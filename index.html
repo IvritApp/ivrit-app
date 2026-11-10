@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Иврит</title>
+  <title>Hirbis</title>
   <!-- Библиотека Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Оформление вынесено в отдельный файл -->
@@ -13,10 +13,16 @@
   <!-- Полоска прогресса урока -->
   <div class="progress"><div id="progress-bar"></div></div>
 
-  <!-- Сюда программа (app.js) будет «рисовать» задания -->
+  <!-- Сюда программа (app.js) «рисует» задания -->
   <main id="screen">Загрузка…</main>
 
-  <!-- Логика приложения вынесена в отдельный файл -->
+  <!-- Красная вспышка по краям экрана при ошибке -->
+  <div id="flash"></div>
+
+  <!-- Панель с результатом, выезжает снизу -->
+  <div id="feedback"></div>
+
+  <!-- Логика приложения -->
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,60 +1,162 @@
-/* Оформление приложения. Цвета берём из темы Telegram (светлая/тёмная) */
+/* =====================================================
+   Оформление Hirbis. Палитра: белый + мягкий голубой,
+   тёплый акцент — оранжевый (хохолок удода).
+   ===================================================== */
+:root {
+  --blue: #5aa9f0;
+  --blue-dark: #3a8ad6;
+  --orange: #ff9f43;
+  --green: #58cc02;
+  --green-bg: #d7ffb8;
+  --green-text: #2b7000;
+  --red: #ff4b4b;
+  --red-bg: #ffdfe0;
+  --red-text: #a00000;
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --text: var(--tg-theme-text-color, #222222);
+  --hint: var(--tg-theme-hint-color, #8a8a8a);
+  --soft: var(--tg-theme-secondary-bg-color, #eef5fd);
+}
+
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: var(--tg-theme-bg-color, #ffffff);
-  color: var(--tg-theme-text-color, #222222);
+  background: var(--bg);
+  color: var(--text);
   text-align: center;
-  padding: 20px;
+  padding: 20px 20px 140px;   /* снизу место под панель ответа */
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Полоска прогресса */
+/* ---------- Полоска прогресса ---------- */
 .progress {
-  height: 10px;
-  background: var(--tg-theme-secondary-bg-color, #e5e5e5);
-  border-radius: 5px;
+  height: 12px;
+  background: var(--soft);
+  border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 #progress-bar {
   height: 100%;
   width: 0%;
-  background: #58cc02;
-  transition: width 0.3s;
+  background: linear-gradient(90deg, var(--blue), #7cc0ff);
+  border-radius: 6px;
+  transition: width 0.5s cubic-bezier(.2,.8,.2,1);
+  position: relative;
+}
+/* блик на полоске */
+#progress-bar::after {
+  content: "";
+  position: absolute; left: 6px; right: 6px; top: 3px;
+  height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,.45);
 }
 
-.task  { font-size: 18px; color: var(--tg-theme-hint-color, #888888); }
+/* ---------- Плавная смена заданий ---------- */
+#screen { will-change: transform, opacity; }
+.slide-out { animation: slideOut .25s ease-in forwards; }
+.slide-in  { animation: slideIn .35s cubic-bezier(.2,.8,.2,1); }
+@keyframes slideOut { to   { opacity: 0; transform: translateX(-40px); } }
+@keyframes slideIn  { from { opacity: 0; transform: translateX(40px); } }
+
+/* ---------- Задание ---------- */
+.task  { font-size: 18px; color: var(--hint); }
 .word  { font-size: 56px; margin: 16px 0 4px; }
-.translit { font-size: 18px; color: var(--tg-theme-hint-color, #888888); margin-bottom: 8px; }
+.translit { font-size: 18px; color: var(--hint); margin-bottom: 8px; }
 
 .listen {
-  font-size: 28px; background: none; border: none; cursor: pointer; margin-bottom: 20px;
+  font-size: 26px; width: 56px; height: 56px; border-radius: 50%;
+  border: none; background: var(--soft); cursor: pointer; margin-bottom: 20px;
+  transition: transform .15s;
 }
+.listen:active { transform: scale(.9); }
 
-/* Кнопки с вариантами ответа */
+/* ---------- Варианты ответа ---------- */
 .option {
   display: block;
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   margin: 10px auto;
-  padding: 14px;
+  padding: 15px;
   font-size: 18px;
-  border-radius: 12px;
-  border: 2px solid var(--tg-theme-hint-color, #cccccc);
-  background: var(--tg-theme-bg-color, #ffffff);
-  color: var(--tg-theme-text-color, #222222);
+  border-radius: 14px;
+  border: 2px solid #dfe6ee;
+  border-bottom-width: 4px;          /* «объёмная» кнопка */
+  background: var(--bg);
+  color: var(--text);
   cursor: pointer;
+  transition: transform .12s, background-color .2s, border-color .2s;
+  opacity: 0;
+  animation: optionIn .35s cubic-bezier(.2,.8,.2,1) forwards;
 }
-.option.right { border-color: #58cc02; background: #d7ffb8; color: #2b7000; }
-.option.wrong { border-color: #ff4b4b; background: #ffdfe0; color: #a00000; }
+.option:nth-child(2) { animation-delay: .05s; }
+.option:nth-child(3) { animation-delay: .10s; }
+.option:nth-child(4) { animation-delay: .15s; }
+@keyframes optionIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-.next {
-  margin-top: 20px;
-  padding: 14px 40px;
-  font-size: 18px;
-  border: none;
-  border-radius: 12px;
-  background: var(--tg-theme-button-color, #3390ec);
-  color: var(--tg-theme-button-text-color, #ffffff);
-  cursor: pointer;
+.option:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+.option:disabled { cursor: default; }
+.option.dim { animation: none; opacity: .45; }
+
+.option.right {
+  border-color: var(--green); background: var(--green-bg); color: var(--green-text);
+  animation: pop .35s ease;
+  opacity: 1;
+}
+.option.wrong {
+  border-color: var(--red); background: var(--red-bg); color: var(--red-text);
+  animation: shake .4s ease;
+  opacity: 1;
+}
+@keyframes pop   { 50% { transform: scale(1.06); } }
+@keyframes shake {
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+/* ---------- Вспышка по краям экрана при ошибке ---------- */
+#flash {
+  position: fixed; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 0 rgba(255,75,75,0);
+  transition: box-shadow .15s;
+  z-index: 5;
+}
+#flash.on { box-shadow: inset 0 0 60px 10px rgba(255,75,75,.55); }
+
+/* ---------- Панель ответа снизу ---------- */
+#feedback {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  padding: 18px 20px 24px;
+  text-align: left;
+  transform: translateY(110%);
+  transition: transform .35s cubic-bezier(.2,.8,.2,1);
+  z-index: 10;
+}
+#feedback.show { transform: translateY(0); }
+#feedback.good { background: var(--green-bg); color: var(--green-text); }
+#feedback.bad  { background: var(--red-bg);   color: var(--red-text); }
+#feedback .title { font-size: 22px; font-weight: 700; }
+#feedback .detail { font-size: 17px; margin-top: 4px; }
+
+.btn {
+  display: block; width: 100%; max-width: 420px; margin: 14px auto 0;
+  padding: 15px; font-size: 18px; font-weight: 600;
+  border: none; border-radius: 14px; cursor: pointer;
+  border-bottom: 4px solid rgba(0,0,0,.18);
+  transition: transform .1s;
+}
+.btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+.btn.red  { background: var(--red);  color: #fff; }
+.btn.blue { background: var(--blue); color: #fff; }
+
+/* ---------- Финал урока ---------- */
+.finish .big { font-size: 72px; animation: pop .6s ease; }
+
+/* Если человек отключил анимации в системе — уважаем это */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .option { opacity: 1; }
 }
