@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <!-- Кодировка: чтобы русские и ивритские буквы показывались правильно -->
+  <meta charset="UTF-8">
+  <!-- Подгоняет страницу под ширину экрана телефона -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Иврит</title>
+
+  <!-- Подключаем библиотеку Telegram: через неё приложение «общается» с Телеграмом -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    /* Оформление. Цвета берём из темы Телеграма, чтобы в тёмной теме было тёмное */
+    body {
+      margin: 0;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #ffffff);
+      color: var(--tg-theme-text-color, #222222);
+      text-align: center;
+      padding: 40px 20px;
+    }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    .hebrew { font-size: 48px; margin: 24px 0; }
+    p { color: var(--tg-theme-hint-color, #888888); font-size: 18px; }
+    button {
+      margin-top: 24px;
+      padding: 14px 32px;
+      font-size: 18px;
+      border: none;
+      border-radius: 12px;
+      background: var(--tg-theme-button-color, #3390ec);
+      color: var(--tg-theme-button-text-color, #ffffff);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- То, что видно на экране -->
+  <h1 id="greeting">Шалом!</h1>
+  <div class="hebrew">שָׁלוֹם</div>
+  <p>Это первая версия нашего приложения.</p>
+  <button id="btn">Нажми меня</button>
+  <p id="answer"></p>
+
+  <script>
+    // Это JavaScript — язык, на котором «оживают» веб-страницы.
+    // Он похож на Python: переменные, условия, функции.
+
+    // Берём объект Телеграма (если страница открыта не в Телеграме — его не будет)
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+
+    if (tg) {
+      tg.ready();   // сообщаем Телеграму: приложение загрузилось
+      tg.expand();  // разворачиваем на весь экран
+
+      // Телеграм передаёт имя пользователя — поздороваемся лично
+      const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+      if (user) {
+        document.getElementById("greeting").textContent = "Шалом, " + user.first_name + "!";
+      }
+    }
+
+    // Что происходит при нажатии на кнопку
+    document.getElementById("btn").addEventListener("click", function () {
+      document.getElementById("answer").textContent = "«Шалом» значит и «привет», и «мир» 🙂";
+    });
+  </script>
+</body>
+</html>
