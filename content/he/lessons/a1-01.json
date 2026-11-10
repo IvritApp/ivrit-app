@@ -4,19 +4,78 @@
   "title": "Знакомство",
   "status": "черновик — проверить у знатока",
   "words": [
-    { "he": "שָׁלוֹם",       "tr": "шалом",       "ru": "привет" },
-    { "he": "תּוֹדָה",       "tr": "тода",        "ru": "спасибо" },
-    { "he": "כֵּן",          "tr": "кен",         "ru": "да" },
-    { "he": "לֹא",          "tr": "ло",          "ru": "нет" },
-    { "he": "בְּבַקָּשָׁה",    "tr": "бевакаша",    "ru": "пожалуйста" },
-    { "he": "לְהִתְרָאוֹת",   "tr": "леhитраот",   "ru": "до свидания" }
+    {
+      "he": "שָׁלוֹם",
+      "tr": "шалом",
+      "ru": "привет"
+    },
+    {
+      "he": "תּוֹדָה",
+      "tr": "тода",
+      "ru": "спасибо"
+    },
+    {
+      "he": "כֵּן",
+      "tr": "кен",
+      "ru": "да"
+    },
+    {
+      "he": "לֹא",
+      "tr": "ло",
+      "ru": "нет"
+    },
+    {
+      "he": "בְּבַקָּשָׁה",
+      "tr": "бевакаша",
+      "ru": "пожалуйста"
+    },
+    {
+      "he": "לְהִתְרָאוֹת",
+      "tr": "леhитраот",
+      "ru": "до свидания"
+    }
   ],
   "exercises": [
-    { "type": "choose_translation", "word": 0 },
-    { "type": "choose_translation", "word": 1 },
-    { "type": "choose_translation", "word": 2 },
-    { "type": "choose_translation", "word": 3 },
-    { "type": "choose_translation", "word": 4 },
-    { "type": "choose_translation", "word": 5 }
-  ]
+    {
+      "type": "choose_translation",
+      "word": 0
+    },
+    {
+      "type": "choose_translation",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 2
+    },
+    {
+      "type": "choose_translation",
+      "word": 3
+    },
+    {
+      "type": "choose_translation",
+      "word": 4
+    },
+    {
+      "type": "choose_translation",
+      "word": 5
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 0
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 1
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 4
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 5
+    }
+  ],
+  "exam": false
 }

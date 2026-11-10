@@ -12,10 +12,19 @@
 <body>
   <!-- ===== ГЛАВНЫЙ ЭКРАН ===== -->
   <section id="home">
-    <img class="logo" src="assets/udod.png" alt="Hirbis">
+    <!-- Удод из двух слоёв: тело и крыло отдельно, чтобы крыло могло махать -->
+    <div class="bird-wrap" id="homeBird">
+      <div class="bubble" id="bubble"></div>
+      <div class="bird-rig" id="rig">
+        <img class="b-wing" src="assets/udod-wing.png" alt="">
+        <img class="b-body" src="assets/udod-body.png" alt="Удод Hirbis">
+        <div class="b-carry" id="carry"></div>
+      </div>
+    </div>
     <h1 class="hello" id="hello">Шалом!</h1>
     <div class="hello-he" dir="rtl">שָׁלוֹם</div>
     <p class="sub">Чем займёмся сегодня?</p>
+    <div class="today" id="today"></div>
 
     <div class="menu">
       <button class="card main" id="go-learn">
@@ -49,7 +58,10 @@
 
   <!-- ===== ЭКРАН УРОКА ===== -->
   <section id="lesson" hidden>
-    <div class="progress"><div id="progress-bar"></div></div>
+    <div class="topbar">
+      <div class="progress"><div id="progress-bar"></div></div>
+      <div class="combo" id="combo"></div>
+    </div>
     <main id="screen">Загрузка…</main>
   </section>
 
@@ -59,6 +71,8 @@
   <div id="feedback"></div>
   <!-- Короткое всплывающее сообщение («Скоро появится») -->
   <div id="toast"></div>
+  <!-- Большой огонь на 5, 10, 15 правильных подряд -->
+  <div id="milestone"></div>
 
   <!-- Логика приложения -->
   <script src="app.js"></script>
