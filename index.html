@@ -6,21 +6,59 @@
   <title>Hirbis</title>
   <!-- Библиотека Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Оформление вынесено в отдельный файл -->
+  <!-- Оформление -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Полоска прогресса урока -->
-  <div class="progress"><div id="progress-bar"></div></div>
+  <!-- ===== ГЛАВНЫЙ ЭКРАН ===== -->
+  <section id="home">
+    <img class="logo" src="assets/logo.svg" alt="Hirbis">
+    <h1 class="hello" id="hello">Шалом!</h1>
+    <div class="hello-he" dir="rtl">שָׁלוֹם</div>
+    <p class="sub">Чем займёмся сегодня?</p>
 
-  <!-- Сюда программа (app.js) «рисует» задания -->
-  <main id="screen">Загрузка…</main>
+    <div class="menu">
+      <button class="card main" id="go-learn">
+        <span class="icon">🎯</span>
+        <span class="text">
+          <span class="name">Основное обучение</span>
+          <span class="desc">Разговорный иврит шаг за шагом</span>
+        </span>
+        <span class="arrow">›</span>
+      </button>
+
+      <button class="card soon" data-soon="Алфавит">
+        <span class="icon">אב</span>
+        <span class="text">
+          <span class="name">Алфавит</span>
+          <span class="desc">Буквы и огласовки</span>
+        </span>
+        <span class="badge">Скоро</span>
+      </button>
+
+      <button class="card soon" data-soon="Другие языки">
+        <span class="icon">🌍</span>
+        <span class="text">
+          <span class="name">Другие языки</span>
+          <span class="desc">Новые курсы в будущем</span>
+        </span>
+        <span class="badge">Скоро</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ===== ЭКРАН УРОКА ===== -->
+  <section id="lesson" hidden>
+    <div class="progress"><div id="progress-bar"></div></div>
+    <main id="screen">Загрузка…</main>
+  </section>
 
   <!-- Красная вспышка по краям экрана при ошибке -->
   <div id="flash"></div>
-
   <!-- Панель с результатом, выезжает снизу -->
   <div id="feedback"></div>
+  <!-- Короткое всплывающее сообщение («Скоро появится») -->
+  <div id="toast"></div>
 
   <!-- Логика приложения -->
   <script src="app.js"></script>

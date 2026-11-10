@@ -28,16 +28,69 @@ const screen   = document.getElementById("screen");
 const bar      = document.getElementById("progress-bar");
 const feedback = document.getElementById("feedback");
 const flash    = document.getElementById("flash");
+const homeView   = document.getElementById("home");
+const lessonView = document.getElementById("lesson");
+const toast      = document.getElementById("toast");
 
-// --- 1. Загружаем урок из файла ---
-fetch(`content/${COURSE_LANG}/lessons/${LESSON_ID}.json`)
-  .then(response => response.json())
-  .then(data => {
-    lesson = data;
-    queue = shuffle([...lesson.exercises]);
-    showStep();
-  })
-  .catch(() => { screen.textContent = "Не удалось загрузить урок 😕"; });
+// =====================================================
+// ГЛАВНЫЙ ЭКРАН
+// =====================================================
+
+// Здороваемся по имени из Telegram
+const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+if (user) document.getElementById("hello").textContent = "Шалом, " + user.first_name + "!";
+
+// «Основное обучение» → открыть урок
+document.getElementById("go-learn").onclick = startLesson;
+
+// Карточки «Скоро» → короткое сообщение
+document.querySelectorAll(".card.soon").forEach(card => {
+  card.onclick = () => {
+    showToast(card.dataset.soon + " — скоро появится ✨");
+    vibrate("warning");
+  };
+});
+
+function showHome() {
+  hideFeedback();
+  lessonView.hidden = true;
+  homeView.hidden = false;
+  homeView.classList.remove("slide-in"); void homeView.offsetWidth; homeView.classList.add("slide-in");
+  if (tg && tg.BackButton) tg.BackButton.hide();
+}
+
+function showToast(text) {
+  toast.textContent = text;
+  toast.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+// Кнопка «Назад» Telegram (вверху окна) возвращает на главный экран
+if (tg && tg.BackButton) tg.BackButton.onClick(showHome);
+
+// =====================================================
+// УРОК
+// =====================================================
+
+// --- 1. Загружаем урок из файла и начинаем ---
+function startLesson() {
+  homeView.hidden = true;
+  lessonView.hidden = false;
+  if (tg && tg.BackButton) tg.BackButton.show();
+  step = 0; mistakes = 0;
+  bar.style.width = "0%";
+  screen.textContent = "Загрузка…";
+
+  fetch(`content/${COURSE_LANG}/lessons/${LESSON_ID}.json`)
+    .then(response => response.json())
+    .then(data => {
+      lesson = data;
+      queue = shuffle([...lesson.exercises]);
+      showStep();
+    })
+    .catch(() => { screen.textContent = "Не удалось загрузить урок 😕"; });
+}
 
 // --- 2. Показываем текущее задание (с плавной сменой) ---
 function showStep() {
@@ -146,7 +199,8 @@ function showFinish() {
       <div class="big">🎉</div>
       <h2>Урок «${lesson.title}» пройден!</h2>
       <p class="task">Ошибок: ${mistakes}</p>
-      <button class="btn blue" onclick="location.reload()">Пройти ещё раз</button>
+      <button class="btn blue" onclick="startLesson()">Пройти ещё раз</button>
+      <button class="btn ghost" onclick="showHome()">На главную</button>
     </div>
   `;
   screen.classList.remove("slide-out");

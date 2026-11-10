@@ -160,3 +160,79 @@ body {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .option { opacity: 1; }
 }
+
+/* =====================================================
+   ГЛАВНЫЙ ЭКРАН
+   ===================================================== */
+[hidden] { display: none !important; }
+
+#home { padding-top: 12px; }
+#home.slide-in { animation: slideIn .35s cubic-bezier(.2,.8,.2,1); }
+
+.logo {
+  width: 104px; height: 104px;
+  animation: float 3.5s ease-in-out infinite;   /* значок слегка «парит» */
+}
+@keyframes float { 50% { transform: translateY(-6px); } }
+
+.hello { font-size: 40px; margin: 10px 0 0; }
+.hello-he { font-size: 26px; color: var(--blue-dark); margin-top: 2px; }
+.sub { color: var(--hint); font-size: 17px; margin: 10px 0 24px; }
+
+.menu { max-width: 420px; margin: 0 auto; }
+
+.card {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; margin-bottom: 12px; padding: 16px;
+  border-radius: 18px;
+  border: 2px solid #dfe6ee; border-bottom-width: 4px;
+  background: var(--bg); color: var(--text);
+  text-align: left; cursor: pointer;
+  transition: transform .12s;
+  opacity: 0;
+  animation: optionIn .4s cubic-bezier(.2,.8,.2,1) forwards;
+}
+.card:nth-child(2) { animation-delay: .07s; }
+.card:nth-child(3) { animation-delay: .14s; }
+.card:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+.card.main {
+  background: linear-gradient(135deg, var(--blue), #7cc0ff);
+  border-color: var(--blue-dark);
+  color: #fff;
+}
+.card.main .desc { color: rgba(255,255,255,.85); }
+
+.card .icon {
+  flex: 0 0 48px; height: 48px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700;
+  background: var(--soft); color: var(--blue-dark);
+}
+.card.main .icon { background: rgba(255,255,255,.25); color: #fff; }
+
+.card .text { flex: 1; display: flex; flex-direction: column; }
+.card .name { font-size: 18px; font-weight: 700; }
+.card .desc { font-size: 14px; color: var(--hint); margin-top: 2px; }
+.card .arrow { font-size: 30px; line-height: 1; }
+
+.card.soon .name, .card.soon .icon { opacity: .55; }
+.badge {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  padding: 5px 9px; border-radius: 999px;
+  background: #fff3e6; color: #e07b10;            /* тёплый оранжевый акцент */
+}
+
+/* Всплывающее сообщение */
+#toast {
+  position: fixed; left: 50%; bottom: 28px;
+  transform: translate(-50%, 20px);
+  background: rgba(30,30,30,.92); color: #fff;
+  padding: 12px 18px; border-radius: 14px; font-size: 15px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  z-index: 20; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.btn.ghost { background: transparent; color: var(--hint); border-bottom: none; font-weight: 500; }
