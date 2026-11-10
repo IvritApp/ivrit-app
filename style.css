@@ -1,0 +1,60 @@
+/* Оформление приложения. Цвета берём из темы Telegram (светлая/тёмная) */
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #222222);
+  text-align: center;
+  padding: 20px;
+}
+
+/* Полоска прогресса */
+.progress {
+  height: 10px;
+  background: var(--tg-theme-secondary-bg-color, #e5e5e5);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+#progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #58cc02;
+  transition: width 0.3s;
+}
+
+.task  { font-size: 18px; color: var(--tg-theme-hint-color, #888888); }
+.word  { font-size: 56px; margin: 16px 0 4px; }
+.translit { font-size: 18px; color: var(--tg-theme-hint-color, #888888); margin-bottom: 8px; }
+
+.listen {
+  font-size: 28px; background: none; border: none; cursor: pointer; margin-bottom: 20px;
+}
+
+/* Кнопки с вариантами ответа */
+.option {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin: 10px auto;
+  padding: 14px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: 2px solid var(--tg-theme-hint-color, #cccccc);
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #222222);
+  cursor: pointer;
+}
+.option.right { border-color: #58cc02; background: #d7ffb8; color: #2b7000; }
+.option.wrong { border-color: #ff4b4b; background: #ffdfe0; color: #a00000; }
+
+.next {
+  margin-top: 20px;
+  padding: 14px 40px;
+  font-size: 18px;
+  border: none;
+  border-radius: 12px;
+  background: var(--tg-theme-button-color, #3390ec);
+  color: var(--tg-theme-button-text-color, #ffffff);
+  cursor: pointer;
+}
