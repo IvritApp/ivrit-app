@@ -192,19 +192,56 @@ function flashRed() {
 // --- 4. Конец урока ---
 function showFinish() {
   bar.style.width = "100%";
-  playSound("finish");
   vibrate("success");
   screen.innerHTML = `
     <div class="finish">
-      <div class="big">🎉</div>
-      <h2>Урок «${lesson.title}» пройден!</h2>
-      <p class="task">Ошибок: ${mistakes}</p>
+      <!-- Сцена: ветка оливы, удод прилетает и садится на неё -->
+      <div class="scene">
+        <svg class="branch" viewBox="0 0 320 120" aria-hidden="true">
+          <path d="M-10 92 Q120 70 300 84" stroke="#8a5a3b" stroke-width="9" fill="none" stroke-linecap="round"/>
+          <path d="M70 80 Q90 104 118 112" stroke="#8a5a3b" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <g class="leaves" fill="#7fae5a">
+            <ellipse cx="40" cy="74" rx="18" ry="6" transform="rotate(-25 40 74)"/>
+            <ellipse cx="62" cy="96" rx="17" ry="6" transform="rotate(30 62 96)"/>
+            <ellipse cx="104" cy="110" rx="16" ry="5.5" transform="rotate(15 104 110)"/>
+            <ellipse cx="128" cy="64" rx="18" ry="6" transform="rotate(-35 128 64)"/>
+            <ellipse cx="270" cy="70" rx="18" ry="6" transform="rotate(-30 270 70)"/>
+            <ellipse cx="292" cy="96" rx="17" ry="6" transform="rotate(25 292 96)"/>
+          </g>
+          <g fill="#5e7f3f"><circle cx="92" cy="94" r="5"/><circle cx="248" cy="94" r="5"/></g>
+        </svg>
+        <img class="bird" src="assets/udod.png" alt="Удод">
+      </div>
+
+      <h2 class="done">Урок пройден!</h2>
+      <p class="task">«${lesson.title}» · Ошибок: ${mistakes}</p>
+
+      <!-- Бонус: сленговое выражение -->
+      <div class="bonus" id="bonus"></div>
+
       <button class="btn blue" onclick="startLesson()">Пройти ещё раз</button>
       <button class="btn ghost" onclick="showHome()">На главную</button>
     </div>
   `;
   screen.classList.remove("slide-out");
   screen.classList.add("slide-in");
+  setTimeout(() => playSound("finish"), 900);   // фанфара — когда удод сел на ветку
+
+  // Бонусная фраза берётся из файла content/<язык>/bonus.json
+  fetch(`content/${COURSE_LANG}/bonus.json`)
+    .then(r => r.json())
+    .then(data => {
+      const p = random(data.phrases);
+      const box = document.getElementById("bonus");
+      box.innerHTML = `
+        <div class="bonus-label">🎁 Бонус · ${data.title}</div>
+        <div class="bonus-he" dir="rtl">${p.he}</div>
+        <div class="bonus-tr">${p.tr} <button class="listen small" id="bonus-listen" aria-label="Послушать">🔊</button></div>
+        <div class="bonus-ru">${p.ru}</div>
+      `;
+      document.getElementById("bonus-listen").onclick = () => speak(p.he);
+    })
+    .catch(() => {});
 }
 
 // =====================================================
