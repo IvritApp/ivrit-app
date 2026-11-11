@@ -828,3 +828,9 @@ body.theme-dark .p-medal.won { background: #3a3218; }
 body.theme-dark .hn-form, body.theme-dark .hn-how, body.theme-dark .hn-me { background: #2a2a1c; }
 button.p-lvl-go { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; background: #e8f4ff; color: #1b5e9e; }
 .st-view .q-tray { background: #fffaf2; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); opacity: 1; }
+.set-test { display: flex; gap: 8px; align-items: center; margin: 6px 0 4px; }
+.set-test span { flex: 1; font-size: 14px; }
+.set-test input { flex: 1; min-width: 0; padding: 10px 12px; border: 2px solid #d9e6f2; border-radius: 12px; font: inherit; font-size: 16px; background: #fff; color: #222; }
+.set-test .btn { width: auto; margin: 0; padding: 10px 14px; }
+.p-soon.p-lvl-go.locked { background: #f1f3f6; color: #98a2ae; }
+body.theme-dark .set-test input { background: #1c2430; color: var(--text); border-color: #2c3a4c; }

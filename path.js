@@ -6,7 +6,8 @@
 const pathView = document.getElementById("path");
 let course = null;
 // ВРЕМЕННО для проверки: все уроки и квест открыты сразу. Потом поставить false.
-const TEST_UNLOCK_ALL = true;
+// Режим тестировщика: всё открыто. Включается в ⚙️ Настройках по паролю (только на этом телефоне).
+function testMode() { return store.get("testmode", false) === true; }
 
 // =====================================================
 // МЕДАЛИ
@@ -67,10 +68,12 @@ function autoIntro() {
 }
 
 // Какой уровень показывать: выбранный игроком, иначе первый ещё не пройденный (из готовых)
+// Уровень открыт, если пройден предыдущий (или включён режим тестировщика)
+function levelOpen(ch, i) { return testMode() || i === 0 || levelDone(ch.levels[i - 1]); }
 function currentLevelIdx(ch) {
   const ready = ch.levels.map((l, i) => l.soon ? -1 : i).filter(i => i >= 0);
   const picked = store.get("level_" + ch.id, null);
-  if (picked !== null && ready.includes(picked)) return picked;
+  if (picked !== null && ready.includes(picked) && levelOpen(ch, picked)) return picked;
   const open = ready.find(i => !levelDone(ch.levels[i]));
   return open !== undefined ? open : ready[ready.length - 1];
 }
@@ -85,7 +88,7 @@ function renderPath() {
   const done = doneLessons();
   const gold = perfectLessons();
   const goldCount = lvl.lessons.filter(id => gold.includes(id)).length;
-  const allDone = TEST_UNLOCK_ALL || lvl.lessons.every(id => done.includes(id));
+  const allDone = testMode() || lvl.lessons.every(id => done.includes(id));
   const questDone = store.get("quest_q-" + lvl.quest, false);
   const questGold = store.get("questGold_q-" + lvl.quest, false);
   const nextIdx = lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
@@ -93,7 +96,7 @@ function renderPath() {
   // змейка: смещение кружков влево-вправо
   const offs = [0, 60, 90, 60, 0, -60, -90];
   const nodes = lvl.lessons.map((id, k) => {
-    const st = done.includes(id) ? (gold.includes(id) ? "done gold" : "done") : (k === nextIdx || TEST_UNLOCK_ALL) ? "current" : "locked";
+    const st = done.includes(id) ? (gold.includes(id) ? "done gold" : "done") : (k === nextIdx || testMode()) ? "current" : "locked";
     const icon = st === "done gold" ? "★" : st === "done" ? "✓" : st === "locked" ? "🔒" : (k + 1);
     return `<div class="p-node-wrap${st === "current" && k === nextIdx ? " cur" : ""}" style="transform:translateX(${offs[k % offs.length]}px)">
       ${st === "current" && k === nextIdx ? `<div class="p-start">Старт</div>` : ""}
@@ -104,7 +107,7 @@ function renderPath() {
 
   pathView.innerHTML = `
     <button class="p-settings" id="p-settings" aria-label="Настройки">⚙️</button>
-    ${TEST_UNLOCK_ALL ? `<div class="p-test">🔓 Тестовый режим: всё открыто</div>` : ""}
+    ${testMode() ? `<div class="p-test">🔓 Режим тестировщика: всё открыто</div>` : ""}
     <div class="p-chapter">
       <div class="p-ch-badge">${ch.id}</div>
       <div><div class="p-ch-title">${ch.title}</div><div class="p-ch-sub">Уровень ${lvlIdx + 1} из ${ch.levels.length}</div></div>
@@ -128,7 +131,7 @@ function renderPath() {
     </button>
     ${ch.levels.map((l, i) => i === lvlIdx ? "" : l.soon
       ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
-      : `<button class="p-soon p-lvl-go" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${levelGold(l) ? "🏅" : levelDone(l) ? "✓" : "›"}</span></button>`).join("")}
+      : `<button class="p-soon p-lvl-go${levelOpen(ch, i) ? "" : " locked"}" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${levelGold(l) ? "🏅" : levelDone(l) ? "✓" : levelOpen(ch, i) ? "›" : "🔒"}</span></button>`).join("")}
     <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после ${ch.levels.length} уровней</span></div>
     <div class="p-soon next"><b>Дальше — глава ${ch.next}</b><span>🔒</span></div>`;
 
@@ -141,7 +144,8 @@ function renderPath() {
   document.getElementById("p-settings").onclick = openSettings;
   const tb = document.getElementById("p-taxi");
   if (tb) tb.onclick = () => showTaxi(() => showPath());
-  pathView.querySelectorAll(".p-lvl-go").forEach(b => b.onclick = () => { store.set("level_" + ch.id, +b.dataset.lvl); renderPath(); window.scrollTo(0, 0); });
+  pathView.querySelectorAll(".p-lvl-go").forEach(b => b.onclick = () => {
+    if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий уровень — все уроки и квест"); vibrate("warning"); return; } store.set("level_" + ch.id, +b.dataset.lvl); renderPath(); window.scrollTo(0, 0); });
   document.getElementById("p-quest").onclick = () => {
     if (!allDone) { showToast(`Пройди все ${lvl.lessons.length} уроков — и квест откроется`); vibrate("warning"); return; }
     startQuest(lvl.quest);

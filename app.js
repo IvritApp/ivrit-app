@@ -949,6 +949,10 @@ function openSettings() {
       ${seg("translit", [["false", "Без неё ⭐"], ["true", "Показывать"]])}
       <div class="set-note">⭐ Советуем учить без транскрипции — так слова запоминаются лучше. Но выбор за тобой.</div>
       <div class="set-title">Вибрация</div>${seg("vibro", [["true", "Вкл"], ["false", "Выкл"]])}
+      <div class="set-title">Режим тестировщика</div>
+      ${store.get("testmode", false)
+        ? `<div class="set-test"><span>🔓 Включён: все уроки и уровни открыты</span><button class="btn ghost" id="testOff">Выключить</button></div>`
+        : `<div class="set-test"><input type="password" inputmode="numeric" id="testPass" placeholder="Пароль" autocomplete="off"><button class="btn blue" id="testOn">Включить</button></div>`}
     </div>`;
   box.className = "show";
   box.onclick = (e) => { if (e.target === box) closeSettings(); };
@@ -957,10 +961,24 @@ function openSettings() {
     const v = b.dataset.v; settings[b.dataset.k] = v === "true" ? true : v === "false" ? false : v;
     saveSettings(); playSound("pop"); openSettings();
   });
+  // Режим тестировщика (пароль хранится не открытым текстом — защита от случайных игроков)
+  const tOn = document.getElementById("testOn"), tOff = document.getElementById("testOff");
+  if (tOn) tOn.onclick = () => {
+    const v = document.getElementById("testPass").value.trim();
+    if (testHash(v) === TEST_HASH) { store.set("testmode", true); showToast("Режим тестировщика включён 🔓"); vibrate("success"); afterTestToggle(); }
+    else { showToast("Неверный пароль"); vibrate("error"); }
+  };
+  if (tOff) tOff.onclick = () => { store.set("testmode", false); showToast("Режим тестировщика выключен"); afterTestToggle(); };
   box.querySelectorAll("input[type=range]").forEach(r => {
     r.oninput = () => { settings[r.dataset.k] = +r.value; r.nextElementSibling.textContent = r.value; };
     r.onchange = () => { saveSettings(); if (r.dataset.k === "sfx") playSound("right"); if (r.dataset.k === "voice") speak("שָׁלוֹם"); };
   });
+}
+const TEST_HASH = 9530;
+function testHash(t) { let h = 7; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) % 1000003; return h; }
+function afterTestToggle() {
+  openSettings();
+  if (!document.getElementById("path").hidden && typeof renderPath === "function") renderPath();
 }
 function closeSettings() { const b = document.getElementById("settings"); if (b) b.className = ""; }
 
