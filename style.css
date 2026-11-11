@@ -811,3 +811,18 @@ body.theme-dark .bl-opt { background: #1c2430; border-color: #2e3a4b; }
 .h-medal { display: inline-flex; flex-direction: column; align-items: center; font-size: 22px; line-height: 1; }
 .h-medal small { font-size: 10px; color: var(--hint); }
 body.theme-dark .p-medal.won { background: #3a3218; }
+
+/* ---------- Доска почёта ---------- */
+#honor { max-width: 460px; margin: 0 auto; }
+.hn-head { font-size: 64px; animation: popIn .5s ease both; }
+.hn-title { margin: 4px 0; }
+.hn-form, .hn-how, .hn-me { text-align: left; background: linear-gradient(135deg, #fff6d6, #eaf4fd); border-radius: 18px; padding: 14px 16px; margin: 12px 0; font-size: 15px; line-height: 1.4; }
+.hn-form .ob-input { margin: 6px 0; }
+.hn-ok { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--hint); margin: 8px 0; }
+.hn-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--bg); }
+.hn-row small { margin-left: auto; color: var(--hint); }
+.hn-medal { font-size: 24px; }
+.hn-board { margin: 10px 0 16px; }
+.hn-empty { color: var(--hint); font-size: 14px; padding: 16px; border: 2px dashed #dfe6ee; border-radius: 16px; }
+.card.honor-card .icon { background: #fff3c4; }
+body.theme-dark .hn-form, body.theme-dark .hn-how, body.theme-dark .hn-me { background: #2a2a1c; }

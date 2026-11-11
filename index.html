@@ -7,9 +7,9 @@
   <!-- Библиотека Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Оформление -->
-  <link rel="stylesheet" href="style.css?v=20261111v">
-  <link rel="stylesheet" href="avatar.css?v=20261111v">
-  <link rel="stylesheet" href="scene.css?v=20261111v">
+  <link rel="stylesheet" href="style.css?v=20261111w">
+  <link rel="stylesheet" href="avatar.css?v=20261111w">
+  <link rel="stylesheet" href="scene.css?v=20261111w">
 </head>
 <body>
   <!-- ===== ГЛАВНЫЙ ЭКРАН ===== -->
@@ -65,6 +65,15 @@
         <span class="arrow">›</span>
       </button>
 
+      <button class="card honor-card" id="go-honor">
+        <span class="icon">🏆</span>
+        <span class="text">
+          <span class="name">Доска почёта</span>
+          <span class="desc">Обладатели золотых медалей</span>
+        </span>
+        <span class="arrow">›</span>
+      </button>
+
       <button class="card soon" data-soon="Алфавит">
         <span class="icon">אב</span>
         <span class="text">
@@ -86,6 +95,9 @@
     <button class="link-btn" id="reset-profile">Сменить имя или пол</button>
     <button class="link-btn danger" id="reset-all">Начать сначала</button>
   </section>
+
+  <!-- ===== ДОСКА ПОЧЁТА ===== -->
+  <section id="honor" hidden></section>
 
   <!-- ===== ЭКРАН УРОКА ===== -->
   <section id="lesson" hidden>
@@ -112,10 +124,10 @@
   <div id="milestone"></div>
 
   <!-- Логика приложения -->
-  <script src="avatar.js?v=20261111v"></script>
-  <script src="scene.js?v=20261111v"></script>
-  <script src="app.js?v=20261111v"></script>
-  <script src="quest.js?v=20261111v"></script>
-  <script src="path.js?v=20261111v"></script>
+  <script src="avatar.js?v=20261111w"></script>
+  <script src="scene.js?v=20261111w"></script>
+  <script src="app.js?v=20261111w"></script>
+  <script src="quest.js?v=20261111w"></script>
+  <script src="path.js?v=20261111w"></script>
 </body>
 </html>

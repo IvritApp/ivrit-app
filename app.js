@@ -966,3 +966,60 @@ function askTranslit(then) {
   });
 }
 applySettings();
+
+
+// =====================================================
+// ДОСКА ПОЧЁТА: золотая медаль главы → имя и фамилия на общей доске.
+// Общая доска (видна всем) заработает, когда подключим сервер.
+// Пока запись хранится на телефоне с пометкой «отправится на сервер».
+// =====================================================
+function showHonor() {
+  stopHomeBird();
+  document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "honor");
+  if (tg && tg.BackButton) tg.BackButton.show();
+  const box = document.getElementById("honor");
+  const medals = store.get("medals", {});
+  const goldCh = Object.keys(medals).filter(ch => medals[ch] === "gold");
+  const me = store.get("honor", null);
+  let form = "";
+  if (me) {
+    form = `<div class="hn-me"><div class="hn-row mine"><span class="hn-medal">🥇</span><b>${esc(me.first)} ${esc(me.last)}</b><small>глава ${me.chapter}</small></div>
+      <p class="set-note">⏳ Твоя запись сохранена. Все увидят её на общей доске, как только мы подключим сервер.</p>
+      <button class="link-btn" id="hnRemove">Убрать меня с доски</button></div>`;
+  } else if (goldCh.length) {
+    form = `<div class="hn-form">
+      <b>Поздравляем! У тебя золотая медаль главы ${goldCh[0]} 🥇</b>
+      <p>Впиши имя и фамилию — и попадёшь на доску почёта.</p>
+      <input class="ob-input" id="hnFirst" maxlength="20" placeholder="Имя" value="${profile ? esc(profile.name) : ""}">
+      <input class="ob-input" id="hnLast" maxlength="25" placeholder="Фамилия">
+      <label class="hn-ok"><input type="checkbox" id="hnAgree"> Согласен(на), чтобы имя и фамилию видели другие пользователи</label>
+      <button class="btn blue" id="hnSend" disabled>Попасть на доску почёта</button></div>`;
+  } else {
+    form = `<div class="hn-how">Как сюда попасть: пройди все уровни главы на золото — все уроки ★ и квесты без ошибок — и получи
+      <b>золотую медаль главы 🥇</b>. Тогда здесь появится твоё имя.</div>`;
+  }
+  box.innerHTML = `
+    <div class="hn-head">🏆</div>
+    <h2 class="hn-title">Доска почёта</h2>
+    <p class="task">Здесь все, кто прошёл главу на золотую медаль</p>
+    ${form}
+    <div class="hn-board">
+      <div class="hn-empty">Общая доска заработает вместе с сервером — скоро здесь будут все обладатели золотых медалей.</div>
+    </div>
+    <button class="btn ghost" id="hnBack">На главную</button>`;
+  document.getElementById("hnBack").onclick = showHome;
+  const send = document.getElementById("hnSend");
+  if (send) {
+    const f = document.getElementById("hnFirst"), l = document.getElementById("hnLast"), ag = document.getElementById("hnAgree");
+    const check = () => { send.disabled = !(f.value.trim().length >= 2 && l.value.trim().length >= 2 && ag.checked); };
+    [f, l].forEach(x => x.oninput = check); ag.onchange = check; check();
+    send.onclick = () => {
+      store.set("honor", { first: f.value.trim(), last: l.value.trim(), chapter: goldCh[0], date: Date.now(), pending: true });
+      playSound("finish"); vibrate("success"); showHonor();
+    };
+  }
+  const rm = document.getElementById("hnRemove");
+  if (rm) rm.onclick = () => { store.set("honor", null); showHonor(); };
+}
+function esc(s) { return String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+document.getElementById("go-honor").onclick = showHonor;
