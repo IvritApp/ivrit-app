@@ -34,6 +34,7 @@ function renderStageShell(place, title, icon) {
     <div class="st-wrap">
       <div class="st-view" id="stView">
         <div class="st-title"><span>${icon}</span>${title}</div>
+        <button class="st-order" id="stOrder" hidden>🧾 Мой заказ</button>
         <div class="q-tray" id="qTray" hidden></div>
         <div class="st-tap" id="stTap">нажми, чтобы дальше ›</div>
       </div>
@@ -126,8 +127,12 @@ function startQuest(id) {
     .then(r => r.json())
     .then(d => {
       quest = d; qStep = 0; qMistakes = 0; qBag = [];
-      const token = renderStageShell("shop", "Шаурмичная", "🌯");
-      document.getElementById("qTray").hidden = false;
+      const token = renderStageShell("counter", "Шаурмичная", "🌯");
+      // Список заказа — по кнопке, а главное видно на прилавке
+      const ob = document.getElementById("stOrder"), tray = document.getElementById("qTray");
+      ob.hidden = false;
+      ob.onclick = (e) => { e.stopPropagation(); tray.hidden = !tray.hidden; };
+      tray.onclick = (e) => { e.stopPropagation(); tray.hidden = true; };
       setTimeout(() => { if (token === stageToken) showQuestStep(); }, 1500);
     })
     .catch(() => { questView.innerHTML = `<p class="task">Не удалось загрузить квест 😕</p>`; });
@@ -205,6 +210,7 @@ function addToTray(items) {
     el.className = "q-ing";
     el.innerHTML = `<img src="assets/ing-${it}.png" alt=""><span>${ING_NAMES[it] || it}</span>`;
     tray.appendChild(el);
+    if (stage && stage.food) stage.food(it);
     playSound("pop");
   }, k * 250));
 }
@@ -220,6 +226,8 @@ function finishQuest() {
   store.set("quest_" + quest.id, true);
   const finalImg = qBag.includes("lafa") ? "gift-shawarma" : "gift-pita";
   const order = qBag.map(x => ING_NAMES[x]).join(", ");
+  // продавец заворачивает шаурму и протягивает тебе
+  setTimeout(() => { if (token === stageToken && stage) stage.wrap(finalImg); }, 2600);
   setTimeout(() => {
     if (token !== stageToken) return;
     closeStage();
@@ -239,5 +247,5 @@ function finishQuest() {
         <button class="btn ghost" onclick="startQuest('${quest.id.replace("q-", "")}')">Пройти ещё раз</button>
       </div>`;
     window.scrollTo(0, 0);
-  }, 3600);
+  }, 6600);
 }

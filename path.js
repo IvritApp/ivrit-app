@@ -5,6 +5,8 @@
 // =====================================================
 const pathView = document.getElementById("path");
 let course = null;
+// ВРЕМЕННО для проверки: все уроки и квест открыты сразу. Потом поставить false.
+const TEST_UNLOCK_ALL = true;
 
 function doneLessons() { return store.get("done", []); }
 function perfectLessons() { return store.get("perfect", []); }
@@ -27,23 +29,24 @@ function renderPath() {
   const done = doneLessons();
   const gold = perfectLessons();
   const goldCount = lvl.lessons.filter(id => gold.includes(id)).length;
-  const allDone = lvl.lessons.every(id => done.includes(id));
+  const allDone = TEST_UNLOCK_ALL || lvl.lessons.every(id => done.includes(id));
   const questDone = store.get("quest_q-" + lvl.quest, false);
   const nextIdx = lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
 
   // змейка: смещение кружков влево-вправо
   const offs = [0, 60, 90, 60, 0, -60, -90];
   const nodes = lvl.lessons.map((id, k) => {
-    const st = done.includes(id) ? (gold.includes(id) ? "done gold" : "done") : k === nextIdx ? "current" : "locked";
+    const st = done.includes(id) ? (gold.includes(id) ? "done gold" : "done") : (k === nextIdx || TEST_UNLOCK_ALL) ? "current" : "locked";
     const icon = st === "done gold" ? "★" : st === "done" ? "✓" : st === "locked" ? "🔒" : (k + 1);
-    return `<div class="p-node-wrap${st === "current" ? " cur" : ""}" style="transform:translateX(${offs[k % offs.length]}px)">
-      ${st === "current" ? `<div class="p-start">Старт</div>` : ""}
+    return `<div class="p-node-wrap${st === "current" && k === nextIdx ? " cur" : ""}" style="transform:translateX(${offs[k % offs.length]}px)">
+      ${st === "current" && k === nextIdx ? `<div class="p-start">Старт</div>` : ""}
       <button class="p-node ${st}" data-lesson="${id}" data-k="${k}">${icon}</button>
       <div class="p-label">Урок ${k + 1}</div>
     </div>`;
   }).join("");
 
   pathView.innerHTML = `
+    ${TEST_UNLOCK_ALL ? `<div class="p-test">🔓 Тестовый режим: всё открыто</div>` : ""}
     <div class="p-chapter">
       <div class="p-ch-badge">${ch.id}</div>
       <div><div class="p-ch-title">${ch.title}</div><div class="p-ch-sub">Уровень 1 из ${ch.levels.length}</div></div>

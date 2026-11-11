@@ -53,11 +53,11 @@
       "word": 0
     },
     {
-      "type": "choose_translation",
+      "type": "listen",
       "word": 1
     },
     {
-      "type": "choose_translation",
+      "type": "choose_hebrew",
       "word": 2
     },
     {
@@ -65,28 +65,39 @@
       "word": 3
     },
     {
-      "type": "choose_translation",
+      "type": "build_phrase",
+      "phrase": 0
+    },
+    {
+      "type": "listen",
       "word": 4
+    },
+    {
+      "type": "match_pairs"
     },
     {
       "type": "choose_hebrew",
       "word": 0
     },
     {
-      "type": "choose_hebrew",
-      "word": 1
+      "type": "build_phrase",
+      "phrase": 1
     },
     {
-      "type": "choose_translation",
-      "word": 5
+      "type": "listen",
+      "word": 2
+    }
+  ],
+  "phrases": [
+    {
+      "he": "אֲנִי {m:רוֹצֶה}{f:רוֹצָה} שווארמה",
+      "tr": "ани {m:роцэ}{f:роца} шаварма",
+      "ru": "Я хочу шаурму"
     },
     {
-      "type": "choose_hebrew",
-      "word": 6
-    },
-    {
-      "type": "choose_translation",
-      "word": 7
+      "he": "{m:אַתָּה רוֹצֶה}{f:אַתְּ רוֹצָה} פִּיתָה?",
+      "tr": "{m:ата роцэ}{f:ат роца} пита?",
+      "ru": "Ты хочешь питу?"
     }
   ]
 }

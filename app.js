@@ -328,8 +328,9 @@ function startLesson(id) {
       // слова и названия — в форме игрока (парень / девушка)
       data.title = g(data.title);
       data.words = data.words.map(w => Object.assign({}, w, { he: g(w.he), tr: g(w.tr), ru: g(w.ru) }));
+      data.phrases = (data.phrases || []).map(w => Object.assign({}, w, { he: g(w.he), tr: g(w.tr), ru: g(w.ru) }));
       lesson = data;
-      queue = shuffle([...lesson.exercises]);
+      queue = [...lesson.exercises];          // порядок заданий продуман в файле урока
       showStep();
     })
     .catch(() => { screen.textContent = "Не удалось загрузить урок 😕"; });
@@ -344,8 +345,10 @@ function showStep() {
   const ex = queue[step];
   if (ex.type === "choose_translation") showChooseTranslation(ex);
   else if (ex.type === "choose_hebrew") showChooseHebrew(ex);
-  // Здесь потом появятся другие игры:
-  // else if (ex.type === "build_phrase") { ... }
+  else if (ex.type === "listen") showListen(ex);
+  else if (ex.type === "build_phrase") showBuildPhrase(ex);
+  else if (ex.type === "match_pairs") showMatchPairs(ex);
+  else { step++; showStep(); return; }       // незнакомый тип — пропускаем
 
   // анимация появления
   screen.classList.remove("slide-out");
@@ -432,8 +435,123 @@ function showChooseHebrew(ex) {
   });
 }
 
+// =====================================================
+// НОВЫЕ ИГРЫ
+// =====================================================
+const ASK_LISTEN = [
+  "Послушай, что я скажу. Что это значит?", "Угадай на слух!", "Слушай внимательно… Что я сказал{m:}{f:а}?",
+  "Я скажу слово, а ты переведи", "Закрой глаза и послушай. Что это?"
+];
+const ASK_BUILD = [
+  "Собери фразу: «$»", "Как сказать: «$»? Собери из слов", "Представь, что говоришь продавцу: «$»",
+  "Скажи по-нашему, на иврите: «$»"
+];
+const ASK_MATCH = ["Соедини пары: слово — перевод", "Быстро! Найди пары", "Проверим память: найди пары"];
+
+// --- «Выбери на слух»: слово не показываем, только звук ---
+function showListen(ex) {
+  const word = lesson.words[ex.word];
+  const others = lesson.words.filter(w => w !== word && w.ru !== word.ru);
+  const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
+  screen.innerHTML = hostHTML(ask(ASK_LISTEN, "listen"), `
+      <button class="listen big" id="listen" aria-label="Послушать">🔊</button>
+      <div class="listen-hint">нажми, чтобы послушать ещё раз</div>
+      <div class="word reveal" dir="rtl" id="reveal" hidden>${word.he}</div>`) + `
+    <div id="options"></div>`;
+  const play = () => { speak(word.he, { audio: word.audio }); const b = document.getElementById("listen"); b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); };
+  document.getElementById("listen").onclick = play;
+  setTimeout(play, 500);
+  const box = document.getElementById("options");
+  options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "option";
+    btn.textContent = opt.ru;
+    if (opt === word) btn.dataset.right = "1";
+    btn.onclick = () => { document.getElementById("reveal").hidden = false; checkAnswer(btn, opt === word, ex, word); };
+    box.appendChild(btn);
+  });
+}
+
+// --- «Собери фразу»: нажимай слова по порядку ---
+const cleanTok = (t) => t.replace(/[?!.,]/g, "");
+function showBuildPhrase(ex) {
+  const ph = lesson.phrases[ex.phrase];
+  const target = ph.he.split(" ").map(cleanTok);
+  const extra = shuffle(lesson.words.filter(w => !w.he.includes(" ") && !target.includes(w.he)).map(w => w.he)).slice(0, 2);
+  const tiles = shuffle([...target, ...extra]);
+  screen.innerHTML = hostHTML(ask(ASK_BUILD, "build").replace("$", ph.ru), "") + `
+    <div class="build-line" dir="rtl" id="bLine"><span class="build-empty">нажимай слова по порядку</span></div>
+    <div class="build-pool" dir="rtl" id="bPool"></div>
+    <button class="option check-btn" id="bCheck" disabled>Проверить</button>`;
+  const line = document.getElementById("bLine"), pool = document.getElementById("bPool"), check = document.getElementById("bCheck");
+  const refresh = () => {
+    const n = line.querySelectorAll(".tile").length;
+    check.disabled = n === 0;
+    line.querySelector(".build-empty").hidden = n > 0;
+  };
+  tiles.forEach(t => {
+    const b = document.createElement("button");
+    b.className = "tile"; b.textContent = t; b.dir = "rtl";
+    b.onclick = () => {
+      if (b.parentNode === pool) { line.appendChild(b); speak(t); playSound("pop"); }
+      else pool.appendChild(b);
+      refresh();
+    };
+    pool.appendChild(b);
+  });
+  check.onclick = () => {
+    const got = [...line.querySelectorAll(".tile")].map(b => b.textContent);
+    const ok = got.join(" ") === target.join(" ");
+    document.querySelectorAll(".tile").forEach(b => b.disabled = true);
+    if (ok) { line.classList.add("good"); speak(ph.he, { audio: ph.audio }); }
+    else line.classList.add("bad");
+    checkAnswer(check, ok, ex, ph);
+  };
+}
+
+// --- «Найди пары»: иврит слева, перевод справа ---
+function showMatchPairs(ex) {
+  const seen = new Set();
+  const pairs = shuffle(lesson.words.slice(0, lesson.newCount || lesson.words.length)).concat(shuffle(lesson.words))
+    .filter(w => !seen.has(w.ru) && seen.add(w.ru)).slice(0, 4);   // сначала новые слова урока
+  screen.innerHTML = hostHTML(ask(ASK_MATCH, "match"), "") + `
+    <div class="match">
+      <div class="match-col" id="mHe"></div>
+      <div class="match-col" id="mRu"></div>
+    </div>`;
+  let pick = null, left = pairs.length, hadError = false;
+  const mk = (box, w, side) => {
+    const b = document.createElement("button");
+    b.className = "m-card " + side;
+    b.innerHTML = side === "he" ? `<span class="he" dir="rtl">${w.he}</span><span class="tr">${w.tr}</span>` : w.ru;
+    b.onclick = () => {
+      if (b.disabled) return;
+      if (side === "he") speak(w.he, { audio: w.audio });
+      if (!pick || pick.side === side) {          // выбрали первую карточку (или передумали)
+        if (pick) pick.b.classList.remove("sel");
+        pick = { b, w, side }; b.classList.add("sel"); return;
+      }
+      if (pick.w === w) {                          // пара!
+        [pick.b, b].forEach(x => { x.classList.remove("sel"); x.classList.add("ok"); x.disabled = true; });
+        playSound("pop"); vibrate("success");
+        pick = null; left--;
+        if (left === 0) setTimeout(() => checkAnswer(document.createElement("button"), !hadError, ex,
+          { ru: "пары", he: "", tr: "" }, hadError ? "Были ошибки в парах — повторим это задание в конце урока" : ""), 400);
+      } else {                                     // не пара
+        hadError = true;
+        [pick.b, b].forEach(x => { x.classList.remove("sel"); x.classList.add("no"); setTimeout(() => x.classList.remove("no"), 500); });
+        playSound("wrong"); vibrate("error");
+        pick = null;
+      }
+    };
+    box.appendChild(b);
+  };
+  shuffle([...pairs]).forEach(w => mk(document.getElementById("mHe"), w, "he"));
+  shuffle([...pairs]).forEach(w => mk(document.getElementById("mRu"), w, "ru"));
+}
+
 // --- 3. Проверяем ответ ---
-function checkAnswer(btn, isRight, ex, word) {
+function checkAnswer(btn, isRight, ex, word, wrongDetail) {
   const all = document.querySelectorAll(".option");
   all.forEach(b => {
     b.disabled = true;
@@ -469,7 +587,7 @@ function checkAnswer(btn, isRight, ex, word) {
     playSound("wrong");
     vibrate("error");
     flashRed();
-    showFeedback(false, "Правильный ответ:", `${word.ru} — ${word.he} (${word.tr})`);
+    showFeedback(false, wrongDetail ? "Не страшно!" : "Правильный ответ:", wrongDetail || `${word.ru} — ${word.he} (${word.tr})`);
     if (WRONG_AUTO) setTimeout(goNext, 2500);
   }
 }

@@ -38,11 +38,11 @@
       "word": 0
     },
     {
-      "type": "choose_translation",
+      "type": "listen",
       "word": 1
     },
     {
-      "type": "choose_translation",
+      "type": "choose_hebrew",
       "word": 2
     },
     {
@@ -50,28 +50,39 @@
       "word": 3
     },
     {
-      "type": "choose_translation",
+      "type": "build_phrase",
+      "phrase": 0
+    },
+    {
+      "type": "listen",
       "word": 4
+    },
+    {
+      "type": "match_pairs"
     },
     {
       "type": "choose_hebrew",
       "word": 0
     },
     {
-      "type": "choose_hebrew",
-      "word": 1
+      "type": "build_phrase",
+      "phrase": 1
     },
     {
-      "type": "choose_hebrew",
+      "type": "listen",
       "word": 2
+    }
+  ],
+  "phrases": [
+    {
+      "he": "לֹא, תּוֹדָה",
+      "tr": "ло, тода",
+      "ru": "Нет, спасибо"
     },
     {
-      "type": "choose_hebrew",
-      "word": 3
-    },
-    {
-      "type": "choose_hebrew",
-      "word": 4
+      "he": "כֵּן, בְּבַקָּשָׁה",
+      "tr": "кен, бевакаша",
+      "ru": "Да, пожалуйста"
     }
   ]
 }

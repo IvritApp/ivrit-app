@@ -658,6 +658,49 @@
   //   st.hide()     → убрать реплику
   //   st.destroy()  → убрать сцену
   // =====================================================
+  // ---------- Крупный план шаурмичной (кадр 360×700, видна нижняя часть) ----------
+  function counterBackSVG() {
+    let tiles = "";
+    for (let y = 300; y < 560; y += 22) tiles += `<path d="M0,${y} L360,${y}" stroke="#f3e2c8" stroke-width="2"/>`;
+    for (let x = 0; x < 360; x += 30) tiles += `<path d="M${x},300 L${x},560" stroke="#f6e8d3" stroke-width="2"/>`;
+    let bands = "";
+    for (let x = 262; x < 330; x += 10) bands += `<rect x="${x}" y="400" width="5" height="130" fill="#e39a5c"/>`;
+    return `<svg class="hs-bg" viewBox="0 0 360 700" width="360" height="700">
+      <defs><clipPath id="hsCone2"><path d="M262,404 L326,404 L312,530 L276,530Z"/></clipPath></defs>
+      <rect width="360" height="700" fill="#fff4e4"/>${tiles}
+      <g filter="url(#hsPaper)">
+        <rect x="20" y="352" width="104" height="96" rx="10" fill="${C.blue}"/>
+        <text x="72" y="378" text-anchor="middle" font-size="17" font-weight="700" fill="#fff" font-family="Arial, 'DejaVu Sans', sans-serif">תַּפְרִיט</text>
+        <path d="M34,394 L110,394 M34,410 L98,410 M34,426 L104,426" stroke="#cfe8fb" stroke-width="5" stroke-linecap="round"/>
+      </g>
+      <rect x="318" y="380" width="12" height="160" rx="4" fill="${C.orange}" class="hs-glow"/>
+      <line x1="294" y1="388" x2="294" y2="545" stroke="#8a97a6" stroke-width="4"/>
+      <path d="M262,404 L326,404 L312,530 L276,530Z" fill="#c8763c"/>
+      <g clip-path="url(#hsCone2)"><g class="hs-spit">${bands}</g></g>
+      <g class="hs-steam" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".9">
+        <path d="M284,392 q-6,-10 0,-20 t0,-20"/><path d="M302,390 q6,-10 0,-20 t0,-20"/></g>
+    </svg>`;
+  }
+  function counterFrontSVG() {
+    let awning = "";
+    const sw = 40;
+    for (let i = 0; i < 9; i++) {
+      const x = i * sw, c = i % 2 ? "#fff" : C.orange;
+      awning += `<rect x="${x}" y="286" width="${sw + .5}" height="26" fill="${c}"/><path d="M${x},311 a${sw / 2},${sw / 2 * .7} 0 0 0 ${sw},0Z" fill="${c}"/>`;
+    }
+    const bowl = (x, c) => `<path d="M${x},560 a22,14 0 0 0 44,0Z" fill="#fff"/><ellipse cx="${x + 22}" cy="560" rx="22" ry="6" fill="${c}"/>`;
+    return `<svg class="hs-abs hs-full" viewBox="0 0 360 700" width="360" height="700" style="left:0;top:0;width:360px;height:700px">
+      <g filter="url(#hsPaper)">
+        <rect x="0" y="556" width="360" height="14" fill="#dbe9f6"/>
+        <rect x="0" y="568" width="360" height="132" fill="#fff"/>
+      </g>
+      <rect x="0" y="606" width="360" height="10" fill="${C.blue}"/>
+      ${bowl(8, C.green)}${bowl(262, "#ff6b5a")}${bowl(308, "#ffd86b")}
+      <rect x="0" y="300" width="12" height="270" fill="#f1e5d1"/><rect x="348" y="300" width="12" height="270" fill="#f1e5d1"/>
+      <g filter="url(#hsPaper)">${awning}</g>
+    </svg>`;
+  }
+
   const VIEW_MIN = 300;                    // сколько «кадра» минимум видно по ширине и высоте
   function createStage(view, opts) {
     opts = opts || {};
@@ -696,16 +739,29 @@
     }
     const fig = (look) => `<div class="hs-fig">${personSVG(look)}</div>`;
 
-    // Фон улицы
-    frame.insertAdjacentHTML("beforeend", bgStreetSky());
-    const far = put(frame, farTile() + farTile(), 0, 0, 1440, 700, "hs-layer");
-    put(frame, bgStreetGround(), 0, 0, 360, 700);
-    const mid = put(frame, midTile() + midTile() + midTile(), 0, 0, 1080, 700, "hs-layer");
-    let dashHTML = ""; for (let i = 0; i < 5; i++) dashHTML += dashTile();
-    const dashes = put(frame, dashHTML, 0, 0, 600, 700, "hs-layer");
-
     const who = {};                        // к кому «привязывать» пузыри
-    if (place === "taxi") {
+    let far, mid, dashes, breadBox = null;
+    if (place !== "counter") {
+      // Фон улицы
+      frame.insertAdjacentHTML("beforeend", bgStreetSky());
+      far = put(frame, farTile() + farTile(), 0, 0, 1440, 700, "hs-layer");
+      put(frame, bgStreetGround(), 0, 0, 360, 700);
+      mid = put(frame, midTile() + midTile() + midTile(), 0, 0, 1080, 700, "hs-layer");
+      let dashHTML = ""; for (let i = 0; i < 5; i++) dashHTML += dashTile();
+      dashes = put(frame, dashHTML, 0, 0, 600, 700, "hs-layer");
+    }
+
+    if (place === "counter") {
+      // КРУПНЫЙ ПЛАН: окно шаурмичной, продавец за прилавком, на прилавке собирается шаурма
+      root.classList.add("hs-counter");
+      frame.insertAdjacentHTML("beforeend", counterBackSVG());
+      who.seller = put(frame, fig(LOOK.seller), 130, 432, 100, 200, "hs-seller");
+      who.sellerHead = who.seller;
+      frame.insertAdjacentHTML("beforeend", counterFrontSVG());
+      breadBox = put(frame, "", 104, 520, 152, 80, "hs-bread");
+      who.me = put(frame, "", 20, 690, 60, 10);
+      who.friend = put(frame, "", 280, 690, 60, 10);
+    } else if (place === "taxi") {
       const loops = [
         far.animate([{ transform: "translateX(0)" }, { transform: "translateX(-720px)" }], { duration: 9000, iterations: Infinity }),
         mid.animate([{ transform: "translateX(0)" }, { transform: "translateX(-360px)" }], { duration: 1800, iterations: Infinity }),
@@ -728,9 +784,12 @@
 
     function fit() {
       const w = view.clientWidth, h = view.clientHeight;
-      const sc = Math.min(w / VIEW_MIN, h / VIEW_MIN);
-      const bottom = place === "taxi" ? H : 628;          // у шаурмичной дорогу внизу не показываем
-      frame.style.transform = `translate(${(w - W * sc) / 2}px, ${Math.min(0, h - bottom * sc)}px) scale(${sc})`;
+      const sc = place === "counter" ? Math.min(w / 300, h / 330) : Math.min(w / VIEW_MIN, h / VIEW_MIN);
+      const bottom = place === "taxi" || place === "counter" ? H : 628;   // у шаурмичной дорогу внизу не показываем
+      const ty = place === "counter" ? -280 * sc + Math.max(0, (h - 420 * sc) / 2)   // крупный план: по центру, лишнее — стена и прилавок
+                                     : Math.min(0, h - bottom * sc);
+      frame.style.transform = `translate(${(w - W * sc) / 2}px, ${ty}px) scale(${sc})`;
+      root.style.setProperty("--split", (ty + 562 * sc) + "px");
     }
     fit();
     window.addEventListener("resize", fit);
@@ -739,9 +798,17 @@
     if (window.ResizeObserver) { ro = new ResizeObserver(() => { fit(); placeBubble(); }); ro.observe(view); }
 
     // Пузырь с репликой (в пикселях экрана, поверх картинки)
-    let bubble = null, bubbleAnchor = null;
+    let bubble = null, bubbleAnchor = null, bubbleTop = false;
     function placeBubble() {
       if (!bubble || !bubbleAnchor) return;
+      if (bubbleTop) {                                  // крупный план: реплика продавца — сверху
+        const vr = view.getBoundingClientRect(), ar = bubbleAnchor.getBoundingClientRect();
+        const cx = ar.left - vr.left + ar.width / 2, bw = bubble.offsetWidth, vw = view.clientWidth;
+        const left = Math.min(Math.max(cx - bw / 2, 8), vw - 8 - bw);
+        bubble.style.left = left + "px"; bubble.style.top = "46px"; bubble.style.bottom = "auto";
+        bubble.style.setProperty("--tx", Math.min(Math.max(cx - left, 18), bw - 18) + "px");
+        return;
+      }
       const b = bubble, anchor = bubbleAnchor;
       const vr = view.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
       const cx = ar.left - vr.left + ar.width / 2;
@@ -754,7 +821,7 @@
     }
     function hide() {
       if (!bubble) return;
-      const b = bubble; bubble = null; bubbleAnchor = null;
+      const b = bubble; bubble = null; bubbleAnchor = null; bubbleTop = false;
       b.classList.remove("show");
       setTimeout(() => b.remove(), 300);
     }
@@ -766,7 +833,7 @@
       b.className = "hs-st-bubble " + speaker;
       b.innerHTML = html;
       root.appendChild(b);
-      bubble = b; bubbleAnchor = anchor;
+      bubble = b; bubbleAnchor = anchor; bubbleTop = place === "counter" && speaker === "seller";
       placeBubble();
       requestAnimationFrame(() => b.classList.add("show"));
       return b;
@@ -778,7 +845,37 @@
       if (ro) ro.disconnect();
       root.remove();
     }
-    return { say, hide, destroy, fit, root };
+    // --- Сборка шаурмы на прилавке (только крупный план) ---
+    let bread = null;
+    function food(it) {
+      if (!breadBox) return;
+      if (it === "pita" || it === "lafa") {
+        breadBox.innerHTML = "";
+        bread = document.createElement("img");
+        bread.className = "hs-bread-base " + it; bread.src = ASSETS + "ing-" + it + ".png";
+        breadBox.appendChild(bread);
+        return;
+      }
+      const n = breadBox.querySelectorAll(".hs-topping").length;
+      const spots = [[38, 18], [72, 12], [56, 30], [26, 32], [88, 28], [46, 8], [66, 22], [34, 22]];
+      const [x, y] = spots[n % spots.length];
+      const im = document.createElement("img");
+      im.className = "hs-topping"; im.src = ASSETS + "ing-" + it + ".png";
+      im.style.left = x + "px"; im.style.top = y + "px";
+      breadBox.appendChild(im);
+      const s = who.seller; s.classList.remove("hs-put"); void s.offsetWidth; s.classList.add("hs-put");
+    }
+    // Заворачивает и протягивает тебе
+    function wrap(img, cb) {
+      if (!breadBox) { if (cb) cb(); return; }
+      breadBox.querySelectorAll(".hs-topping").forEach((t, k) => { t.style.transitionDelay = (k * 60) + "ms"; t.classList.add("in"); });
+      setTimeout(() => {
+        breadBox.innerHTML = `<img class="hs-wrapped" src="${ASSETS}${img}.png" alt="">`;
+      }, 900);
+      setTimeout(() => breadBox.classList.add("give"), 2200);
+      setTimeout(() => { if (cb) cb(); }, 3600);
+    }
+    return { say, hide, destroy, fit, root, food, wrap };
   }
   window.createStage = createStage;
   // Фигура друга (Давид / Циля) для уроков: он задаёт вопросы

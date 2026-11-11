@@ -202,3 +202,25 @@
 .hs-st-bubble .he { font-size: 22px; font-weight: 700; color: #1d4f86; }
 .hs-st-bubble .tr { font-size: 13px; color: #7c8a99; }
 .hs-st-bubble .ru { font-size: 14px; color: #555; margin-top: 2px; }
+
+/* ---------- Крупный план шаурмичной ---------- */
+.hs-stage.hs-counter { background: linear-gradient(#fff4e4 var(--split, 60%), #fff var(--split, 60%)); }
+.hs-counter .hs-stage-frame { animation: hsZoomIn 1.4s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes hsZoomIn { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: none; } }
+.hs-seller > .hs-fig > svg { animation: hsBreath 2.6s ease-in-out infinite alternate; }
+@keyframes hsBreath { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+.hs-seller.hs-put > .hs-fig { animation: hsPut .5s ease; }
+@keyframes hsPut { 40% { transform: translateY(8px) rotate(-3deg); } }
+.hs-bread { z-index: 6; transition: transform 1.3s cubic-bezier(.5,0,.3,1), opacity 1.3s; }
+.hs-bread-base { position: absolute; left: 6px; top: 0; width: 140px; height: 80px; object-fit: fill;
+  animation: hsSlap .5s cubic-bezier(.3,1.5,.5,1) both; }
+.hs-bread-base.pita { left: 26px; width: 100px; }
+@keyframes hsSlap { from { transform: translateY(-60px) scale(.7); opacity: 0; } }
+.hs-topping { position: absolute; width: 44px; height: 44px; object-fit: contain;
+  animation: hsDrop .55s cubic-bezier(.3,1.5,.5,1) both; transition: transform .6s ease-in, opacity .6s; }
+.hs-topping.in { transform: translate(var(--ix, 0), 0) scale(.2); opacity: 0; }
+@keyframes hsDrop { from { transform: translateY(-90px) rotate(-30deg); opacity: 0; } 60% { opacity: 1; } }
+.hs-wrapped { position: absolute; left: 26px; top: -40px; width: 100px; height: 120px; object-fit: contain;
+  animation: hsRoll .8s cubic-bezier(.3,1.4,.5,1) both; }
+@keyframes hsRoll { from { transform: rotate(-90deg) scale(.4); opacity: 0; } }
+.hs-bread.give { transform: translate(0, 150px) scale(2.4); opacity: 0; }
