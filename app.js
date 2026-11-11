@@ -298,6 +298,15 @@ if (!profile) showOnboarding(); else startHomeBird();
 // «Основное обучение» → открыть урок
 document.getElementById("go-learn").onclick = () => showPath();
 
+// Алфавит — отдельный раздел (alphabet.js задаёт window.openAlphabet)
+document.getElementById("go-alphabet").onclick = () => {
+  if (typeof window.openAlphabet !== "function") { showToast("Алфавит загружается… попробуй ещё раз"); return; }
+  stopHomeBird();
+  document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "alphabet");
+  if (tg && tg.BackButton) tg.BackButton.show();
+  window.openAlphabet(document.getElementById("alphabet"));
+};
+
 // Карточки «Скоро» → короткое сообщение
 document.querySelectorAll(".card.soon").forEach(card => {
   card.onclick = () => {
@@ -335,6 +344,8 @@ function showToast(text) {
 // Кнопка «Назад» Telegram (вверху окна) возвращает на главный экран
 // Урок и квест → к дорожке уровня; дорожка → на главный
 if (tg && tg.BackButton) tg.BackButton.onClick(() => {
+  // в алфавите «Назад» сначала обрабатывает сам раздел (например, из урока — к списку уроков)
+  if (!document.getElementById("alphabet").hidden && typeof window.alphabetBack === "function" && window.alphabetBack()) return;
   if (!lessonView.hidden || !document.getElementById("quest").hidden) showPath(); else showHome();
 });
 
