@@ -794,3 +794,20 @@ body.theme-dark .bl-opt { background: #1c2430; border-color: #2e3a4b; }
   background: linear-gradient(135deg, #eaf4fd, #fff6d6); text-align: left; font-size: 15px; animation: popIn .5s ease .4s both; }
 .lvl-done span { color: var(--hint); font-size: 14px; }
 .lvl-badge { font-size: 34px; }
+
+/* ---------- Медали ---------- */
+.p-medals { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 4px 0 10px; }
+.p-medal { flex: 1; min-width: 92px; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; border-radius: 14px;
+  background: var(--soft); opacity: .55; filter: grayscale(.85); }
+.p-medal span { font-size: 26px; }
+.p-medal small { font-size: 11px; color: var(--hint); text-align: center; line-height: 1.2; }
+.p-medal.won { opacity: 1; filter: none; background: #fff6d6; box-shadow: 0 0 0 2px #ffd54a; animation: popIn .5s ease both; }
+.p-medal-note { width: 100%; font-size: 13px; color: var(--hint); }
+.p-lvl-gold { font-size: 13px; color: #b07800; background: #fff3c4; padding: 2px 8px; border-radius: 999px; }
+.p-level-hint { font-size: 12px; color: var(--hint); margin-top: 6px; }
+.lvl-gold { max-width: 380px; margin: 8px auto; padding: 10px 12px; border-radius: 14px; background: linear-gradient(135deg, #fff3c4, #ffe066);
+  color: #6b4b00; font-weight: 700; font-size: 15px; animation: popIn .5s ease .2s both; }
+.h-medals { display: inline-flex; gap: 6px; align-items: center; margin-left: 10px; }
+.h-medal { display: inline-flex; flex-direction: column; align-items: center; font-size: 22px; line-height: 1; }
+.h-medal small { font-size: 10px; color: var(--hint); }
+body.theme-dark .p-medal.won { background: #3a3218; }

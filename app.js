@@ -318,7 +318,11 @@ function showHome() {
 
 function updateToday() {
   const pts = store.get(todayKey(), 0);
-  todayBox.innerHTML = pts > 0 ? `${flameSVG(fireLevel(combo))}<span>Сегодня: <b>${pts}</b> очков</span>` : "";
+  const medals = store.get("medals", {});
+  const icons = { gold: "🥇", silver: "🥈", bronze: "🥉" };
+  const list = Object.keys(medals).map(ch => `<span class="h-medal" title="Глава ${ch}">${icons[medals[ch]]}<small>${ch}</small></span>`).join("");
+  todayBox.innerHTML = (pts > 0 ? `${flameSVG(fireLevel(combo))}<span>Сегодня: <b>${pts}</b> очков</span>` : "") +
+    (list ? `<span class="h-medals">Медали: ${list}</span>` : "");
 }
 
 function showToast(text) {

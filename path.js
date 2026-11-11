@@ -8,6 +8,35 @@ let course = null;
 // ВРЕМЕННО для проверки: все уроки и квест открыты сразу. Потом поставить false.
 const TEST_UNLOCK_ALL = true;
 
+// =====================================================
+// МЕДАЛИ
+// Уровень ЗОЛОТОЙ: все уроки золотые + квест золотой.
+// Медаль главы: 🥇 все уровни золотые, 🥈 золотых на один меньше (4 из 5), 🥉 глава пройдена.
+// Медали видны в профиле (потом — и друзьям, когда будет сервер).
+// =====================================================
+function levelGold(l) {
+  if (!l.lessons || !l.lessons.length) return false;
+  const gold = store.get("perfect", []);
+  return l.lessons.every(id => gold.includes(id)) && store.get("questGold_q-" + l.quest, false);
+}
+function levelDone(l) {
+  if (!l.lessons || !l.lessons.length) return false;
+  return l.lessons.every(id => store.get("done", []).includes(id)) && store.get("quest_q-" + l.quest, false);
+}
+function chapterMedal(ch) {
+  const n = ch.levels.length, g = ch.levels.filter(levelGold).length, d = ch.levels.filter(levelDone).length;
+  if (d < n) return null;
+  return g === n ? "gold" : g >= n - 1 ? "silver" : "bronze";
+}
+const MEDAL = { gold: ["🥇", "Золотая"], silver: ["🥈", "Серебряная"], bronze: ["🥉", "Бронзовая"] };
+function updateMedals() {                       // запоминаем лучшие медали за главы
+  if (!course) return;
+  const m = store.get("medals", {});
+  const rank = { bronze: 1, silver: 2, gold: 3 };
+  course.chapters.forEach(ch => { const md = chapterMedal(ch); if (md && (!m[ch.id] || rank[md] > rank[m[ch.id]])) m[ch.id] = md; });
+  store.set("medals", m);
+}
+
 function doneLessons() { return store.get("done", []); }
 function perfectLessons() { return store.get("perfect", []); }
 function markPerfect(id) { const d = perfectLessons(); if (!d.includes(id)) { d.push(id); store.set("perfect", d); } }
@@ -37,6 +66,10 @@ function autoIntro() {
 function renderPath() {
   const ch = course.chapters[0];                 // пока одна глава — A1
   const lvl = ch.levels[0];
+  updateMedals();
+  const goldLevels = ch.levels.filter(levelGold).length;
+  const myMedal = store.get("medals", {})[ch.id];
+  const isGoldLvl = levelGold(lvl);
   const done = doneLessons();
   const gold = perfectLessons();
   const goldCount = lvl.lessons.filter(id => gold.includes(id)).length;
@@ -64,9 +97,15 @@ function renderPath() {
       <div class="p-ch-badge">${ch.id}</div>
       <div><div class="p-ch-title">${ch.title}</div><div class="p-ch-sub">Уровень 1 из ${ch.levels.length}</div></div>
     </div>
+    <div class="p-medals">
+      ${["gold", "silver", "bronze"].map(k => `<div class="p-medal ${myMedal === k ? "won" : ""}"><span>${MEDAL[k][0]}</span><small>${
+        k === "gold" ? `все ${ch.levels.length} уровней золотые` : k === "silver" ? `${ch.levels.length - 1} из ${ch.levels.length} золотые` : "глава пройдена"}</small></div>`).join("")}
+      <div class="p-medal-note">Золотых уровней: <b>${goldLevels} из ${ch.levels.length}</b></div>
+    </div>
     <div class="p-level">
-      <div class="p-level-title">Уровень 1 · ${lvl.title}</div>
+      <div class="p-level-title">Уровень 1 · ${lvl.title}${isGoldLvl ? ` <span class="p-lvl-gold">🏅 золотой</span>` : ""}</div>
       <div class="p-level-sub">${done.filter(id => lvl.lessons.includes(id)).length} из ${lvl.lessons.length} уроков${goldCount ? ` · <span class="p-gold">★ ${goldCount} золот${goldCount === 1 ? "ой" : "ых"}</span>` : ""}</div>
+      ${isGoldLvl ? "" : `<div class="p-level-hint">Золотой уровень: все уроки ★ золотые + квест без ошибок</div>`}
       <div class="p-level-bar"><div style="width:${done.filter(id => lvl.lessons.includes(id)).length / lvl.lessons.length * 100}%"></div></div>
     </div>
     <button class="p-scene" id="p-taxi">🚕 Сцена: в такси из аэропорта</button>

@@ -266,6 +266,7 @@ function finishQuest() {
       <div class="q-final">
         <img class="q-final-img" src="assets/${finalImg}.png" alt="Шаурма">
         <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный квест! 🏆" : "Квест пройден! 🎉"}</h2>
+        ${lvlInfo && levelGold(lvlInfo) ? `<div class="lvl-gold">🏅 Уровень золотой! Ещё ${course.chapters[0].levels.length - course.chapters[0].levels.filter(levelGold).length} — и золотая медаль главы 🥇</div>` : ""}
         <div class="lvl-done">
           <div class="lvl-badge">🏁</div>
           <div><b>Уровень 1 «Первая шаурма» пройден!</b><br>
