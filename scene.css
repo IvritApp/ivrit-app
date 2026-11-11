@@ -1,0 +1,169 @@
+/* =====================================================
+   КИНО «ПРИЛЁТ» (scene.js). Все классы начинаются с hs-,
+   чтобы не пересекаться со style.css приложения.
+   ===================================================== */
+.hs-root {
+  position: fixed; inset: 0; z-index: 1000;
+  overflow: hidden;
+  background: #e6f3fd;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  animation: hsRootIn .4s ease-out;
+  transition: opacity .35s;
+}
+.hs-root.hs-inside { position: absolute; }
+.hs-root.hs-out { opacity: 0; }
+@keyframes hsRootIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Кадр 360×700, масштабируется под экран из scene.js */
+.hs-frame {
+  position: absolute; left: 50%; top: 50%;
+  width: 360px; height: 700px;
+  overflow: hidden;
+  transform-origin: center;
+}
+/* Лёгкая фактура бумаги поверх всего */
+.hs-frame::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 20;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .35 0 0 0 0 .4 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: .12; mix-blend-mode: multiply;
+}
+
+.hs-scene { position: absolute; inset: 0; opacity: 0; transition: opacity .6s ease; }
+.hs-scene.on { opacity: 1; }
+.hs-bg { position: absolute; left: 0; top: 0; display: block; }
+.hs-abs { position: absolute; }
+.hs-full { left: 0; top: 0; width: 100%; height: 100%; }
+.hs-abs > svg, .hs-fig > svg, .hs-custom > svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.hs-layer { display: flex; will-change: transform; }
+.hs-layer > svg { flex: none; width: auto; height: 700px; }
+.hs-fig { width: 100%; height: 100%; }
+
+/* ---------- Кнопка «Пропустить» ---------- */
+.hs-skip {
+  position: absolute; z-index: 30;
+  top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px;
+  border: none; border-radius: 999px;
+  padding: 9px 16px;
+  font: 600 15px -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #3a8ad6; background: rgba(255, 255, 255, .88);
+  box-shadow: 0 2px 0 rgba(42, 74, 106, .1), 0 4px 14px rgba(58, 138, 214, .2);
+  cursor: pointer;
+}
+.hs-skip:active { transform: scale(.95); }
+
+/* ---------- Подпись «Израиль» ---------- */
+.hs-caption {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  opacity: 0; transform: translateY(10px) scale(.9);
+  transition: opacity .5s, transform .5s cubic-bezier(.3, 1.5, .5, 1);
+  color: #3a8ad6; font-size: 22px; font-weight: 700;
+  text-shadow: 0 2px 0 #fff;
+}
+.hs-caption .hs-he { font-size: 30px; }
+.show > .hs-caption, .hs-abs.show .hs-caption { opacity: 1; transform: none; }
+
+/* ---------- Пузырь с репликой ---------- */
+.hs-bubble {
+  position: absolute; bottom: calc(100% + 12px); left: 0;
+  width: max-content; max-width: 230px;
+  padding: 8px 13px 9px;
+  background: #fff; color: #222;
+  border-radius: 16px;
+  font-size: 15px; line-height: 1.3; text-align: center;
+  box-shadow: 0 2px 0 rgba(42, 74, 106, .1), 0 6px 16px rgba(58, 138, 214, .22);
+  opacity: 0; transform: scale(.5);
+  transform-origin: var(--tx, 50%) 100%;
+  transition: opacity .25s, transform .4s cubic-bezier(.3, 1.6, .5, 1);
+  z-index: 10;
+}
+.hs-bubble.show { opacity: 1; transform: scale(1); }
+.hs-bubble::after {
+  content: ""; position: absolute; top: 100%; left: var(--tx, 50%);
+  margin-left: -8px;
+  border: 8px solid transparent; border-top-color: #fff; border-bottom: 0;
+}
+.hs-who { font-size: 12px; font-weight: 700; color: #3a8ad6; margin-bottom: 1px; }
+.hs-he { font-size: 19px; font-weight: 700; color: #ff8a35; direction: rtl; }
+
+/* ---------- Движения человечков ---------- */
+.hs-person .hs-leg, .hs-person .hs-arm {
+  transform-box: fill-box; transform-origin: 50% 6%;
+  transition: transform .35s ease;
+}
+.walk > svg { animation: hsBob .25s ease-in-out infinite alternate; }
+.walk .hs-leg-l { animation: hsLeg .5s ease-in-out infinite alternate; }
+.walk .hs-leg-r { animation: hsLeg .5s ease-in-out infinite alternate-reverse; }
+.walk .hs-arm-l { animation: hsArm .5s ease-in-out infinite alternate-reverse; }
+.walk .hs-arm-r { animation: hsArm .5s ease-in-out infinite alternate; }
+.wave .hs-arm-r { animation: hsWave .42s ease-in-out infinite alternate; }
+.hug-l .hs-arm-r { transform: rotate(-62deg); }   /* игрок слева тянет руку вправо */
+.hug-r .hs-arm-l { transform: rotate(62deg); }    /* друг справа тянет руку влево */
+.hug-l > svg, .hug-l > .hs-person { transform: rotate(5deg); transition: transform .3s; }
+.hug-r > svg { transform: rotate(-5deg); transition: transform .3s; }
+.hs-custom.walk > svg { animation: hsBob .25s ease-in-out infinite alternate; }
+
+@keyframes hsBob  { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+@keyframes hsLeg  { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+@keyframes hsArm  { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+@keyframes hsWave { from { transform: rotate(-160deg); } to { transform: rotate(-118deg); } }
+
+/* ---------- Чемодан ---------- */
+.hs-bag { z-index: -1; }
+.hs-wheel { transform-box: fill-box; transform-origin: center; }
+.hs-roll .hs-wheel, .hs-moving .hs-wheel { animation: hsSpin .35s linear infinite; }
+.hs-roll > svg { animation: hsBob .25s ease-in-out infinite alternate; }
+@keyframes hsSpin { to { transform: rotate(360deg); } }
+
+/* ---------- Самолёт ---------- */
+.hs-plane { transform-origin: 50% 50%; }
+
+/* ---------- Двери в зале ---------- */
+.hs-door { transition: transform .7s cubic-bezier(.4, 0, .2, 1); }
+.hs-open .hs-door-l { transform: translateX(-56px); }
+.hs-open .hs-door-r { transform: translateX(56px); }
+
+/* ---------- Солнце, пальмы ---------- */
+.hs-rays { animation: hsSpin 40s linear infinite; transform-box: fill-box; transform-origin: center; }
+.hs-frond { transform-box: fill-box; transform-origin: 50% 70%; animation: hsSway 3.2s ease-in-out infinite alternate; }
+@keyframes hsSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+
+/* ---------- Такси ---------- */
+.hs-driving > .hs-abs { animation: hsRumble .3s ease-in-out infinite alternate; }
+@keyframes hsRumble { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+
+/* ---------- Шаурмичная ---------- */
+.hs-spit { animation: hsSpit .9s linear infinite; }
+@keyframes hsSpit { from { transform: translateX(0); } to { transform: translateX(-9px); } }
+.hs-glow { animation: hsGlow 1.2s ease-in-out infinite alternate; }
+@keyframes hsGlow { from { opacity: .65; } to { opacity: 1; } }
+.hs-steam path { animation: hsSteam 1.8s ease-out infinite; }
+.hs-steam path:nth-child(2) { animation-delay: .9s; }
+@keyframes hsSteam {
+  from { transform: translateY(6px); opacity: 0; }
+  40% { opacity: .9; }
+  to { transform: translateY(-10px); opacity: 0; }
+}
+
+/* ---------- Последний кадр ---------- */
+.hs-final-wrap { z-index: 15; pointer-events: none; }
+.hs-final-wrap.show { pointer-events: auto; cursor: pointer; }
+.hs-final {
+  width: 100%; height: 100%; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #fff; border-radius: 28px;
+  box-shadow: 0 3px 0 rgba(42, 74, 106, .1), 0 14px 40px rgba(58, 138, 214, .3);
+  opacity: 0; transform: scale(.6) rotate(-4deg);
+  transition: opacity .3s, transform .55s cubic-bezier(.3, 1.6, .5, 1);
+}
+.hs-final-wrap.show .hs-final { opacity: 1; transform: none; }
+.hs-final img { width: 130px; height: 130px; object-fit: contain; animation: hsFloat 1.6s ease-in-out infinite alternate; }
+.hs-final-small { margin-top: 6px; font-size: 15px; font-weight: 700; color: #ff8a35; text-transform: uppercase; letter-spacing: .08em; }
+.hs-final-big { font-size: 30px; font-weight: 800; color: #3a8ad6; }
+.hs-final-sub { margin-top: 4px; font-size: 16px; color: #8a8a8a; }
+@keyframes hsFloat { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-6px) rotate(3deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-rays, .hs-frond { animation: none; }
+}

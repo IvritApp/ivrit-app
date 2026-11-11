@@ -530,3 +530,48 @@ body {
 .card.quest-card .icon { background: #fff3e6; }
 .card.quest-card .icon img { width: 34px; height: 34px; object-fit: contain; }
 .badge.new { background: #e6f6dd; color: #3e8a1e; }
+
+/* =====================================================
+   ДОРОЖКА УРОВНЯ
+   ===================================================== */
+#path { max-width: 460px; margin: 0 auto; padding-bottom: 40px; }
+.p-chapter { display: flex; align-items: center; gap: 12px; text-align: left; margin: 4px 0 12px; }
+.p-ch-badge { width: 52px; height: 52px; border-radius: 16px; background: var(--blue); color: #fff; font-weight: 800; font-size: 20px;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 var(--blue-dark); }
+.p-ch-title { font-size: 20px; font-weight: 800; }
+.p-ch-sub { font-size: 14px; color: var(--hint); }
+.p-level { background: var(--soft); border-radius: 18px; padding: 14px; text-align: left; }
+.p-level-title { font-size: 18px; font-weight: 800; }
+.p-level-sub { font-size: 13px; color: var(--hint); margin: 2px 0 8px; }
+.p-level-bar { height: 10px; border-radius: 5px; background: #d9e8f8; overflow: hidden; }
+.p-level-bar div { height: 100%; background: linear-gradient(90deg, var(--blue), #7cc0ff); border-radius: 5px; transition: width .5s; }
+.p-scene { margin: 14px auto 6px; display: block; border: 2px dashed #bcd8f5; background: none; color: var(--blue-dark);
+  border-radius: 14px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.p-track { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 44px 0 18px; }
+.p-node-wrap { display: flex; flex-direction: column; align-items: center; position: relative; }
+.p-node { width: 72px; height: 72px; border-radius: 50%; border: none; font-size: 26px; font-weight: 800; cursor: pointer;
+  color: #fff; transition: transform .12s; }
+.p-node:active { transform: translateY(3px); }
+.p-node.done { animation: none; margin: 0; font-size: 26px; background: #58cc02; box-shadow: 0 6px 0 #46a302; }
+.p-node.current { background: var(--blue); box-shadow: 0 6px 0 var(--blue-dark), 0 0 0 8px rgba(90,169,240,.25);
+  animation: nodePulse 1.6s ease-in-out infinite; }
+@keyframes nodePulse { 50% { box-shadow: 0 6px 0 var(--blue-dark), 0 0 0 14px rgba(90,169,240,.12); } }
+.p-node.locked { background: #dfe6ee; box-shadow: 0 6px 0 #c7d0da; color: #8a96a3; font-size: 22px; }
+.p-label { font-size: 13px; color: var(--hint); margin-top: 8px; }
+.p-start { position: absolute; top: -34px; background: #fff; color: var(--blue-dark); font-weight: 800; font-size: 13px;
+  padding: 5px 10px; border-radius: 10px; box-shadow: 0 3px 10px rgba(30,60,110,.15); animation: float 2s ease-in-out infinite; white-space: nowrap; }
+.p-quest { display: flex; align-items: center; gap: 14px; width: 100%; margin: 10px 0 18px; padding: 16px; border-radius: 22px; cursor: pointer;
+  text-align: left; font-size: 15px; border: none; color: #fff; background: linear-gradient(135deg, #ff9f43, #ff7a1a); box-shadow: 0 6px 0 #d9600c; }
+.p-quest img { width: 64px; height: 64px; object-fit: contain; }
+.p-quest b { font-size: 18px; }
+.p-quest.locked { background: #eef1f5; color: #8a96a3; box-shadow: 0 6px 0 #d5dbe2; }
+.p-quest.locked img { filter: grayscale(1); opacity: .5; }
+.p-quest.open { animation: nodePulse2 1.6s ease-in-out infinite; }
+@keyframes nodePulse2 { 50% { transform: scale(1.02); } }
+.p-quest.done { animation: none; margin: 10px 0 18px; font-size: 15px; background: linear-gradient(135deg, #7ad94a, #58cc02); box-shadow: 0 6px 0 #46a302; }
+.p-soon { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; margin: 8px 0; border-radius: 16px;
+  background: var(--soft); color: var(--hint); font-size: 15px; text-align: left; }
+.p-soon span { font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.p-soon.exam { background: #fff3e6; color: #b85f0c; }
+.unlock { margin: 12px auto 4px; max-width: 380px; padding: 12px; border-radius: 16px; background: #fff3e6; color: #b85f0c; font-size: 15px; animation: popIn .5s ease 1.5s both; }
+.p-node-wrap.cur { margin-top: 22px; }

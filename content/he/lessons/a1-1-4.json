@@ -1,0 +1,92 @@
+{
+  "id": "a1-1-4",
+  "level": "A1",
+  "title": "Шаурмичная",
+  "status": "черновик — проверить у знатока",
+  "exam": false,
+  "words": [
+    {
+      "he": "שווארמה",
+      "tr": "шаварма",
+      "ru": "шаурма"
+    },
+    {
+      "he": "פִּיתָה",
+      "tr": "пита",
+      "ru": "пита"
+    },
+    {
+      "he": "לָאפָה",
+      "tr": "лафа",
+      "ru": "лафа"
+    },
+    {
+      "he": "עִם",
+      "tr": "им",
+      "ru": "с"
+    },
+    {
+      "he": "בְּלִי",
+      "tr": "бли",
+      "ru": "без"
+    },
+    {
+      "he": "{m:רוֹצֶה}{f:רוֹצָה}",
+      "tr": "{m:роцэ}{f:роца}",
+      "ru": "хочу"
+    },
+    {
+      "he": "כֵּן",
+      "tr": "кен",
+      "ru": "да"
+    },
+    {
+      "he": "תּוֹדָה",
+      "tr": "тода",
+      "ru": "спасибо"
+    }
+  ],
+  "newCount": 5,
+  "exercises": [
+    {
+      "type": "choose_translation",
+      "word": 0
+    },
+    {
+      "type": "choose_translation",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 2
+    },
+    {
+      "type": "choose_translation",
+      "word": 3
+    },
+    {
+      "type": "choose_translation",
+      "word": 4
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 0
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 5
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 6
+    },
+    {
+      "type": "choose_translation",
+      "word": 7
+    }
+  ]
+}

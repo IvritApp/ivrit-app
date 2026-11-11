@@ -64,15 +64,6 @@
         <span class="arrow">›</span>
       </button>
 
-      <button class="card quest-card" id="go-quest">
-        <span class="icon"><img src="assets/gift-shawarma.png" alt=""></span>
-        <span class="text">
-          <span class="name">Квест: Первая шаурма</span>
-          <span class="desc">Закажи шаурму на иврите</span>
-        </span>
-        <span class="badge new">Новое</span>
-      </button>
-
       <button class="card soon" data-soon="Алфавит">
         <span class="icon">אב</span>
         <span class="text">
@@ -103,7 +94,10 @@
     <main id="screen">Загрузка…</main>
   </section>
 
-  <!-- ===== КВЕСТ (сюжетная сцена) ===== -->
+  <!-- ===== ДОРОЖКА УРОВНЯ (основное обучение) ===== -->
+  <section id="path" hidden></section>
+
+  <!-- ===== КВЕСТ / СЦЕНА ===== -->
   <section id="quest" hidden></section>
 
   <!-- Красная вспышка по краям экрана при ошибке -->
@@ -119,5 +113,6 @@
   <script src="avatar.js"></script>
   <script src="app.js"></script>
   <script src="quest.js"></script>
+  <script src="path.js"></script>
 </body>
 </html>

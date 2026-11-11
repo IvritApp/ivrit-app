@@ -6,7 +6,6 @@
 
 // --- Настройки (можно менять, ничего не ломая) ---
 const COURSE_LANG   = "he";     // язык курса: he = иврит. Новый язык = новая папка content/<код>/
-const LESSON_ID     = "a1-01";  // какой урок открыть
 const AUTO_NEXT_MS  = 1100;     // через сколько миллисекунд после ВЕРНОГО ответа идти дальше (1000 = 1 сек)
 const WRONG_AUTO    = false;    // true = после ошибки тоже идти дальше само, false = кнопка «Понятно»
 const SOUND_ON      = true;     // звуки вкл/выкл
@@ -85,6 +84,14 @@ const STORY = {
   f: { friend: "Циля", who: "твоя бывшая одноклассница Циля", met: "Она", ready: { he: "אני מוכנה", tr: "ани мухана", ru: "я готова" } }
 };
 const onboardView = document.getElementById("onboarding");
+
+// Подставить форму для парня / девушки: «голод{m:ен}{f:на}» → «голоден» или «голодна»
+function g(t) {
+  if (!t) return t;
+  const male = !profile || profile.gender !== "f";
+  return t.replace(/\{m:([^}]*)\}/g, male ? "$1" : "").replace(/\{f:([^}]*)\}/g, male ? "" : "$1");
+}
+function friendName() { return profile && profile.gender === "f" ? "Циля" : "Давид"; }
 const obStep = document.getElementById("ob-step");
 
 function setGreeting() {
@@ -169,7 +176,6 @@ function showOnboarding() {
 
 updateToday();
 document.getElementById("reset-profile").onclick = showOnboarding;
-document.getElementById("go-quest").onclick = () => startQuest("shawarma");
 
 // «Мой герой» — открыть конструктор аватара
 function myAvatar() { return (profile && profile.avatar) || HirbisAvatar.defaults(profile ? profile.gender : "m"); }
@@ -251,7 +257,7 @@ setGreeting();
 if (!profile) showOnboarding(); else startHomeBird();
 
 // «Основное обучение» → открыть урок
-document.getElementById("go-learn").onclick = startLesson;
+document.getElementById("go-learn").onclick = () => showPath();
 
 // Карточки «Скоро» → короткое сообщение
 document.querySelectorAll(".card.soon").forEach(card => {
@@ -263,9 +269,7 @@ document.querySelectorAll(".card.soon").forEach(card => {
 
 function showHome() {
   hideFeedback();
-  lessonView.hidden = true;
-  if (typeof questView !== "undefined") questView.hidden = true;
-  homeView.hidden = false;
+  document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "home");
   homeView.classList.remove("slide-in"); void homeView.offsetWidth; homeView.classList.add("slide-in");
   if (tg && tg.BackButton) tg.BackButton.hide();
   updateToday();
@@ -285,17 +289,19 @@ function showToast(text) {
 }
 
 // Кнопка «Назад» Telegram (вверху окна) возвращает на главный экран
-if (tg && tg.BackButton) tg.BackButton.onClick(showHome);
+// Урок и квест → к дорожке уровня; дорожка → на главный
+if (tg && tg.BackButton) tg.BackButton.onClick(() => {
+  if (!lessonView.hidden || !document.getElementById("quest").hidden) showPath(); else showHome();
+});
 
 // =====================================================
 // УРОК
 // =====================================================
 
 // --- 1. Загружаем урок из файла и начинаем ---
-function startLesson() {
+function startLesson(id) {
   stopHomeBird();
-  homeView.hidden = true;
-  lessonView.hidden = false;
+  document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "lesson");
   if (tg && tg.BackButton) tg.BackButton.show();
   step = 0; mistakes = 0; lessonPoints = 0;
   combo = 0; store.set("combo", 0);      // каждый урок — новая серия
@@ -303,9 +309,12 @@ function startLesson() {
   updateCombo(false);
   screen.textContent = "Загрузка…";
 
-  fetch(`content/${COURSE_LANG}/lessons/${LESSON_ID}.json`)
+  fetch(`content/${COURSE_LANG}/lessons/${id}.json`)
     .then(response => response.json())
     .then(data => {
+      // слова и названия — в форме игрока (парень / девушка)
+      data.title = g(data.title);
+      data.words = data.words.map(w => Object.assign({}, w, { he: g(w.he), tr: g(w.tr), ru: g(w.ru) }));
       lesson = data;
       queue = shuffle([...lesson.exercises]);
       showStep();
@@ -352,8 +361,8 @@ function showChooseTranslation(ex) {
     <div id="options"></div>
   `;
 
-  document.getElementById("listen").onclick = () => speak(word.he);
-  speak(word.he);
+  document.getElementById("listen").onclick = () => speak(word.he, { audio: word.audio });
+  speak(word.he, { audio: word.audio });
 
   const box = document.getElementById("options");
   options.forEach(opt => {
@@ -383,7 +392,7 @@ function showChooseHebrew(ex) {
     btn.className = "option he-option";
     btn.innerHTML = `<span class="he" dir="rtl">${opt.he}</span><span class="tr">${opt.tr}</span>`;
     if (opt === word) btn.dataset.right = "1";
-    btn.onclick = () => { speak(opt.he); checkAnswer(btn, opt === word, ex, word); };
+    btn.onclick = () => { speak(opt.he, { audio: opt.audio }); checkAnswer(btn, opt === word, ex, word); };
     box.appendChild(btn);
   });
 }
@@ -497,6 +506,9 @@ function flashRed() {
 // --- 4. Конец урока ---
 function showFinish() {
   bar.style.width = "100%";
+  markDone(lesson.id);
+  const lvl = course && course.chapters[0].levels[0];
+  const left = lvl ? lvl.lessons.filter(id => !doneLessons().includes(id)).length : 1;
   vibrate("success");
   screen.innerHTML = `
     <div class="finish">
@@ -529,8 +541,9 @@ function showFinish() {
       <!-- Бонус: сленговое выражение -->
       <div class="bonus" id="bonus"></div>
 
-      <button class="btn blue" onclick="startLesson()">Пройти ещё раз</button>
-      <button class="btn ghost" onclick="showHome()">На главную</button>
+      ${left === 0 ? `<div class="unlock">🌯 Все 7 уроков пройдены — <b>квест «Первая шаурма» открыт!</b></div>` : ""}
+      <button class="btn blue" onclick="showPath()">Дальше</button>
+      <button class="btn ghost" onclick="startLesson('${lesson.id}')">Пройти ещё раз</button>
     </div>
   `;
   screen.classList.remove("slide-out");
@@ -568,8 +581,22 @@ function shuffle(list) {                    // перемешать (как rand
 function random(list) { return list[Math.floor(Math.random() * list.length)]; }
 
 // Произнести слово голосом устройства (временно, пока нет настоящей озвучки)
-function speak(text) {
-  if (!("speechSynthesis" in window)) return;
+// ОЗВУЧКА. Сейчас — голос устройства. Место под настоящие голоса уже готово:
+// если у слова/реплики в файле данных есть поле "audio" (например "audio": "seller/hello.mp3"),
+// играется файл content/<язык>/audio/<путь>. Голос персонажа задаётся полем "voice" (seller, david, tsilya, hibri…).
+let currentAudio = null;
+function speak(text, opts) {
+  const audio = opts && opts.audio;
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (audio) {
+    currentAudio = new Audio(`content/${COURSE_LANG}/audio/${audio}`);
+    currentAudio.play().catch(() => ttsFallback(text));      // файла нет — говорит устройство
+    return;
+  }
+  ttsFallback(text);
+}
+function ttsFallback(text) {
+  if (!("speechSynthesis" in window) || !text) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "he-IL";
   speechSynthesis.cancel();

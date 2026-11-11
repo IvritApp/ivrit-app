@@ -1,0 +1,92 @@
+{
+  "id": "a1-1-3",
+  "level": "A1",
+  "title": "Ты голод{m:ен}{f:на}?",
+  "status": "черновик — проверить у знатока",
+  "exam": false,
+  "words": [
+    {
+      "he": "{m:רָעֵב}{f:רְעֵבָה}",
+      "tr": "{m:раэв}{f:реэва}",
+      "ru": "голод{m:ен}{f:на}"
+    },
+    {
+      "he": "מְאוֹד",
+      "tr": "меод",
+      "ru": "очень"
+    },
+    {
+      "he": "{m:אוֹכֵל}{f:אוֹכֶלֶת}",
+      "tr": "{m:охель}{f:охелет}",
+      "ru": "ем"
+    },
+    {
+      "he": "{m:שׁוֹתֶה}{f:שׁוֹתָה}",
+      "tr": "{m:шотэ}{f:шота}",
+      "ru": "пью"
+    },
+    {
+      "he": "מַיִם",
+      "tr": "маим",
+      "ru": "вода"
+    },
+    {
+      "he": "אֲנִי",
+      "tr": "ани",
+      "ru": "я"
+    },
+    {
+      "he": "שָׁלוֹם",
+      "tr": "шалом",
+      "ru": "привет"
+    },
+    {
+      "he": "תּוֹדָה",
+      "tr": "тода",
+      "ru": "спасибо"
+    }
+  ],
+  "newCount": 5,
+  "exercises": [
+    {
+      "type": "choose_translation",
+      "word": 0
+    },
+    {
+      "type": "choose_translation",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 2
+    },
+    {
+      "type": "choose_translation",
+      "word": 3
+    },
+    {
+      "type": "choose_translation",
+      "word": 4
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 0
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 5
+    },
+    {
+      "type": "choose_translation",
+      "word": 6
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 7
+    }
+  ]
+}

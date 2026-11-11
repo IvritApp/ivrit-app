@@ -1,0 +1,92 @@
+{
+  "id": "a1-1-2",
+  "level": "A1",
+  "title": "Я хочу",
+  "status": "черновик — проверить у знатока",
+  "exam": false,
+  "words": [
+    {
+      "he": "אֲנִי",
+      "tr": "ани",
+      "ru": "я"
+    },
+    {
+      "he": "{m:רוֹצֶה}{f:רוֹצָה}",
+      "tr": "{m:роцэ}{f:роца}",
+      "ru": "хочу"
+    },
+    {
+      "he": "{m:אַתָּה}{f:אַתְּ}",
+      "tr": "{m:ата}{f:ат}",
+      "ru": "ты"
+    },
+    {
+      "he": "מָה",
+      "tr": "ма",
+      "ru": "что"
+    },
+    {
+      "he": "זֶה",
+      "tr": "зэ",
+      "ru": "это"
+    },
+    {
+      "he": "לֹא",
+      "tr": "ло",
+      "ru": "нет"
+    },
+    {
+      "he": "כֵּן",
+      "tr": "кен",
+      "ru": "да"
+    },
+    {
+      "he": "תּוֹדָה",
+      "tr": "тода",
+      "ru": "спасибо"
+    }
+  ],
+  "newCount": 5,
+  "exercises": [
+    {
+      "type": "choose_translation",
+      "word": 0
+    },
+    {
+      "type": "choose_translation",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 2
+    },
+    {
+      "type": "choose_translation",
+      "word": 3
+    },
+    {
+      "type": "choose_translation",
+      "word": 4
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 0
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 5
+    },
+    {
+      "type": "choose_translation",
+      "word": 6
+    },
+    {
+      "type": "choose_translation",
+      "word": 7
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "id": "a1-1-7",
+  "level": "A1",
+  "title": "Сколько стоит?",
+  "status": "черновик — проверить у знатока",
+  "exam": false,
+  "words": [
+    {
+      "he": "כַּמָּה",
+      "tr": "кама",
+      "ru": "сколько"
+    },
+    {
+      "he": "שֶׁקֶל",
+      "tr": "шекель",
+      "ru": "шекель"
+    },
+    {
+      "he": "אַרְבָּעִים",
+      "tr": "арбаим",
+      "ru": "сорок"
+    },
+    {
+      "he": "חֲמִשָּׁה",
+      "tr": "хамиша",
+      "ru": "пять"
+    },
+    {
+      "he": "הִנֵּה",
+      "tr": "hинэ",
+      "ru": "вот (держи)"
+    },
+    {
+      "he": "בְּתֵאָבוֹן",
+      "tr": "бэ-тэавон",
+      "ru": "приятного аппетита"
+    },
+    {
+      "he": "בְּבַקָּשָׁה",
+      "tr": "бевакаша",
+      "ru": "пожалуйста"
+    },
+    {
+      "he": "לָאפָה",
+      "tr": "лафа",
+      "ru": "лафа"
+    },
+    {
+      "he": "תּוֹדָה",
+      "tr": "тода",
+      "ru": "спасибо"
+    }
+  ],
+  "newCount": 6,
+  "exercises": [
+    {
+      "type": "choose_translation",
+      "word": 0
+    },
+    {
+      "type": "choose_translation",
+      "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 2
+    },
+    {
+      "type": "choose_translation",
+      "word": 3
+    },
+    {
+      "type": "choose_translation",
+      "word": 4
+    },
+    {
+      "type": "choose_translation",
+      "word": 5
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 0
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 6
+    },
+    {
+      "type": "choose_translation",
+      "word": 7
+    },
+    {
+      "type": "choose_translation",
+      "word": 8
+    }
+  ]
+}
