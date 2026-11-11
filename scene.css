@@ -246,3 +246,64 @@
 .hs-shave { z-index: 6; opacity: 0; animation: hsShave .8s ease-in both; }
 @keyframes hsShave { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 20% { opacity: 1; }
   100% { opacity: 0; transform: translate(-10px, 90px) rotate(60deg); } }
+/* Маколет */
+.hs-stage.hs-makolet { background: linear-gradient(#eaf4ec var(--split, 60%), #fff var(--split, 60%)); }
+.hs-goods .hs-wrapped { left: 60px; top: -70px; }
+
+/* ===== Маколет: магазин, по которому ходишь (store.js) ===== */
+.hs-stage.mk-stage { background: linear-gradient(#f3ede2 0, #f3ede2 30%, #efe4cf 31%, #e2d3b8 100%); touch-action: pan-y; }
+.mk-world { position: absolute; left: 0; top: 0; width: 1080px; height: 440px; transform-origin: 0 0; transition: transform .75s cubic-bezier(.45, .05, .3, 1); }
+.mk-world-svg, .mk-over { position: absolute; left: 0; top: 0; }
+.mk-over { pointer-events: none; z-index: 3; }
+.mk-seller { position: absolute; left: 520px; top: 116px; width: 120px; height: 240px; z-index: 2; transform-origin: 50% 100%;
+  animation: mkBreath 2.4s ease-in-out infinite alternate; }
+.mk-seller > svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.mk-seller.wave .hs-arm-r { animation: hsWave .42s ease-in-out infinite alternate; }
+.mk-seller.talk { animation: mkTalk .38s ease-in-out infinite alternate; }
+.mk-seller.mk-scan .hs-arm-l { animation: mkScan .45s ease 2 alternate; }
+@keyframes mkBreath { from { transform: translateY(0); } to { transform: translateY(-2px) scaleY(1.01); } }
+@keyframes mkTalk { from { transform: rotate(-1.2deg); } to { transform: rotate(1.4deg) translateY(-2px); } }
+@keyframes mkScan { to { transform: rotate(45deg); } }
+.mk-spot { cursor: pointer; }
+.mk-spot .mk-units { transform-box: fill-box; transform-origin: center; }
+.mk-spot .mk-units > svg.gone { opacity: 0; transition: opacity .2s; }
+.mk-spot.mk-no .mk-units { animation: mkNo .45s; }
+@keyframes mkNo { 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+.mk-goods { position: absolute; left: 0; top: 0; width: 1080px; height: 440px; z-index: 4; pointer-events: none; transform-origin: 575px 240px;
+  transition: transform 1.3s cubic-bezier(.5, 0, .3, 1), opacity 1.3s; }
+.mk-good { position: absolute; transition: transform .6s ease-in, opacity .6s; }
+.mk-good > svg { display: block; overflow: visible; }
+.mk-good.in { transform: translate(var(--ix, 0), 0) scale(.2); opacity: 0; }
+.mk-bagfull { position: absolute; left: 535px; top: 172px; width: 80px; height: 94px; object-fit: contain; animation: hsDrop .6s ease both; }
+.mk-goods.give { transform: translateY(220px) scale(1.5); opacity: 0; }
+.mk-basket { position: absolute; z-index: 22; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 4px; padding: 6px 12px;
+  background: #fff; border-radius: 16px; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+.mk-basket b { font-size: 17px; color: #2c6b3f; }
+.mk-basket.bump { animation: mkBump .35s ease; }
+@keyframes mkBump { 50% { transform: scale(1.25); } }
+.mk-anchor { position: absolute; bottom: 0; width: 60px; height: 4px; }
+.mk-anchor.me { left: 20px; } .mk-anchor.fr { right: 20px; }
+.mk-fly { position: absolute; z-index: 23; pointer-events: none; }
+.mk-fly > svg { display: block; overflow: visible; }
+.mk-intro { position: absolute; left: 0; top: 0; width: 360px; height: 440px; transform-origin: 0 0; z-index: 30; box-shadow: 0 -2000px 0 2000px #bfe0f5; }
+.mk-intro.walk { box-shadow: none; }
+.mk-intro > svg { display: block; transition: transform 1.3s ease-in, opacity 1.3s ease-in; transform-origin: 50% 64%; }
+.mk-intro .mk-door-l, .mk-intro .mk-door-r { transition: transform .8s ease; }
+.mk-intro.open .mk-door-l { transform: translateX(-62px); }
+.mk-intro.open .mk-door-r { transform: translateX(62px); }
+.mk-intro.walk > svg { transform: scale(3.4); opacity: 0; }
+
+/* Панель: список покупок и «налево / направо» */
+.mk-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 2px 0 8px; }
+.mk-chip { border: 2px solid #d9e6f2; background: #fff; border-radius: 14px; padding: 5px 10px; font: inherit; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+.mk-chip .he { font-size: 19px; font-weight: 700; color: #1d4f86; }
+.mk-chip .tr { font-size: 11px; color: #7c8a99; }
+.mk-chip.got { border-color: #7fcf95; background: #e3f7e8; }
+.mk-chip.got .he { color: #2c7a45; text-decoration: line-through; text-decoration-thickness: 2px; }
+.mk-chip.got::after { content: "✓"; color: #2c7a45; font-weight: 700; font-size: 12px; }
+.mk-nav { display: flex; gap: 8px; }
+.mk-nav button { flex: 1; margin: 0; }
+.mk-nav button:disabled { opacity: .4; }
+.mk-where { text-align: center; font-size: 13px; color: #7c8a99; margin: 2px 0 4px; }
+body.theme-dark .mk-chip { background: #1c2430; border-color: #2c3a4c; }

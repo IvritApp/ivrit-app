@@ -46,6 +46,7 @@
     playerM: { skin: "#f1c9a8", hair: "short", hairC: "#6b4a32", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
     playerF: { skin: "#f1c9a8", hair: "long", hairC: "#5a3a26", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
     seller: { skin: "#e8b48c", hair: "short", hairC: "#2b211c", top: "#ffffff", bottom: "#ffffff", shoes: C.ink, hat: "chef", beard: true },
+    grocer: { skin: "#d9a27a", hair: "short", hairC: "#4a3a2e", top: "#3f8f5a", bottom: "#2f3b52", shoes: C.ink, hat: "kippa", beard: true },
     driver: { skin: "#eabd98", hair: "short", hairC: "#444", top: "#8fa8c8", bottom: "#34405e", shoes: C.ink, hat: "cap" }
   };
 
@@ -206,6 +207,7 @@
     let hat = "";
     if (o.hat === "chef") hat = `<path d="M30,34 Q18,16 34,12 Q38,0 52,4 Q66,-2 70,12 Q84,16 70,34Z" fill="#fff"/><rect x="29" y="28" width="42" height="9" rx="3" fill="#eef4fa"/>`;
     if (o.hat === "cap") hat = `<path d="M27,36 Q28,16 50,16 Q72,16 73,36Z" fill="${C.blueD}"/><rect x="60" y="32" width="24" height="5" rx="2.5" fill="${C.blueD}"/>`;
+    if (o.hat === "kippa") hat = `<path d="M37,21 Q50,9 63,21 Q50,17 37,21Z" fill="#2f3b52"/>`;
     const beard = o.beard ? `<path d="M32,52 Q34,72 50,72 Q66,72 68,52 Q60,62 50,62 Q40,62 32,52Z" fill="${o.hairC}"/>` : "";
     return `<svg viewBox="0 0 100 200" class="hs-person" overflow="visible">
       ${backHair}
@@ -873,6 +875,90 @@
     </svg>`;
   }
 
+
+  // ---------- Маколет (мини-маркет у дома): полки, касса, продукты ----------
+  // Продукт в коробке 40×30 (рисуется в любом размере w)
+  function goodSVG(kind, w) {
+    const h = Math.round(w * .75);
+    const P = {
+      bread: `<path d="M3,24 Q2,10 14,8 Q20,4 27,8 Q38,10 37,24Z" fill="#d99a4e"/><path d="M6,14 Q20,6 34,14" stroke="#e8b26a" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <path d="M12,10 l3,6 M19,8 l3,6 M26,9 l3,6" stroke="#b9772f" stroke-width="2" stroke-linecap="round"/><rect x="3" y="22" width="34" height="3" rx="1.5" fill="#c98a3e"/>`,
+      milk: `<rect x="17" y="0" width="6" height="3" rx="1" fill="${C.blue}"/><path d="M17.5,3 L22.5,3 L22.5,7 Q27,9 27,13 L27,28 Q27,30 25,30 L15,30 Q13,30 13,28 L13,13 Q13,9 17.5,7Z" fill="#fff" stroke="#c9dcec" stroke-width="1"/>
+             <rect x="13.5" y="15" width="13" height="9" fill="${C.blue}"/><text x="20" y="22" text-anchor="middle" font-size="6.2" font-weight="700" fill="#fff" font-family="Arial, sans-serif">חלב</text>
+             <path d="M15.5,11 L15.5,13" stroke="#e3eef8" stroke-width="1.2" stroke-linecap="round"/>`,
+      cheese: `<path d="M4,25 L36,25 L36,13 L10,8Z" fill="#ffd35a"/><path d="M4,25 L36,25 L36,13 L4,25Z" fill="#f5c242"/>
+               <circle cx="15" cy="15" r="2" fill="#e8b23a"/><circle cx="26" cy="19" r="2.5" fill="#e8b23a"/><circle cx="31" cy="15" r="1.4" fill="#e8b23a"/>`,
+      eggs: `<path d="M4,6 L36,6 L34,15 L6,15Z" fill="#d9c7ad"/><rect x="2" y="15" width="36" height="13" rx="2" fill="#c9b49a"/>
+             <path d="M2,21.5 L38,21.5" stroke="#b39d82" stroke-width="1"/>
+             <ellipse cx="9" cy="14.5" rx="4.2" ry="5" fill="#fff7ea"/><ellipse cx="20" cy="14" rx="4.2" ry="5" fill="#fbeedc"/><ellipse cx="31" cy="14.5" rx="4.2" ry="5" fill="#fff7ea"/>
+             <ellipse cx="7.5" cy="12.5" rx="1.2" ry="1.6" fill="#fff"/><ellipse cx="18.5" cy="12" rx="1.2" ry="1.6" fill="#fff"/><ellipse cx="29.5" cy="12.5" rx="1.2" ry="1.6" fill="#fff"/>
+             <circle cx="9" cy="25" r="1.4" fill="#b39d82"/><circle cx="20" cy="25" r="1.4" fill="#b39d82"/><circle cx="31" cy="25" r="1.4" fill="#b39d82"/>`,
+      tomatoes: `<circle cx="11" cy="20" r="7" fill="#e5483d"/><circle cx="27" cy="20" r="7" fill="#ef5a4a"/><circle cx="19" cy="13" r="6.5" fill="#e04237"/>
+                 <path d="M19,6.5 l-3,-1 M19,6.5 l3,-1 M19,6.5 l0,-2.5 M11,13 l-2.5,-1 M11,13 l2.5,-1 M27,13 l-2.5,-1 M27,13 l2.5,-1" stroke="#3f8f4c" stroke-width="1.6" stroke-linecap="round"/>
+                 <ellipse cx="8.5" cy="18" rx="1.6" ry="1" fill="#ff9a8f"/><ellipse cx="24.5" cy="18" rx="1.6" ry="1" fill="#ff9a8f"/>`,
+      cucumbers: `<path d="M4,15 Q4,11 9,11 L32,9 Q36,9 36,12.5 Q36,16 32,16 L9,18 Q4,18 4,15Z" fill="#2f7d3c"/>
+                  <path d="M6,23 Q6,19 11,19 L33,19 Q37,19 37,22.5 Q37,26 33,26 L11,27 Q6,27 6,23Z" fill="#3a8f47"/>
+                  <path d="M9,13 L32,11.5 M11,21.5 L33,21" stroke="#5fb06b" stroke-width="1" stroke-linecap="round"/>
+                  ${[[8,14],[11,12.5],[13,15.5],[16,13],[19,15],[21,12],[24,14.2],[27,11.6],[29,13.8],[32,12],[10,24],[13,21],[15,25],[18,22.5],[21,24.5],[23,21],[26,23.8],[29,21.2],[31,24],[34,22]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".45" fill="#e6f5e8"/>`).join("")}`,
+      apples: `<circle cx="11" cy="20" r="7" fill="#9ccc4a"/><circle cx="27" cy="20" r="7" fill="#8cc23e"/><circle cx="19" cy="13" r="6.8" fill="#a6d453"/>
+               <path d="M19,6.5 q0.5,-3 2.5,-4.5" stroke="#7a5233" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M21,4 q4,-2 6,1 q-4,2 -6,-1Z" fill="#3f8f4c"/>
+               <ellipse cx="16.5" cy="10.5" rx="1.6" ry="1.1" fill="#d9f0a8"/><ellipse cx="8.5" cy="18" rx="1.6" ry="1.1" fill="#d9f0a8"/><ellipse cx="24.5" cy="18" rx="1.6" ry="1.1" fill="#d9f0a8"/>`,
+      bananas: `<path d="M8,6 Q6,22 22,26 Q32,27 36,20 Q24,24 15,17 Q11,12 11,6Z" fill="#ffd35a"/>
+                <path d="M11,6 Q11,18 22,21 Q30,22 35,15 Q24,18 17,12 Q14,9 14,6Z" fill="#ffe07a"/>
+                <path d="M14,6 Q15,14 23,16 Q30,16 33,10 Q24,13 19,9 Q17,7.5 17,6Z" fill="#ffe993"/>
+                <rect x="8" y="3" width="9" height="4" rx="1.5" fill="#7a5233"/><circle cx="36" cy="20" r="1" fill="#5a3d24"/><circle cx="35" cy="15" r="1" fill="#5a3d24"/><circle cx="33" cy="10" r="1" fill="#5a3d24"/>`,
+      pita: `<ellipse cx="20" cy="18" rx="17" ry="9" fill="#e9c48a"/><ellipse cx="20" cy="17" rx="15" ry="7.4" fill="#f3d7a2"/>
+             <circle cx="13" cy="15" r="1.3" fill="#d9a560"/><circle cx="22" cy="19" r="1.6" fill="#d9a560"/><circle cx="28" cy="14.5" r="1.1" fill="#d9a560"/><circle cx="17" cy="20.5" r="1" fill="#d9a560"/>`,
+      bag: `<path d="M8,10 L32,10 L35,28 L5,28Z" fill="#fff" stroke="#d7e3ee"/><path d="M13,10 q0,-8 7,-8 q7,0 7,8" stroke="#d7e3ee" stroke-width="2" fill="none"/>
+            <text x="20" y="23" text-anchor="middle" font-size="7" font-weight="700" fill="${C.blue}" font-family="Arial, sans-serif">שקית</text>`
+    };
+    return `<svg viewBox="0 0 40 30" width="${w}" height="${h}" overflow="visible">${P[kind] || P.bag}</svg>`;
+  }
+  // Где что лежит на полках (центр предмета, кадр 360×700) — оттуда продукты летят на прилавок
+  const SHELF_GOODS = [
+    { kind: "bread", x: 14, y: 322 }, { kind: "bread", x: 60, y: 322 }, { kind: "pita", x: 110, y: 324 }, { kind: "pita", x: 156, y: 324 }, { kind: "pita", x: 133, y: 316 },
+    { kind: "milk", x: 236, y: 322 }, { kind: "milk", x: 264, y: 322 }, { kind: "milk", x: 292, y: 322 }, { kind: "milk", x: 320, y: 322 },
+    { kind: "cheese", x: 14, y: 392 }, { kind: "cheese", x: 60, y: 392 }, { kind: "eggs", x: 250, y: 392 }, { kind: "eggs", x: 302, y: 392 },
+    { kind: "tomatoes", x: 10, y: 458, crate: 1 }, { kind: "cucumbers", x: 64, y: 458, crate: 1 }, { kind: "apples", x: 246, y: 458, crate: 1 }, { kind: "bananas", x: 300, y: 458, crate: 1 }
+  ];
+  const MK_SOURCE = { bag: [320, 540] };
+  SHELF_GOODS.forEach(g => { if (!MK_SOURCE[g.kind]) MK_SOURCE[g.kind] = [g.x + 22, g.y + 16]; });
+
+  // Деревянный ящик под овощи и фрукты (передняя стенка поверх продуктов)
+  function crateSVG() {
+    return `<rect x="-3" y="27" width="50" height="7" rx="1.5" fill="#c58d55"/><path d="M-3,30.5 L47,30.5" stroke="#a5713e" stroke-width="1"/>
+      <rect x="-3" y="25" width="4" height="9" rx="1" fill="#a5713e"/><rect x="43" y="25" width="4" height="9" rx="1" fill="#a5713e"/>`;
+  }
+  function makoletBackSVG() {
+    const shelf = (y) => `<rect x="0" y="${y}" width="360" height="8" fill="#c99a6b"/><rect x="0" y="${y + 8}" width="360" height="4" fill="#a87a4e"/>`;
+    return `<svg class="hs-bg" viewBox="0 0 360 700" width="360" height="700">
+      <rect width="360" height="700" fill="#eaf4ec"/>
+      <rect x="0" y="300" width="360" height="260" fill="#f4faf5"/>
+      ${shelf(352)}${shelf(422)}${shelf(492)}
+      ${SHELF_GOODS.map(g => `<g transform="translate(${g.x},${g.y})">${goodSVG(g.kind, 44).replace("<svg ", "<svg x=\"0\" y=\"0\" ")}${g.crate ? crateSVG() : ""}</g>`).join("")}
+    </svg>`;
+  }
+  function makoletFrontSVG() {
+    return `<svg class="hs-abs hs-full" viewBox="0 0 360 700" width="360" height="700" style="left:0;top:0;width:360px;height:700px">
+      <g filter="url(#hsPaper)">
+        <rect x="0" y="282" width="360" height="34" fill="#3f8f5a"/>
+        <text x="180" y="307" text-anchor="middle" font-size="20" font-weight="700" fill="#fff" font-family="Arial, 'DejaVu Sans', sans-serif">מַכֹּלֶת</text>
+      </g>
+      <g filter="url(#hsPaper)">
+        <rect x="0" y="556" width="360" height="14" fill="#d8c3a5"/>
+        <rect x="0" y="568" width="360" height="132" fill="#fff"/>
+      </g>
+      <rect x="0" y="606" width="360" height="10" fill="#3f8f5a"/>
+      <g filter="url(#hsPaper)">
+        <rect x="282" y="512" width="62" height="44" rx="6" fill="#4b5668"/>
+        <rect x="290" y="518" width="46" height="14" rx="3" fill="#bfe6c8"/>
+        <text x="313" y="529" text-anchor="middle" font-size="10" font-weight="700" fill="#2c6b3f" font-family="Arial, sans-serif">₪</text>
+        <rect x="292" y="538" width="10" height="6" rx="2" fill="#dfe6ee"/><rect x="308" y="538" width="10" height="6" rx="2" fill="#dfe6ee"/><rect x="324" y="538" width="10" height="6" rx="2" fill="#dfe6ee"/>
+      </g>
+      <g transform="translate(14,520)">${goodSVG("bag", 40)}</g>
+    </svg>`;
+  }
+
   const VIEW_MIN = 300;                    // сколько «кадра» минимум видно по ширине и высоте
   function createStage(view, opts) {
     opts = opts || {};
@@ -913,7 +999,8 @@
 
     const who = {};                        // к кому «привязывать» пузыри
     let far, mid, dashes, breadBox = null;
-    if (place !== "counter") {
+    const close = place === "counter" || place === "makolet";   // крупный план у прилавка
+    if (!close) {
       // Фон улицы
       frame.insertAdjacentHTML("beforeend", bgStreetSky());
       far = put(frame, farTile() + farTile(), 0, 0, 1440, 700, "hs-layer");
@@ -931,6 +1018,15 @@
       who.sellerHead = who.seller;
       frame.insertAdjacentHTML("beforeend", counterFrontSVG());
       breadBox = put(frame, "", 104, 520, 152, 80, "hs-bread");
+      who.me = put(frame, "", 20, 690, 60, 10);
+      who.friend = put(frame, "", 280, 690, 60, 10);
+    } else if (place === "makolet") {
+      // КРУПНЫЙ ПЛАН: маколет, продавец за прилавком, покупки ложатся на прилавок
+      root.classList.add("hs-counter", "hs-makolet");
+      frame.insertAdjacentHTML("beforeend", makoletBackSVG());
+      who.seller = put(frame, fig(LOOK.grocer), 130, 432, 100, 200, "hs-seller");
+      frame.insertAdjacentHTML("beforeend", makoletFrontSVG());
+      breadBox = put(frame, "", 60, 520, 220, 40, "hs-bread hs-goods");
       who.me = put(frame, "", 20, 690, 60, 10);
       who.friend = put(frame, "", 280, 690, 60, 10);
     } else if (place === "taxi") {
@@ -956,9 +1052,9 @@
 
     function fit() {
       const w = view.clientWidth, h = view.clientHeight;
-      const sc = place === "counter" ? Math.min(w / 300, h / 330) : Math.min(w / VIEW_MIN, h / VIEW_MIN);
-      const bottom = place === "taxi" || place === "counter" ? H : 628;   // у шаурмичной дорогу внизу не показываем
-      const ty = place === "counter" ? -280 * sc + Math.max(0, (h - 420 * sc) / 2)   // крупный план: по центру, лишнее — стена и прилавок
+      const sc = close ? Math.min(w / 300, h / 330) : Math.min(w / VIEW_MIN, h / VIEW_MIN);
+      const bottom = place === "taxi" || close ? H : 628;   // у шаурмичной дорогу внизу не показываем
+      const ty = close ? -280 * sc + Math.max(0, (h - 420 * sc) / 2)   // крупный план: по центру, лишнее — стена и прилавок
                                      : Math.min(0, h - bottom * sc);
       frame.style.transform = `translate(${(w - W * sc) / 2}px, ${ty}px) scale(${sc})`;
       root.style.setProperty("--split", (ty + 562 * sc) + "px");
@@ -1005,7 +1101,7 @@
       b.className = "hs-st-bubble " + speaker;
       b.innerHTML = html;
       root.appendChild(b);
-      bubble = b; bubbleAnchor = anchor; bubbleTop = place === "counter" && speaker === "seller";
+      bubble = b; bubbleAnchor = anchor; bubbleTop = close && speaker === "seller";
       placeBubble();
       requestAnimationFrame(() => b.classList.add("show"));
       return b;
@@ -1021,6 +1117,29 @@
     let bread = null;
     function food(it) {
       if (!breadBox) return;
+      if (place === "makolet") {
+        // Продукт летит с полки на прилавок и встаёт в ряд
+        const n = breadBox.querySelectorAll(".hs-topping").length;
+        const x = 4 + (n % 6) * 36, y = n >= 6 ? -18 : 0, w = 38;
+        const el = document.createElement("div");
+        el.className = "hs-topping";
+        el.style.left = x + "px"; el.style.top = y + "px";
+        el.style.setProperty("--ix", (110 - x - w / 2) + "px");
+        el.innerHTML = goodSVG(it, w);
+        breadBox.appendChild(el);
+        const src = MK_SOURCE[it] || [180, 420];
+        const dx = src[0] - (60 + x + w / 2), dy = src[1] - (520 + y);
+        el.animate([
+          { transform: `translate(${dx}px, ${dy}px) scale(.9)`, opacity: 0 },
+          { transform: `translate(${dx}px, ${dy - 8}px) scale(.9)`, opacity: 1, offset: .15 },
+          { transform: `translate(${dx * .45}px, ${Math.min(dy, 0) - 50}px) scale(1.05)`, offset: .55 },
+          { transform: "translate(0, 0) scale(1)" }
+        ], { duration: 900, easing: "ease-in-out", fill: "both" });
+        const s = who.seller;
+        s.classList.remove("hs-put", "hs-put-l", "hs-put-r"); void s.offsetWidth;
+        s.classList.add("hs-put", src[0] < 180 ? "hs-put-l" : "hs-put-r");
+        return;
+      }
       if (it === "pita" || it === "lafa") {
         breadBox.innerHTML = "";
         breadBox.dataset.kind = it;
@@ -1082,6 +1201,7 @@
     return { say, hide, destroy, fit, root, food, wrap };
   }
   window.createStage = createStage;
+  window.goodSVG = goodSVG;
   // Фигура друга (Давид / Циля) для уроков: он задаёт вопросы
   window.friendFigureSVG = (gender) => personSVG(gender === "f" ? LOOK.tzila : LOOK.david);
   window.playArrivalScene = playArrivalScene;
