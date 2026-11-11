@@ -300,7 +300,7 @@ body {
 
 #milestone {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-  pointer-events: none; z-index: 30; opacity: 0;
+  pointer-events: none; z-index: 60; opacity: 0;
 }
 #milestone.show { animation: msIn 1.5s ease forwards; }
 @keyframes msIn {
@@ -678,3 +678,6 @@ body {
 .st-order { position: absolute; z-index: 27; top: 10px; right: 10px; border: none; border-radius: 999px; padding: 6px 12px;
   background: rgba(255,255,255,.92); color: #b2620f; font-weight: 700; font-size: 14px; box-shadow: 0 2px 8px rgba(30,60,110,.12); cursor: pointer; }
 .st-view .q-tray { top: 48px; }
+
+.st-fire { position: absolute; z-index: 27; top: 10px; left: 50%; transform: translateX(-50%); }
+.st-fire:empty { display: none; }

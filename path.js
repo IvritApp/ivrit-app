@@ -18,9 +18,20 @@ function showPath() {
   if (typeof closeStage === "function") closeStage();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "path");
   if (tg && tg.BackButton) tg.BackButton.show();
-  if (course) { renderPath(); return; }
+  if (course) { if (!autoIntro()) renderPath(); return; }
   pathView.innerHTML = `<p class="task">Загрузка…</p>`;
-  fetch(`content/${COURSE_LANG}/course.json`).then(r => r.json()).then(c => { course = c; renderPath(); });
+  fetch(`content/${COURSE_LANG}/course.json`).then(r => r.json()).then(c => { course = c; if (!autoIntro()) renderPath(); });
+}
+
+// Первый заход в «Основное обучение»: сразу запускаем кино и сцену в такси,
+// после «Учить слова» — сразу первый урок. Если игрок вышел посередине — второй раз не навязываем
+// (сцену можно открыть кнопкой «Сцена: в такси»).
+function autoIntro() {
+  const lvl = course.chapters[0].levels[0];
+  if (lvl.intro !== "taxi" || store.get("taxiSeen", false) || autoIntro.tried) return false;
+  autoIntro.tried = true;
+  showTaxi(() => startLesson(lvl.lessons[0]));
+  return true;
 }
 
 function renderPath() {

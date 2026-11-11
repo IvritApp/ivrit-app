@@ -41,7 +41,7 @@
 
   // ---------- Внешность героев (временные, потом заменим) ----------
   const LOOK = {
-    david: { skin: "#f3c7a5", hair: "curly", hairC: "#3b2a22", top: C.blue, bottom: "#34405e", shoes: C.ink },
+    david: { custom: "david" },          // нарисован отдельно (davidSVG) по картинке из Шедеврума
     tzila: { skin: "#f6d2b4", hair: "long", hairC: "#a8532e", top: C.orangeL, bottom: "#ffffff", skirt: true, legs: "#f6d2b4", shoes: C.blueD },
     playerM: { skin: "#f1c9a8", hair: "short", hairC: "#6b4a32", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
     playerF: { skin: "#f1c9a8", hair: "long", hairC: "#5a3a26", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
@@ -54,7 +54,71 @@
   // =====================================================
 
   // Человечек 100×200: руки и ноги — отдельные группы, чтобы шагать и махать
+  // ---------- ДАВИД (по образцу из Шедеврума, 11.11) ----------
+  // Те же части, что у человечков: руки и ноги — отдельные группы (машет, шагает, обнимает),
+  // глаза моргают, голова чуть покачивается.
+  function davidSVG() {
+    const skin = "#f4c39a", skinD = "#e5a77c", hair = "#2b2130", hairL = "#463949";
+    const tee = "#1f7fd6", teeD = "#1766b3", jeans = "#1f2d4f", cuff = "#3b4b72";
+    let curls = "";
+    const ring = [[22,44,8],[21,33,9],[25,22,10],[33,13,10],[43,8,10],[54,7,10],[64,10,10],[73,17,10],[78,28,9],[79,39,8],[30,30,8],[50,16,9],[68,26,8],[40,20,8],[59,18,8]];
+    ring.forEach(([x, y, r]) => { curls += `<circle cx="${x}" cy="${y}" r="${r}" fill="${hair}"/>`; });
+    let swirls = "";
+    [[26,24],[38,12],[52,9],[66,14],[75,27],[23,37],[46,20],[61,21]].forEach(([x, y]) => {
+      swirls += `<path d="M${x - 3},${y + 1} q1,-4 4,-3 q3,1 1,4" stroke="${hairL}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+    });
+    const shoe = (x, flip) => `<path d="M${x - 9},190 Q${x - 9},182 ${x - 2},181 L${x + 5},181 Q${x + 11},183 ${x + 12},190 Z" fill="#f4f6f9"/>
+      <rect x="${x - 10}" y="189" width="${23}" height="4" rx="2" fill="#c9d1db"/>
+      <path d="M${x - 3},183.5 l5,0 M${x - 3},186 l5,0" stroke="#c9d1db" stroke-width="1.1"/>`;
+    return `<svg viewBox="0 0 100 200" class="hs-person hs-david" overflow="visible">
+      <g class="hs-leg hs-leg-l">
+        <rect x="36.5" y="124" width="13" height="55" rx="3" fill="${jeans}"/>
+        <rect x="36" y="174" width="14" height="6" rx="2" fill="${cuff}"/>${shoe(42)}</g>
+      <g class="hs-leg hs-leg-r">
+        <rect x="50.5" y="124" width="13" height="55" rx="3" fill="${jeans}"/>
+        <rect x="50" y="174" width="14" height="6" rx="2" fill="${cuff}"/>${shoe(58)}</g>
+      <path d="M35,124 L65,124 L65,134 L35,134Z" fill="${jeans}"/>
+      <g class="hs-arm hs-arm-l">
+        <rect x="21.5" y="100" width="8" height="34" rx="4" fill="${skin}"/>
+        <path d="M21,133 q-1,6 3,8 q3,1 5,-1 l1,-6 q-1,-4 -5,-4 q-3,0 -4,3Z" fill="${skin}"/>
+        <path d="M24,88 Q30,84 34,88 L33,104 Q27,106 20,103 Z" fill="${tee}"/>
+        <path d="M20,101 Q27,104 33,102 L33,105 Q27,107 20,104Z" fill="${teeD}"/></g>
+      <g class="hs-arm hs-arm-r">
+        <rect x="70.5" y="100" width="8" height="34" rx="4" fill="${skin}"/>
+        <path d="M79,133 q1,6 -3,8 q-3,1 -5,-1 l-1,-6 q1,-4 5,-4 q3,0 4,3Z" fill="${skin}"/>
+        <path d="M76,88 Q70,84 66,88 L67,104 Q73,106 80,103 Z" fill="${tee}"/>
+        <path d="M80,101 Q73,104 67,102 L67,105 Q73,107 80,104Z" fill="${teeD}"/></g>
+      <path d="M31,92 Q32,86 42,85 L58,85 Q68,86 69,92 L68,128 Q50,131 32,128Z" fill="${tee}"/>
+      <path d="M58,92 Q63,100 62,124 L68,124 L68,96Z" fill="${teeD}" opacity=".45"/>
+      <rect x="44.5" y="78" width="11" height="10" rx="3" fill="${skinD}"/>
+      <path d="M42,85.5 Q50,91 58,85.5" stroke="${teeD}" stroke-width="2.4" fill="none"/>
+      <g class="hs-head">
+        <circle cx="22.5" cy="50" r="6" fill="${skin}"/><circle cx="77.5" cy="50" r="6" fill="${skin}"/>
+        <circle cx="22.5" cy="50" r="3" fill="${skinD}"/><circle cx="77.5" cy="50" r="3" fill="${skinD}"/>
+        <path d="M23,46 Q23,20 50,20 Q77,20 77,46 Q77,70 64,79 Q50,87 36,79 Q23,70 23,46Z" fill="${skin}"/>
+        <path d="M26,56 Q27,74 38,80 Q50,87 62,80 Q73,74 74,56 Q70,70 61,73 Q50,69 39,73 Q30,70 26,56Z" fill="#a9785a" opacity=".42"/>
+        <path d="M42,62 Q50,59 58,62" stroke="#a9785a" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+        <ellipse cx="31" cy="60" rx="5" ry="3" fill="#ff8f80" opacity=".4"/><ellipse cx="69" cy="60" rx="5" ry="3" fill="#ff8f80" opacity=".4"/>
+        <g class="hs-eyes">
+          <ellipse cx="39" cy="46" rx="7" ry="7.5" fill="#fff"/><ellipse cx="61" cy="46" rx="7" ry="7.5" fill="#fff"/>
+          <circle cx="39.5" cy="47" r="5" fill="#8a5222"/><circle cx="60.5" cy="47" r="5" fill="#8a5222"/>
+          <circle cx="39.5" cy="47.5" r="2.6" fill="#24150e"/><circle cx="60.5" cy="47.5" r="2.6" fill="#24150e"/>
+          <circle cx="41.2" cy="45" r="1.6" fill="#fff"/><circle cx="62.2" cy="45" r="1.6" fill="#fff"/>
+        </g>
+        <path d="M30,36 Q38,30 46,35" stroke="${hair}" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+        <path d="M54,35 Q62,30 70,36" stroke="${hair}" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+        <ellipse cx="50" cy="56" rx="3.2" ry="2.4" fill="${skinD}"/>
+        <path d="M39,63.5 Q50,76 61,63.5 Q50,66.5 39,63.5Z" fill="#7a2630"/>
+        <path d="M40.5,64 Q50,67 59.5,64 L58.8,66.2 Q50,69 41.2,66.2Z" fill="#fff"/>
+        <ellipse cx="50" cy="70.6" rx="4.4" ry="2" fill="#ff6b6b"/>
+        <path d="M22,46 Q19,14 50,12 Q81,14 78,46 Q74,30 50,28 Q28,29 22,46Z" fill="${hair}"/>
+        ${curls}${swirls}
+      </g>
+    </svg>`;
+  }
+
   function personSVG(o) {
+    if (o.custom === "david") return davidSVG();
     const legC = o.legs || o.bottom;
     const backHair = o.hair === "long"
       ? `<path d="M24,46 Q22,13 50,13 Q78,13 76,46 L79,98 Q64,106 50,99 Q36,106 21,98Z" fill="${o.hairC}"/>` : "";
@@ -281,7 +345,7 @@
 
   // ---------- Такси 220×110 (три слоя: салон, пассажиры, кузов с окнами-дырками) ----------
   const TAXI_BODY = "M10,72 Q10,56 28,53 L62,50 L82,25 Q86,20 94,20 L150,20 Q158,20 163,25 L188,50 L202,53 Q214,56 214,72 L214,84 Q214,90 208,90 L16,90 Q10,90 10,84Z";
-  const TAXI_WIN = "M90,26 L128,26 L128,49 L72,49Z M134,26 L152,26 Q156,26 159,29 L178,49 L134,49Z";
+  const TAXI_WIN = "M93,30 L128,30 L128,49 L76,49Z M134,30 L152,30 Q156,30 159,33 L175,49 L134,49Z";
   function taxiBackSVG() {
     return `<svg viewBox="0 0 220 110"><rect x="70" y="24" width="112" height="28" fill="#cfe3f4"/></svg>`;
   }
@@ -488,9 +552,9 @@
     const taxi = put(s3, "", 4, 552, 264, 132, "hs-taxi");
     taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
     const pass = taxi.querySelector(".hs-pass");
-    put(pass, fig(LOOK.driver), 172, 30, 34, 68);
-    const pFriend = put(pass, fig(friendLook), 92, 30, 34, 68);
-    const pPlayer = put(pass, playerFig("sit"), 120, 30, 34, 68);
+    put(pass, fig(LOOK.driver), 168, 20, 42, 84);
+    const pFriend = put(pass, fig(friendLook), 84, 20, 42, 84);
+    const pPlayer = put(pass, playerFig("sit"), 116, 20, 42, 84);
     pFriend.style.opacity = 0; pPlayer.style.opacity = 0;
     const talkFriend = put(taxi, "", 96, 20, 30, 20);   // точки, над которыми появляются реплики в такси
     const talkPlayer = put(taxi, "", 128, 20, 30, 20);
@@ -612,8 +676,9 @@
     at(T3 + 3.2, () => { fade(pFriend, 1, .4); fade(pPlayer, 1, .4); });
     at(T3 + 3.7, () => { taxi.classList.add("hs-moving", "hs-driving"); speed(1, 1.2); });
     if (part === "arrival") {
-      at(T3 + 4.4, () => say(talkFriend, friendName, TEXT.drive.ru, "", 2.6));
-      at(T3 + 7.4, finish);
+      at(T3 + 4.4, () => say(talkFriend, friendName, TEXT.hungry[G], "", 2.6));
+      at(T3 + 7.2, () => say(talkPlayer, "", TEXT.yes.ru, "", 1.6));
+      at(T3 + 9.2, finish);
       return { skip: finish };
     }
     at(T3 + 4.4, () => say(talkFriend, friendName, TEXT.hungry[G], "", 2.4));
@@ -659,6 +724,42 @@
   //   st.destroy()  → убрать сцену
   // =====================================================
   // ---------- Крупный план шаурмичной (кадр 360×700, видна нижняя часть) ----------
+  // Где стоят миски (кадр 360×700); мясо продавец срезает с вертела
+  const BOWLS = [
+    { kind: "salad", x: 4 }, { kind: "hummus", x: 38 }, { kind: "chips", x: 72 },
+    { kind: "tahini", x: 254 }, { kind: "spicy", x: 288 }
+  ];
+  const SOURCE = { "meat-turkey": [294, 470], "meat-chicken": [294, 470], "meat-veal": [294, 470] };
+  BOWLS.forEach(b => { SOURCE[b.kind] = [b.x + 17, 548]; });
+
+  // Нарезанная начинка (кусочки), ширина w, высота ≈ w*0.6
+  function chopSVG(kind, w) {
+    const h = Math.round(w * .6);
+    const R = (seed) => { let x = seed; return () => (x = (x * 9301 + 49297) % 233280) / 233280; };
+    const r = R(kind.length * 31 + w);
+    let p = "";
+    const n = 9;
+    const at = () => [4 + r() * (w - 10), 3 + r() * (h - 9)];
+    if (kind.startsWith("meat")) {
+      const cols = kind === "meat-chicken" ? ["#e0a25a", "#c8843e"] : kind === "meat-veal" ? ["#8e4a22", "#a85c28"] : ["#c8763c", "#a85c28"];
+      for (let i = 0; i < n; i++) { const [x, y] = at(); p += `<rect x="${x}" y="${y}" width="${w * .26}" height="${h * .16}" rx="2" fill="${cols[i % 2]}" transform="rotate(${r() * 50 - 25} ${x} ${y})"/>`; }
+    } else if (kind === "salad") {
+      for (let i = 0; i < n + 3; i++) { const [x, y] = at(); const c = ["#5aa874", "#7cc490", "#ff6b5a", "#fbe7a1"][i % 4]; p += `<rect x="${x}" y="${y}" width="${w * .13}" height="${w * .13}" rx="1.5" fill="${c}" transform="rotate(${r() * 40} ${x} ${y})"/>`; }
+    } else if (kind === "hummus") {
+      p = `<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w * .42}" ry="${h * .36}" fill="#e9c98f"/>
+        <path d="M${w * .3},${h * .5} q${w * .2},-${h * .3} ${w * .4},0" stroke="#d4ad6c" stroke-width="2" fill="none"/>
+        <circle cx="${w * .55}" cy="${h * .45}" r="${w * .05}" fill="#c9a24a"/>`;
+    } else if (kind === "tahini") {
+      p = `<path d="M${w * .1},${h * .4} q${w * .15},-${h * .3} ${w * .3},0 t${w * .3},0 t${w * .2},0" stroke="#f6f0e2" stroke-width="${h * .2}" fill="none" stroke-linecap="round"/>
+        <path d="M${w * .15},${h * .7} q${w * .2},-${h * .2} ${w * .4},0 t${w * .3},0" stroke="#efe6cf" stroke-width="${h * .16}" fill="none" stroke-linecap="round"/>`;
+    } else if (kind === "spicy") {
+      for (let i = 0; i < n; i++) { const [x, y] = at(); p += `<circle cx="${x}" cy="${y}" r="${w * .06}" fill="${i % 3 ? "#e5322b" : "#5aa874"}"/>`; }
+    } else if (kind === "chips") {
+      for (let i = 0; i < n; i++) { const [x, y] = at(); p += `<rect x="${x}" y="${y}" width="${w * .07}" height="${h * .5}" rx="1.5" fill="${i % 2 ? "#ffd86b" : "#f5c242"}" transform="rotate(${r() * 80 - 40} ${x} ${y})"/>`; }
+    }
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" overflow="visible">${p}</svg>`;
+  }
+
   function counterBackSVG() {
     let tiles = "";
     for (let y = 300; y < 560; y += 22) tiles += `<path d="M0,${y} L360,${y}" stroke="#f3e2c8" stroke-width="2"/>`;
@@ -688,14 +789,18 @@
       const x = i * sw, c = i % 2 ? "#fff" : C.orange;
       awning += `<rect x="${x}" y="286" width="${sw + .5}" height="26" fill="${c}"/><path d="M${x},311 a${sw / 2},${sw / 2 * .7} 0 0 0 ${sw},0Z" fill="${c}"/>`;
     }
-    const bowl = (x, c) => `<path d="M${x},560 a22,14 0 0 0 44,0Z" fill="#fff"/><ellipse cx="${x + 22}" cy="560" rx="22" ry="6" fill="${c}"/>`;
+    // Миски с нарезанной начинкой: из них продавец берёт и кладёт в питу/лафу
+    const bowl = (x, kind) => `<g transform="translate(${x},538)">
+      <path d="M0,18 a17,13 0 0 0 34,0Z" fill="#fff" filter="url(#hsPaper)"/>
+      <g transform="translate(-1,6)">${chopSVG(kind, 36)}</g>
+      <path d="M0,18 L34,18" stroke="#dbe9f6" stroke-width="2"/></g>`;
     return `<svg class="hs-abs hs-full" viewBox="0 0 360 700" width="360" height="700" style="left:0;top:0;width:360px;height:700px">
       <g filter="url(#hsPaper)">
         <rect x="0" y="556" width="360" height="14" fill="#dbe9f6"/>
         <rect x="0" y="568" width="360" height="132" fill="#fff"/>
       </g>
       <rect x="0" y="606" width="360" height="10" fill="${C.blue}"/>
-      ${bowl(8, C.green)}${bowl(262, "#ff6b5a")}${bowl(308, "#ffd86b")}
+      ${BOWLS.map(b => bowl(b.x, b.kind)).join("")}
       <rect x="0" y="300" width="12" height="270" fill="#f1e5d1"/><rect x="348" y="300" width="12" height="270" fill="#f1e5d1"/>
       <g filter="url(#hsPaper)">${awning}</g>
     </svg>`;
@@ -772,9 +877,9 @@
       const taxi = put(big, "", 0, 0, 264, 132, "hs-taxi hs-moving hs-driving");
       taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
       const pass = taxi.querySelector(".hs-pass");
-      put(pass, fig(LOOK.driver), 172, 30, 34, 68);
-      who.friend = put(pass, fig(friendLook), 92, 30, 34, 68);
-      who.me = put(pass, playerFig("sit"), 124, 30, 34, 68);
+      put(pass, fig(LOOK.driver), 168, 20, 42, 84);
+      who.friend = put(pass, fig(friendLook), 84, 20, 42, 84);
+      who.me = put(pass, playerFig("sit"), 116, 20, 42, 84);
     } else {
       const shop = put(frame, shopSVG(), 65, 366, 230, 190, "hs-shop");
       who.seller = put(shop, "", 64, 72, 36, 30);        // голова продавца внутри вывески
@@ -851,24 +956,40 @@
       if (!breadBox) return;
       if (it === "pita" || it === "lafa") {
         breadBox.innerHTML = "";
+        breadBox.dataset.kind = it;
         bread = document.createElement("img");
         bread.className = "hs-bread-base " + it; bread.src = ASSETS + "ing-" + it + ".png";
         breadBox.appendChild(bread);
         return;
       }
+      // Кусочки летят из миски (или с вертела) на питу/лафу
+      const pita = breadBox.dataset.kind === "pita";
       const n = breadBox.querySelectorAll(".hs-topping").length;
-      const spots = [[38, 18], [72, 12], [56, 30], [26, 32], [88, 28], [46, 8], [66, 22], [34, 22]];
-      const [x, y] = spots[n % spots.length];
-      const im = document.createElement("img");
-      im.className = "hs-topping"; im.src = ASSETS + "ing-" + it + ".png";
-      im.style.left = x + "px"; im.style.top = y + "px";
-      breadBox.appendChild(im);
-      const s = who.seller; s.classList.remove("hs-put"); void s.offsetWidth; s.classList.add("hs-put");
+      const spotsL = [[46, 22], [70, 18], [58, 30], [40, 34], [78, 30], [54, 12]];
+      const spotsP = [[52, 16], [62, 20], [56, 24], [48, 20], [66, 14], [58, 12]];
+      const [x, y] = (pita ? spotsP : spotsL)[n % 6];
+      const w = pita ? 34 : 44;
+      const el = document.createElement("div");
+      el.className = "hs-topping";
+      el.style.left = x + "px"; el.style.top = y + "px";
+      el.innerHTML = chopSVG(it, w);
+      breadBox.appendChild(el);
+      const src = SOURCE[it] || [180, 470];
+      const dx = src[0] - (104 + x + w / 2), dy = src[1] - (520 + y);
+      el.animate([
+        { transform: `translate(${dx}px, ${dy}px) scale(.8)`, opacity: 0 },
+        { transform: `translate(${dx}px, ${dy - 10}px) scale(.8)`, opacity: 1, offset: .15 },
+        { transform: `translate(${dx * .45}px, ${Math.min(dy, 0) - 60}px) scale(1)`, offset: .55 },
+        { transform: "translate(0, 0) scale(1)" }
+      ], { duration: 900, easing: "ease-in-out", fill: "both" });
+      const s = who.seller;
+      s.classList.remove("hs-put", "hs-put-l", "hs-put-r"); void s.offsetWidth;
+      s.classList.add("hs-put", src[0] < 180 ? "hs-put-l" : "hs-put-r");
     }
     // Заворачивает и протягивает тебе
     function wrap(img, cb) {
       if (!breadBox) { if (cb) cb(); return; }
-      breadBox.querySelectorAll(".hs-topping").forEach((t, k) => { t.style.transitionDelay = (k * 60) + "ms"; t.classList.add("in"); });
+      breadBox.querySelectorAll(".hs-topping").forEach((t, k) => { t.getAnimations().forEach(a => a.finish()); t.getAnimations().forEach(a => a.cancel()); t.style.transitionDelay = (k * 60) + "ms"; t.classList.add("in"); });
       setTimeout(() => {
         breadBox.innerHTML = `<img class="hs-wrapped" src="${ASSETS}${img}.png" alt="">`;
       }, 900);

@@ -209,18 +209,26 @@
 @keyframes hsZoomIn { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: none; } }
 .hs-seller > .hs-fig > svg { animation: hsBreath 2.6s ease-in-out infinite alternate; }
 @keyframes hsBreath { from { transform: translateY(0); } to { transform: translateY(-2px); } }
-.hs-seller.hs-put > .hs-fig { animation: hsPut .5s ease; }
-@keyframes hsPut { 40% { transform: translateY(8px) rotate(-3deg); } }
+.hs-seller.hs-put-l > .hs-fig { animation: hsPutL .8s ease; }
+.hs-seller.hs-put-r > .hs-fig { animation: hsPutR .8s ease; }
+@keyframes hsPutL { 35% { transform: translate(-16px, 8px) rotate(-8deg); } }
+@keyframes hsPutR { 35% { transform: translate(16px, 8px) rotate(8deg); } }
 .hs-bread { z-index: 6; transition: transform 1.3s cubic-bezier(.5,0,.3,1), opacity 1.3s; }
 .hs-bread-base { position: absolute; left: 6px; top: 0; width: 140px; height: 80px; object-fit: fill;
   animation: hsSlap .5s cubic-bezier(.3,1.5,.5,1) both; }
-.hs-bread-base.pita { left: 26px; width: 100px; }
+.hs-bread-base.pita { left: 36px; top: 4px; width: 80px; height: 64px; }
 @keyframes hsSlap { from { transform: translateY(-60px) scale(.7); opacity: 0; } }
-.hs-topping { position: absolute; width: 44px; height: 44px; object-fit: contain;
-  animation: hsDrop .55s cubic-bezier(.3,1.5,.5,1) both; transition: transform .6s ease-in, opacity .6s; }
+.hs-topping { position: absolute; transition: transform .6s ease-in, opacity .6s; }
+.hs-topping > svg { display: block; overflow: visible; }
 .hs-topping.in { transform: translate(var(--ix, 0), 0) scale(.2); opacity: 0; }
 @keyframes hsDrop { from { transform: translateY(-90px) rotate(-30deg); opacity: 0; } 60% { opacity: 1; } }
 .hs-wrapped { position: absolute; left: 26px; top: -40px; width: 100px; height: 120px; object-fit: contain;
   animation: hsRoll .8s cubic-bezier(.3,1.4,.5,1) both; }
 @keyframes hsRoll { from { transform: rotate(-90deg) scale(.4); opacity: 0; } }
 .hs-bread.give { transform: translate(0, 150px) scale(2.4); opacity: 0; }
+
+/* ---------- Давид: моргает и чуть покачивает головой ---------- */
+.hs-david .hs-eyes { transform-box: fill-box; transform-origin: center; animation: hsBlink 4.2s infinite; }
+@keyframes hsBlink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+.hs-david .hs-head { transform-box: fill-box; transform-origin: 50% 90%; animation: hsNod 3.4s ease-in-out infinite alternate; }
+@keyframes hsNod { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }

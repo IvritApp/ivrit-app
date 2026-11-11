@@ -9,6 +9,20 @@
 const questView = document.getElementById("quest");
 let quest = null, qStep = 0, qMistakes = 0, qBag = [], qHinted = false;
 let stage = null;            // текущая картинка-сцена
+let qCombo = 0, qPoints = 0; // огоньки и очки в квесте
+
+// Очки за квест: идеальный квест = в 1,5 раза больше, чем идеальный урок (10 заданий, ×2)
+const QUEST_RATIO = 1.5;
+function perfectRaw(n) { let s = 0; for (let i = 1; i <= n; i++) s += FIRE[fireLevel(i)].points; return s; }
+function questFactor() { return QUEST_RATIO * perfectRaw(10) / perfectRaw(quest.steps.length); }
+function updateQuestFire(bump) {
+  const box = document.getElementById("stFire");
+  if (!box) return;
+  if (qCombo < 1) { box.innerHTML = ""; box.className = "combo st-fire"; return; }
+  box.className = "combo st-fire lvl" + fireLevel(qCombo);
+  box.innerHTML = `${flameSVG(fireLevel(qCombo))}<span>${qCombo}</span>`;
+  if (bump) { box.classList.remove("bump"); void box.offsetWidth; box.classList.add("bump"); }
+}
 let stageToken = 0;          // защита от «старых» таймеров, если ушли со сцены
 
 // Названия ингредиентов для итогового заказа
@@ -35,6 +49,7 @@ function renderStageShell(place, title, icon) {
       <div class="st-view" id="stView">
         <div class="st-title"><span>${icon}</span>${title}</div>
         <button class="st-order" id="stOrder" hidden>🧾 Мой заказ</button>
+        <div class="combo st-fire" id="stFire"></div>
         <div class="q-tray" id="qTray" hidden></div>
         <div class="st-tap" id="stTap">нажми, чтобы дальше ›</div>
       </div>
@@ -126,7 +141,7 @@ function startQuest(id) {
   fetch(`content/${COURSE_LANG}/quests/${id}.json`)
     .then(r => r.json())
     .then(d => {
-      quest = d; qStep = 0; qMistakes = 0; qBag = [];
+      quest = d; qStep = 0; qMistakes = 0; qBag = []; qCombo = 0; qPoints = 0;
       const token = renderStageShell("counter", "Шаурмичная", "🌯");
       // Список заказа — по кнопке, а главное видно на прилавке
       const ob = document.getElementById("stOrder"), tray = document.getElementById("qTray");
@@ -181,6 +196,13 @@ function chooseOption(btn, o, st) {
     btn.classList.add("right");
     playSound("right"); vibrate("success");
     document.getElementById("qHint").hidden = true;
+    // огоньки, как в уроке
+    const before = fireLevel(qCombo);
+    qCombo++;
+    const lvl = fireLevel(qCombo);
+    qPoints += FIRE[lvl].points;
+    updateQuestFire(true);
+    if (lvl > before) setTimeout(() => showMilestone(lvl), 400);
     meSays(`<div class="he" dir="rtl">${g(o.he)}</div><div class="tr">${g(o.tr)} — ${g(o.ru)}</div>`);
     speak(g(o.he), { audio: o.audio });
     if (o.add) addToTray([].concat(o.add));
@@ -191,6 +213,8 @@ function chooseOption(btn, o, st) {
     btn.classList.remove("wrong"); void btn.offsetWidth; btn.classList.add("wrong");
     btn.disabled = true;
     qMistakes++;
+    if (qCombo >= 5) showToast(`Серия из ${qCombo} прервалась — начнём новую!`);
+    qCombo = 0; updateQuestFire(false);
     playSound("wrong"); vibrate("error");
     if (!qHinted) {
       const h = document.getElementById("qHint");
@@ -221,7 +245,8 @@ function finishQuest() {
   const o = quest.outro;
   stage.say("seller", sellerHTML(o.seller)); speak(g(o.seller.he), { audio: o.seller.audio });
   document.getElementById("qOpts").innerHTML = "";
-  const pts = Math.max(20, quest.points - qMistakes * 5);
+  const perfect = qMistakes === 0;
+  const pts = Math.round(qPoints * questFactor() * (perfect ? 2 : 1));
   store.set(todayKey(), store.get(todayKey(), 0) + pts);
   store.set("quest_" + quest.id, true);
   const finalImg = qBag.includes("lafa") ? "gift-shawarma" : "gift-pita";
@@ -235,12 +260,12 @@ function finishQuest() {
     questView.innerHTML = `
       <div class="q-final">
         <img class="q-final-img" src="assets/${finalImg}.png" alt="Шаурма">
-        <h2 class="done">Квест пройден! 🎉</h2>
+        <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный квест! 🏆" : "Квест пройден! 🎉"}</h2>
         <p class="task"><b>Уровень 1 «Первая шаурма» завершён</b></p>
         <p class="task">Твой заказ: ${order}</p>
         <div class="points-row" style="animation-delay:.3s">
           <div class="pts-big">+${pts}</div>
-          <div class="pts-label">очков за квест<br>Ошибок: ${qMistakes}</div>
+          <div class="pts-label">очков за квест${perfect ? " (×2)" : ""}<br>Ошибок: ${qMistakes}</div>
         </div>
         <div class="q-friend-say"><b>${friendName()}:</b> ${g(qMistakes ? o.friend_mistakes : o.friend)}</div>
         <button class="btn blue" onclick="showPath()">К уровню</button>
