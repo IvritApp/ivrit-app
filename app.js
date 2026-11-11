@@ -97,7 +97,8 @@ function showOnboarding() {
   // тот же живой Хибри, что и на главном экране: машет, улетает за гостинцами, скучает через 7 сек
   document.getElementById("ob-bird-slot").appendChild(document.getElementById("homeBird"));
   startHomeBird();
-  let draft = { name: profile ? profile.name : (user ? user.first_name : ""), gender: profile ? profile.gender : null };
+  let draft = { name: profile ? profile.name : (user ? user.first_name : ""), gender: profile ? profile.gender : null,
+                avatar: profile ? profile.avatar : null, avatarGender: profile ? profile.gender : null };
 
   const steps = [
     // 1. Хибри здоровается
@@ -119,6 +120,7 @@ function showOnboarding() {
     () => {
       const st = STORY[draft.gender];
       return `
+      <div class="ob-hero">${HirbisAvatar.svg(draft.avatar)}</div>
       <h1 class="ob-title">Твоя история</h1>
       <p class="ob-text">Представь: ты скоро переезжаешь в Израиль. Там уже 10 лет живёт ${st.who}. ${st.met} встретит тебя в аэропорту и поможет обосноваться.</p>
       <p class="ob-text">А пока я научу тебя первым словам. Кстати, вот твоя первая фраза:</p>
@@ -142,12 +144,23 @@ function showOnboarding() {
     const next = obStep.querySelector("[data-next]");
     next.onclick = () => {
       if (i === 2 && "speechSynthesis" in window) speak(STORY[draft.gender].ready.he);
+      if (i === 1) {                                   // после имени и пола — создаём героя
+        const base = draft.avatar && draft.avatarGender === draft.gender ? draft.avatar : HirbisAvatar.defaults(draft.gender);
+        stopHomeBird();
+        HirbisAvatar.openEditor(base, cfg => {
+          draft.avatar = cfg; draft.avatarGender = draft.gender;
+          onboardView.hidden = false; startHomeBird();
+          i = 2; render();
+        });
+        return;
+      }
       if (i < steps.length - 1) { i++; render(); return; }
       homeView.insertBefore(document.getElementById("homeBird"), homeView.firstChild);
-      profile = { name: draft.name.trim(), gender: draft.gender };
+      profile = { name: draft.name.trim(), gender: draft.gender, avatar: draft.avatar };
       store.set("profile", profile);
       onboardView.hidden = true;
       setGreeting();
+      updateHeroCard();
       showHome();
     };
   }
@@ -156,6 +169,19 @@ function showOnboarding() {
 
 updateToday();
 document.getElementById("reset-profile").onclick = showOnboarding;
+document.getElementById("go-quest").onclick = () => startQuest("shawarma");
+
+// «Мой герой» — открыть конструктор аватара
+function myAvatar() { return (profile && profile.avatar) || HirbisAvatar.defaults(profile ? profile.gender : "m"); }
+function updateHeroCard() { document.getElementById("heroIcon").innerHTML = HirbisAvatar.svg(myAvatar(), { view: "head" }); }
+updateHeroCard();
+document.getElementById("go-hero").onclick = () => {
+  stopHomeBird();
+  HirbisAvatar.openEditor(myAvatar(), cfg => {
+    if (profile) { profile.avatar = cfg; store.set("profile", profile); }
+    updateHeroCard(); showHome();
+  });
+};
 
 // =====================================================
 // УДОД НА ГЛАВНОМ ЭКРАНЕ: машет крылом, улетает и прилетает с подарком,
@@ -200,7 +226,7 @@ function birdTrip(withGift, awayMs = 2500, onBack) {
 }
 function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(onIdle, IDLE_MS); }
 function onIdle() {
-  if (!lessonView.hidden || birdBusy) { resetIdle(); return; }
+  if (!birdOnScreen() || birdBusy) { resetIdle(); return; }
   say("Чего так долго думаешь? 🤔", 2200);
   setTimeout(() => birdTrip(true, 3000, () => say("Я вернулся! Давай учиться? 😉", 2600)), 2200);
   clearTimeout(idleTimer); idleTimer = setTimeout(onIdle, IDLE_AGAIN_MS);
@@ -214,7 +240,8 @@ function startHomeBird() {
 }
 function stopHomeBird() { clearInterval(waveTimer); clearInterval(tripTimer); clearTimeout(idleTimer); }
 ["pointerdown", "touchstart", "keydown", "scroll"].forEach(ev =>
-  document.addEventListener(ev, () => { if (lessonView.hidden) resetIdle(); }, { passive: true }));
+  document.addEventListener(ev, () => { if (birdOnScreen()) resetIdle(); }, { passive: true }));
+function birdOnScreen() { return !homeView.hidden || !onboardView.hidden; }
 rig.onclick = () => {                                    // если нажать на удода
   birdWave();
   say(random(["Шалом! 👋", "Погнали учиться!", "Я удод, кстати 🙂", "Ой, щекотно!", "יאללה! Поехали!"]), 1800);
@@ -237,6 +264,7 @@ document.querySelectorAll(".card.soon").forEach(card => {
 function showHome() {
   hideFeedback();
   lessonView.hidden = true;
+  if (typeof questView !== "undefined") questView.hidden = true;
   homeView.hidden = false;
   homeView.classList.remove("slide-in"); void homeView.offsetWidth; homeView.classList.add("slide-in");
   if (tg && tg.BackButton) tg.BackButton.hide();
@@ -561,6 +589,7 @@ const SOUNDS = {
   right:  { wave: "sine",     notes: [[660, 0, .12], [880, .1, .2]] },             // «дзынь» вверх
   wrong:  { wave: "triangle", notes: [[220, 0, .18], [180, .14, .25]] },           // глухое «бум» вниз
   finish: { wave: "sine",     notes: [[523, 0, .15], [659, .15, .15], [784, .3, .15], [1047, .45, .35]] },
+  pop:    { wave: "sine",     notes: [[520, 0, .07], [780, .05, .09]] },   // ингредиент лёг на поднос
   combo:  { wave: "triangle", notes: [[784, 0, .1], [988, .08, .1], [1175, .16, .1], [1568, .24, .3]] }  // «вжух» вверх
 };
 function playSound(name) {
