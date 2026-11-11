@@ -375,6 +375,7 @@ function showStep() {
   else if (ex.type === "listen") showListen(ex);
   else if (ex.type === "build_phrase") showBuildPhrase(ex);
   else if (ex.type === "match_pairs") showMatchPairs(ex);
+  else if (ex.type === "blitz") showBlitz(ex);
   else { step++; showStep(); return; }       // незнакомый тип — пропускаем
 
   // анимация появления
@@ -600,6 +601,61 @@ function showMatchPairs(ex) {
   };
   shuffle([...pairs]).forEach(w => mk(document.getElementById("mHe"), w, "he"));
   shuffle([...pairs]).forEach(w => mk(document.getElementById("mRu"), w, "ru"));
+}
+
+// --- «Блиц»: 30 секунд, слово за словом, два варианта — успей как можно больше ---
+const BLITZ_SEC = 30;
+function showBlitz(ex) {
+  const pool = lesson.words.filter((w, i, arr) => arr.findIndex(x => x.ru === w.ru) === i);
+  screen.innerHTML = hostHTML("Блиц! 30 секунд — успей перевести как можно больше слов!", `
+      <div class="blitz-start"><button class="btn blue" id="blGo">Поехали! ⚡</button></div>`) + `<div id="blitz"></div>`;
+  document.getElementById("blGo").onclick = () => {
+    document.querySelector(".blitz-start").remove();
+    let right = 0, total = 0, left = BLITZ_SEC, last = null, over = false;
+    const box = document.getElementById("blitz");
+    box.innerHTML = `<div class="bl-top"><div class="bl-bar"><div id="blBar"></div></div><b id="blTime">${left}</b></div>
+      <div class="bl-score">✓ <b id="blOk">0</b></div>
+      <div class="bl-word" dir="rtl" id="blWord"></div>
+      <div class="bl-opts" id="blOpts"></div>`;
+    const bar = document.getElementById("blBar");
+    requestAnimationFrame(() => { bar.style.transition = `width ${BLITZ_SEC}s linear`; bar.style.width = "0%"; });
+    const timer = setInterval(() => {
+      left--; document.getElementById("blTime").textContent = left;
+      if (left <= 5) document.getElementById("blTime").classList.add("hot");
+      if (left <= 0) finish();
+    }, 1000);
+    const next = () => {
+      let w; do { w = random(pool); } while (pool.length > 1 && w === last);
+      last = w;
+      const wrong = random(pool.filter(x => x !== w));
+      const el = document.getElementById("blWord");
+      el.textContent = w.he; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+      const opts = document.getElementById("blOpts");
+      opts.innerHTML = "";
+      shuffle([w, wrong]).forEach(o => {
+        const b = document.createElement("button");
+        b.className = "bl-opt"; b.textContent = o.ru;
+        b.onpointerdown = (e) => { e.preventDefault(); pick(o === w, b); };
+        opts.appendChild(b);
+      });
+    };
+    const pick = (ok, b) => {
+      if (over) return;
+      total++;
+      if (ok) { right++; document.getElementById("blOk").textContent = right; playSound("pop"); b.classList.add("ok"); hostAct("thumb", 500); }
+      else { playSound("wrong"); vibrate("error"); b.classList.add("no"); }
+      setTimeout(next, ok ? 180 : 420);
+    };
+    const finish = () => {
+      if (over) return; over = true; clearInterval(timer);
+      const good = total > 0 && right / total >= 0.7 && right >= 5;
+      document.getElementById("blOpts").innerHTML = "";
+      document.getElementById("blWord").innerHTML = `<span class="bl-res">${right} из ${total}</span>`;
+      setTimeout(() => checkAnswer(document.createElement("button"), good, ex, { ru: "", he: "", tr: "" },
+        good ? "" : `Верно ${right} из ${total}. Нужно хотя бы 5 и 70% — попробуем ещё раз в конце урока`), 700);
+    };
+    next();
+  };
 }
 
 // --- 3. Проверяем ответ ---

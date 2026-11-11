@@ -42,6 +42,7 @@ function renderPath() {
   const goldCount = lvl.lessons.filter(id => gold.includes(id)).length;
   const allDone = TEST_UNLOCK_ALL || lvl.lessons.every(id => done.includes(id));
   const questDone = store.get("quest_q-" + lvl.quest, false);
+  const questGold = store.get("questGold_q-" + lvl.quest, false);
   const nextIdx = lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
 
   // змейка: смещение кружков влево-вправо
@@ -70,9 +71,9 @@ function renderPath() {
     </div>
     <button class="p-scene" id="p-taxi">🚕 Сцена: в такси из аэропорта</button>
     <div class="p-track">${nodes}</div>
-    <button class="p-quest ${allDone ? (questDone ? "done" : "open") : "locked"}" id="p-quest">
+    <button class="p-quest ${allDone ? (questDone ? (questGold ? "done gold" : "done") : "open") : "locked"}" id="p-quest">
       <img src="assets/gift-shawarma.png" alt="">
-      <span><b>Квест: Первая шаурма</b><br>${allDone ? (questDone ? "Пройден ✓ · можно ещё раз" : "Открыт — вперёд!") : "Откроется после 7 уроков 🔒"}</span>
+      <span><b>Квест: Первая шаурма</b><br>${allDone ? (questDone ? (questGold ? "Идеально 🏆 · можно ещё раз" : "Пройден ✓ · можно ещё раз") : "Открыт — вперёд!") : "Откроется после 7 уроков 🔒"}</span>
     </button>
     ${ch.levels.slice(1).map((l, i) => `<div class="p-soon"><b>Уровень ${i + 2} · ${l.title}</b><span>скоро</span></div>`).join("")}
     <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после 5 уровней</span></div>

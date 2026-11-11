@@ -414,7 +414,7 @@
   const TAXI_BODY = "M10,72 Q10,56 28,53 L62,50 L82,25 Q86,20 94,20 L150,20 Q158,20 163,25 L188,50 L202,53 Q214,56 214,72 L214,84 Q214,90 208,90 L16,90 Q10,90 10,84Z";
   const TAXI_WIN = "M93,30 L128,30 L128,49 L76,49Z M134,30 L152,30 Q156,30 159,33 L175,49 L134,49Z";
   function taxiBackSVG() {
-    return `<svg viewBox="0 0 220 110"><rect x="70" y="24" width="112" height="28" fill="#cfe3f4"/></svg>`;
+    return `<svg viewBox="0 0 220 110"><path d="${TAXI_WIN}" fill="#cfe3f4"/></svg>`;   // салон виден только в окнах
   }
   function taxiFrontSVG() {
     const wheel = (cx) => `<circle cx="${cx}" cy="88" r="18" fill="#dfe8f1"/>

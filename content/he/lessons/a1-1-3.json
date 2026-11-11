@@ -2,7 +2,7 @@
   "id": "a1-1-3",
   "level": "A1",
   "title": "Ты голод{m:ен}{f:на}?",
-  "status": "черновик — проверить у знатока",
+  "status": "проверено знатоком 11.11.2026",
   "exam": false,
   "words": [
     {
@@ -69,8 +69,7 @@
       "phrase": 0
     },
     {
-      "type": "listen",
-      "word": 4
+      "type": "blitz"
     },
     {
       "type": "match_pairs"

@@ -769,3 +769,28 @@ body.theme-dark .set-seg button.on, body.theme-dark .ae-opt.on, body.theme-dark 
 body.theme-dark .p-level, body.theme-dark .p-soon, body.theme-dark .bonus { background: #1c2430; color: var(--text); }
 body.theme-dark .st-wrap, body.theme-dark .st-panel { background: var(--bg); }
 body.theme-dark .p-node.locked { background: #2a3442; box-shadow: 0 6px 0 #1b222c; }
+
+/* ---------- Блиц ---------- */
+.blitz-start { margin-top: 8px; }
+.blitz-start .btn { margin: 4px 0 0; }
+.bl-top { display: flex; align-items: center; gap: 10px; max-width: 380px; margin: 0 auto; }
+.bl-bar { flex: 1; height: 12px; border-radius: 6px; background: #e3edf7; overflow: hidden; }
+.bl-bar div { height: 100%; width: 100%; background: linear-gradient(90deg, #ff9f43, #ff6b3d); }
+.bl-top b { font-size: 20px; min-width: 28px; }
+.bl-top b.hot { color: #ff4b4b; animation: pop .4s ease infinite; }
+.bl-score { font-size: 16px; color: var(--green); margin: 6px 0 0; }
+.bl-word { font-size: 46px; font-weight: 700; margin: 10px 0 14px; min-height: 60px; }
+.bl-word.pop { animation: popIn .25s ease both; }
+.bl-res { font-size: 30px; color: var(--blue-dark); direction: ltr; display: inline-block; }
+.bl-opts { display: flex; gap: 10px; max-width: 380px; margin: 0 auto; }
+.bl-opt { flex: 1; padding: 22px 8px; font-size: 19px; border-radius: 16px; border: 2px solid #dfe6ee; border-bottom-width: 4px;
+  background: var(--bg); color: var(--text); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.bl-opt.ok { background: #dff7cf; border-color: var(--green); }
+.bl-opt.no { background: #ffe1e1; border-color: var(--red); animation: shake .3s ease; }
+body.theme-dark .bl-opt { background: #1c2430; border-color: #2e3a4b; }
+
+.p-quest.done.gold { color: #5a3d00; background: linear-gradient(135deg, #ffe066, #f5b400); box-shadow: 0 6px 0 #c98a00, 0 0 18px rgba(255,200,40,.5); }
+.lvl-done { display: flex; align-items: center; gap: 12px; max-width: 380px; margin: 10px auto; padding: 12px 14px; border-radius: 16px;
+  background: linear-gradient(135deg, #eaf4fd, #fff6d6); text-align: left; font-size: 15px; animation: popIn .5s ease .4s both; }
+.lvl-done span { color: var(--hint); font-size: 14px; }
+.lvl-badge { font-size: 34px; }

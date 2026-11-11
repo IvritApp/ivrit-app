@@ -249,6 +249,11 @@ function finishQuest() {
   const pts = Math.round(qPoints * questFactor() * (perfect ? 2 : 1));
   store.set(todayKey(), store.get(todayKey(), 0) + pts);
   store.set("quest_" + quest.id, true);
+  if (perfect) store.set("questGold_" + quest.id, true);
+  // итог уровня
+  const lvlInfo = (typeof course !== "undefined" && course) ? course.chapters[0].levels[0] : null;
+  const goldN = lvlInfo ? lvlInfo.lessons.filter(id => perfectLessons().includes(id)).length : 0;
+  const totalN = lvlInfo ? lvlInfo.lessons.length : 7;
   const finalImg = qBag.includes("lafa") ? "gift-shawarma" : "gift-pita";
   const order = qBag.map(x => ING_NAMES[x]).join(", ");
   // продавец заворачивает шаурму и протягивает тебе
@@ -261,7 +266,11 @@ function finishQuest() {
       <div class="q-final">
         <img class="q-final-img" src="assets/${finalImg}.png" alt="Шаурма">
         <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный квест! 🏆" : "Квест пройден! 🎉"}</h2>
-        <p class="task"><b>Уровень 1 «Первая шаурма» завершён</b></p>
+        <div class="lvl-done">
+          <div class="lvl-badge">🏁</div>
+          <div><b>Уровень 1 «Первая шаурма» пройден!</b><br>
+          <span>Золотых уроков: ★ ${goldN} из ${totalN}${perfect ? " · квест золотой 🏆" : ""}</span></div>
+        </div>
         <p class="task">Твой заказ: ${order}</p>
         <div class="points-row" style="animation-delay:.3s">
           <div class="pts-big">+${pts}</div>
