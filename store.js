@@ -179,7 +179,13 @@
       <text x="180" y="125" text-anchor="middle" font-size="32" font-weight="700" fill="#fff" font-family="Arial, 'DejaVu Sans', sans-serif">מכולת</text>
       <rect x="20" y="160" width="80" height="120" rx="4" fill="#9fc8e4"/><rect x="260" y="160" width="80" height="120" rx="4" fill="#9fc8e4"/>
       ${inner("soda", 30, 220, 30)}${inner("snack", 62, 222, 30)}${inner("bread", 270, 222, 32)}${inner("juice", 302, 222, 30)}
-      <rect x="112" y="158" width="136" height="242" fill="#5d6a78"/>
+      <rect x="112" y="158" width="136" height="242" fill="#efe4cf"/>
+      <rect x="112" y="158" width="136" height="14" fill="#f8f3ea"/><rect x="140" y="162" width="80" height="5" rx="2" fill="#fffef6"/>
+      <rect x="112" y="200" width="136" height="4" fill="#aeb6be"/><rect x="112" y="250" width="136" height="4" fill="#aeb6be"/>
+      ${inner("snack", 116, 176, 30)}${inner("cookies", 148, 178, 30)}${inner("snack", 182, 176, 30)}${inner("cans", 214, 178, 30)}
+      ${inner("soda", 116, 226, 30)}${inner("water", 148, 226, 30)}${inner("juice", 182, 226, 30)}${inner("soda", 214, 226, 30)}
+      <rect x="150" y="290" width="60" height="70" rx="3" fill="#a87442"/><rect x="146" y="286" width="68" height="6" fill="#e9e1d2"/>
+      <rect x="112" y="360" width="136" height="40" fill="#d9c9ab"/>
       <rect class="mk-door-l" x="116" y="162" width="64" height="238" fill="#a9d0ea" stroke="#7d8b99" stroke-width="3"/>
       <rect class="mk-door-r" x="180" y="162" width="64" height="238" fill="#a9d0ea" stroke="#7d8b99" stroke-width="3"/>
       <rect y="400" width="360" height="40" fill="#b9b1a3"/>
@@ -218,9 +224,9 @@
     const intro = document.createElement("div");
     intro.className = "mk-intro"; intro.innerHTML = facadeSVG();
     root.appendChild(intro);
-    const introMs = 2600;
-    setTimeout(() => intro.classList.add("open"), 500);
-    setTimeout(() => intro.classList.add("walk"), 1300);
+    const introMs = 3600;
+    setTimeout(() => intro.classList.add("open"), 400);      // двери плавно разъезжаются (1,4 с)
+    setTimeout(() => intro.classList.add("walk"), 1700);     // шаг внутрь с лёгким покачиванием (1,9 с)
     setTimeout(() => { intro.remove(); seller.classList.add("wave"); setTimeout(() => seller.classList.remove("wave"), 1800); }, introMs);
 
     let bubble = null, anchor = null, top = false;

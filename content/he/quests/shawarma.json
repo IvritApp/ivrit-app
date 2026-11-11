@@ -6,6 +6,7 @@
   "place": "counter",
   "placeTitle": "Шаурмичная",
   "icon": "🌯",
+  "emptyOrder": "Здесь соберётся твоя шаурма 🌯",
   "prelude": {
     "scene": "shop",
     "once": true

@@ -6,6 +6,7 @@
   "place": "makolet",
   "placeTitle": "Маколет",
   "icon": "🛒",
+  "emptyOrder": "Пока пусто — найди товары из списка 🧺",
   "items": {
     "bread": "хлеб",
     "milk": "молоко",

@@ -593,9 +593,9 @@ body {
 .st-title { position: absolute; z-index: 26; top: 10px; left: 10px; display: flex; gap: 6px; align-items: center;
   padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.9); color: var(--blue-dark);
   font-weight: 700; font-size: 14px; box-shadow: 0 2px 8px rgba(30,60,110,.12); }
-.st-view .q-tray { position: absolute; z-index: 24; top: 48px; left: 8px; right: 8px; margin: 0; padding: 6px;
+.st-view .q-tray { position: absolute; z-index: 28; top: 48px; left: 8px; right: 8px; margin: 0; padding: 6px;
   min-height: 0; background: rgba(255,247,234,.92); }
-.st-view .q-tray:empty { display: none; }
+.st-view .q-tray:empty::before { content: attr(data-empty); color: #8a7a66; font-size: 14px; padding: 6px 4px; }
 .st-view .q-ing { width: 50px; }
 .st-view .q-ing img { width: 34px; height: 34px; }
 .st-tap { position: absolute; z-index: 26; right: 10px; bottom: 8px; font-size: 12px; color: #6b7c8f;
@@ -827,3 +827,4 @@ body.theme-dark .p-medal.won { background: #3a3218; }
 .card.honor-card .icon { background: #fff3c4; }
 body.theme-dark .hn-form, body.theme-dark .hn-how, body.theme-dark .hn-me { background: #2a2a1c; }
 button.p-lvl-go { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; background: #e8f4ff; color: #1b5e9e; }
+.st-view .q-tray { background: #fffaf2; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); opacity: 1; }

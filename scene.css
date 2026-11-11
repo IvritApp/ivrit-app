@@ -287,11 +287,19 @@
 .mk-fly > svg { display: block; overflow: visible; }
 .mk-intro { position: absolute; left: 0; top: 0; width: 360px; height: 440px; transform-origin: 0 0; z-index: 30; box-shadow: 0 -2000px 0 2000px #bfe0f5; }
 .mk-intro.walk { box-shadow: none; }
-.mk-intro > svg { display: block; transition: transform 1.3s ease-in, opacity 1.3s ease-in; transform-origin: 50% 64%; }
-.mk-intro .mk-door-l, .mk-intro .mk-door-r { transition: transform .8s ease; }
+.mk-intro > svg { display: block; transform-origin: 50% 64%; }
+.mk-intro .mk-door-l, .mk-intro .mk-door-r { transition: transform 1.4s cubic-bezier(.45, 0, .2, 1); }
 .mk-intro.open .mk-door-l { transform: translateX(-62px); }
 .mk-intro.open .mk-door-r { transform: translateX(62px); }
-.mk-intro.walk > svg { transform: scale(3.4); opacity: 0; }
+.mk-intro.walk > svg { animation: mkWalkIn 1.9s cubic-bezier(.5, 0, .5, 1) forwards; }
+@keyframes mkWalkIn {
+  0%   { transform: scale(1) translateY(0); opacity: 1; }
+  20%  { transform: scale(1.22) translateY(3px); }
+  40%  { transform: scale(1.55) translateY(-2px); }
+  60%  { transform: scale(2) translateY(3px); opacity: 1; }
+  80%  { transform: scale(2.6) translateY(-1px); opacity: .6; }
+  100% { transform: scale(3.2) translateY(0); opacity: 0; }
+}
 
 /* Панель: список покупок и «налево / направо» */
 .mk-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 2px 0 8px; }

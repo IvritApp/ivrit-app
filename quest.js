@@ -53,7 +53,6 @@ function renderStageShell(place, title, icon) {
   questView.innerHTML = `
     <div class="st-wrap">
       <div class="st-view" id="stView">
-        <div class="st-title"><span>${icon}</span>${title}</div>
         <button class="st-order" id="stOrder" hidden>🧾 Мой заказ</button>
         <div class="combo st-fire" id="stFire"></div>
         <div class="q-tray" id="qTray" hidden></div>
@@ -156,6 +155,7 @@ function startQuest(id) {
       ob.hidden = false;
       ob.onclick = (e) => { e.stopPropagation(); tray.hidden = !tray.hidden; };
       tray.onclick = (e) => { e.stopPropagation(); tray.hidden = true; };
+      tray.dataset.empty = d.emptyOrder || "Пока пусто";
       setTimeout(() => { if (token === stageToken) showQuestStep(); }, (stage && stage.introMs) ? stage.introMs + 300 : 1500);
     })
     .catch(() => { questView.innerHTML = `<p class="task">Не удалось загрузить квест 😕</p>`; });
