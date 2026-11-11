@@ -507,6 +507,13 @@ function flashRed() {
 function showFinish() {
   bar.style.width = "100%";
   markDone(lesson.id);
+  // Идеальный урок (ни одной ошибки) — золотой, очки за урок ×2
+  const perfect = mistakes === 0;
+  if (perfect) {
+    store.set(todayKey(), store.get(todayKey(), 0) + lessonPoints);   // добавляем ещё столько же
+    lessonPoints *= 2;
+    markPerfect(lesson.id);
+  }
   const lvl = course && course.chapters[0].levels[0];
   const left = lvl ? lvl.lessons.filter(id => !doneLessons().includes(id)).length : 1;
   vibrate("success");
@@ -530,11 +537,12 @@ function showFinish() {
         <img class="bird" src="assets/udod.png" alt="Удод">
       </div>
 
-      <h2 class="done">Урок пройден!</h2>
+      <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный урок! 🏆" : "Урок пройден!"}</h2>
       <p class="task">«${lesson.title}» · Ошибок: ${mistakes}</p>
+      ${perfect ? `<div class="perfect-badge">Без единой ошибки — урок стал <b>золотым</b>, очки <b>×2</b></div>` : ""}
       <div class="points-row">
         <div class="pts-big">+${lessonPoints}</div>
-        <div class="pts-label">очков за урок<br>Сегодня всего: <b>${store.get(todayKey(), 0)}</b></div>
+        <div class="pts-label">очков за урок${perfect ? " (×2)" : ""}<br>Сегодня всего: <b>${store.get(todayKey(), 0)}</b></div>
         ${combo >= 1 ? `<div class="pts-fire">${flameSVG(fireLevel(combo))}<span>${combo}</span></div>` : ""}
       </div>
 

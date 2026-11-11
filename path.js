@@ -7,6 +7,8 @@ const pathView = document.getElementById("path");
 let course = null;
 
 function doneLessons() { return store.get("done", []); }
+function perfectLessons() { return store.get("perfect", []); }
+function markPerfect(id) { const d = perfectLessons(); if (!d.includes(id)) { d.push(id); store.set("perfect", d); } }
 function markDone(id) { const d = doneLessons(); if (!d.includes(id)) { d.push(id); store.set("done", d); } }
 
 function showPath() {
@@ -22,6 +24,8 @@ function renderPath() {
   const ch = course.chapters[0];                 // пока одна глава — A1
   const lvl = ch.levels[0];
   const done = doneLessons();
+  const gold = perfectLessons();
+  const goldCount = lvl.lessons.filter(id => gold.includes(id)).length;
   const allDone = lvl.lessons.every(id => done.includes(id));
   const questDone = store.get("quest_q-" + lvl.quest, false);
   const nextIdx = lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
@@ -29,8 +33,8 @@ function renderPath() {
   // змейка: смещение кружков влево-вправо
   const offs = [0, 60, 90, 60, 0, -60, -90];
   const nodes = lvl.lessons.map((id, k) => {
-    const st = done.includes(id) ? "done" : k === nextIdx ? "current" : "locked";
-    const icon = st === "done" ? "✓" : st === "locked" ? "🔒" : (k + 1);
+    const st = done.includes(id) ? (gold.includes(id) ? "done gold" : "done") : k === nextIdx ? "current" : "locked";
+    const icon = st === "done gold" ? "★" : st === "done" ? "✓" : st === "locked" ? "🔒" : (k + 1);
     return `<div class="p-node-wrap${st === "current" ? " cur" : ""}" style="transform:translateX(${offs[k % offs.length]}px)">
       ${st === "current" ? `<div class="p-start">Старт</div>` : ""}
       <button class="p-node ${st}" data-lesson="${id}" data-k="${k}">${icon}</button>
@@ -45,7 +49,7 @@ function renderPath() {
     </div>
     <div class="p-level">
       <div class="p-level-title">Уровень 1 · ${lvl.title}</div>
-      <div class="p-level-sub">${done.filter(id => lvl.lessons.includes(id)).length} из ${lvl.lessons.length} уроков</div>
+      <div class="p-level-sub">${done.filter(id => lvl.lessons.includes(id)).length} из ${lvl.lessons.length} уроков${goldCount ? ` · <span class="p-gold">★ ${goldCount} золот${goldCount === 1 ? "ой" : "ых"}</span>` : ""}</div>
       <div class="p-level-bar"><div style="width:${done.filter(id => lvl.lessons.includes(id)).length / lvl.lessons.length * 100}%"></div></div>
     </div>
     <button class="p-scene" id="p-taxi">🚕 Сцена: в такси из аэропорта</button>

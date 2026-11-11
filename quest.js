@@ -14,6 +14,15 @@ const ING_NAMES = {
 };
 
 function startQuest(id) {
+  // Перед первым квестом — кусочек кино: такси подъезжает к шаурмичной
+  if (id === "shawarma" && window.playArrivalScene && !store.get("quest_q-shawarma", false) && !startQuest.kinoShown) {
+    startQuest.kinoShown = true;
+    stopHomeBird();
+    document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "quest");
+    questView.innerHTML = `<div id="sceneBox"></div>`;
+    window.playArrivalScene(document.getElementById("sceneBox"), { gender: profile ? profile.gender : "m", profile, part: "shop" }, () => startQuest(id));
+    return;
+  }
   stopHomeBird();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "quest");
   if (tg && tg.BackButton) tg.BackButton.show();
@@ -81,7 +90,7 @@ function showTaxi(onDone) {
   const run = () => fetch(`content/${COURSE_LANG}/scenes/taxi.json`).then(r => r.json()).then(sc => playTaxi(sc, onDone));
   if (window.playArrivalScene && !store.get("arrivalSeen", false)) {
     questView.innerHTML = `<div id="sceneBox"></div>`;
-    window.playArrivalScene(document.getElementById("sceneBox"), { gender: profile ? profile.gender : "m", profile }, () => {
+    window.playArrivalScene(document.getElementById("sceneBox"), { gender: profile ? profile.gender : "m", profile, part: "arrival" }, () => {
       store.set("arrivalSeen", true); run();
     });
   } else run();

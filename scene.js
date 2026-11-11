@@ -28,6 +28,7 @@
     hungry:   { m: "Ты голоден? Едем за шаурмой!", f: "Ты голодна? Едем за шаурмой!" },
     yes:      { ru: "Ещё как!" },
     arrived:  { ru: "Приехали! Заказываешь ты — на иврите 😉" },
+    drive:    { ru: "Садись, поехали! По дороге кое-что расскажу 😉" },
     final:    { small: "Квест", big: "Первая шаурма", sub: "Закажи шаурму на иврите" }
   };
 
@@ -357,6 +358,10 @@
   function playArrivalScene(container, opts, onDone) {
     opts = opts || {};
     const female = opts.gender === "f";
+    // part: "arrival" — только прилёт и посадка в такси (перед уроками уровня);
+    //       "shop"    — только подъезд к шаурмичной и карточка квеста (перед квестом);
+    //       иначе     — всё кино целиком.
+    const part = opts.part || "all";
     const G = female ? "f" : "m";
     const profile = opts.profile || {};
     const friendName = female ? "Циля" : "Давид";
@@ -519,6 +524,26 @@
     // =====================================================
     // СЦЕНАРИЙ (время в секундах от начала)
     // =====================================================
+    // --- Только шаурмичная (перед квестом): такси уже едет ---
+    if (part === "shop") {
+      show(s3);
+      [player3, friend3].forEach(a => { a.style.opacity = 0; });
+      pFriend.style.opacity = 1; pPlayer.style.opacity = 1;
+      taxi.classList.add("hs-moving", "hs-driving"); speed(1, .4);
+      at(.6, () => say(talkFriend, friendName, TEXT.hungry[G].replace("Ты голоден? ", "").replace("Ты голодна? ", "") , "", 1.6));
+      at(.8, () => {
+        shop.style.visibility = "visible";
+        setPose(shop, "wave", true);
+        anim(shop, [{ transform: "translateX(330px)" }, { transform: "translateX(0)" }], { duration: 2600, easing: "cubic-bezier(.25,.6,.3,1)" });
+        speed(0, 2.6);
+      });
+      at(3.4, () => taxi.classList.remove("hs-moving", "hs-driving"));
+      at(3.5, () => say(talkFriend, friendName, TEXT.arrived.ru, "", 2));
+      at(5.6, () => finalCard.classList.add("show"));
+      at(7.8, finish);
+      return { skip: finish };
+    }
+
     // --- 1. Посадка: 0 … 5 ---
     show(s1);
     anim(clouds, [{ transform: "translateX(0)" }, { transform: "translateX(-240px)" }], { duration: 6000 });
@@ -586,6 +611,11 @@
     });
     at(T3 + 3.2, () => { fade(pFriend, 1, .4); fade(pPlayer, 1, .4); });
     at(T3 + 3.7, () => { taxi.classList.add("hs-moving", "hs-driving"); speed(1, 1.2); });
+    if (part === "arrival") {
+      at(T3 + 4.4, () => say(talkFriend, friendName, TEXT.drive.ru, "", 2.6));
+      at(T3 + 7.4, finish);
+      return { skip: finish };
+    }
     at(T3 + 4.4, () => say(talkFriend, friendName, TEXT.hungry[G], "", 2.4));
     at(T3 + 7.0, () => say(talkPlayer, "", TEXT.yes.ru, "", 1.4));
 
