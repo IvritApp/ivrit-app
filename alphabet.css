@@ -1,1 +1,93 @@
-/* Стили раздела «Алфавит» — делает второй чат. Все классы начинаются с .ab- */
+/* Стили раздела «Алфавит». Все классы начинаются с .ab- */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;700&display=swap");
+
+#alphabet { --ab-line: #dfe6ee; --ab-seen: #e6f6dc; --ab-seen-b: #8fd16a; }
+body.theme-dark #alphabet { --ab-line: #2c3747; --ab-seen: #1f3a26; --ab-seen-b: #4c9a3a; }
+
+.ab-wrap { max-width: 440px; margin: 0 auto; }
+.ab-in { animation: abIn .3s cubic-bezier(.2,.8,.2,1); }
+@keyframes abIn { from { opacity: 0; transform: translateY(10px); } }
+.ab-loading { padding: 60px 20px; color: var(--hint); }
+
+[dir="rtl"], .ab-tile-he, .ab-big, .ab-name-he, .ab-form-he, .ab-syl-he, .ab-word-he, .ab-vw-he {
+  font-family: "Noto Sans Hebrew", "Arial Hebrew", "David", sans-serif;
+}
+
+.ab-title { margin: 4px 0 2px; font-size: 26px; }
+.ab-sub { color: var(--hint); font-size: 15px; margin: 4px 0 10px; }
+.ab-count { display: inline-block; background: var(--soft); border-radius: 20px; padding: 6px 14px; font-size: 15px; margin-bottom: 14px; }
+
+/* --- таблица букв --- */
+.ab-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ab-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 2px 8px; border-radius: 14px; cursor: pointer;
+  border: 2px solid var(--ab-line); border-bottom-width: 4px;
+  background: var(--bg); color: var(--text); transition: transform .1s;
+}
+.ab-tile:active { transform: translateY(2px); border-bottom-width: 2px; }
+.ab-tile-he { font-size: 34px; line-height: 1.15; font-weight: 700; }
+.ab-tile-name { font-size: 12px; color: var(--hint); direction: ltr; }
+.ab-tile.ab-seen { background: var(--ab-seen); border-color: var(--ab-seen-b); }
+
+/* --- страница буквы --- */
+.ab-top { display: flex; justify-content: space-between; align-items: center; }
+.ab-back { border: none; background: none; color: #3a8ad6; font-size: 16px; font-weight: 600; cursor: pointer; padding: 6px 0; }
+.ab-num { color: var(--hint); font-size: 14px; }
+
+.ab-big {
+  display: block; margin: 6px auto 4px; width: 132px; height: 132px; border-radius: 50%;
+  border: none; background: var(--soft); color: var(--text); cursor: pointer;
+  font-size: 84px; font-weight: 700; line-height: 132px; padding: 0;
+  box-shadow: 0 4px 14px rgba(30,60,110,.12);
+}
+.ab-name { font-size: 24px; font-weight: 700; cursor: pointer; }
+.ab-name-he { font-size: 22px; font-weight: 400; color: var(--hint); margin: 0 4px; }
+.ab-spk { font-size: 18px; }
+
+.ab-h { font-size: 17px; margin: 22px 0 10px; text-align: left; }
+
+.ab-forms { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ab-form {
+  flex: 1 1 0; min-width: 96px; max-width: 140px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px; border-radius: 14px; cursor: pointer;
+  border: 2px solid var(--ab-line); border-bottom-width: 4px; background: var(--bg); color: var(--text);
+}
+.ab-form-he { font-size: 48px; line-height: 1.2; font-weight: 700; }
+.ab-form-sound { font-size: 18px; font-weight: 700; color: #3a8ad6; }
+.ab-form-label { font-size: 12px; color: var(--hint); }
+.ab-note { background: #fff4e6; color: #8a4b00; border-radius: 12px; padding: 10px 12px; font-size: 15px; text-align: left; margin: 12px 0 0; }
+body.theme-dark .ab-note { background: #3a2a14; color: #ffd29c; }
+
+.ab-syl-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+.ab-syl {
+  display: flex; flex-direction: column; align-items: center; padding: 6px 0 6px;
+  border-radius: 12px; border: 2px solid var(--ab-line); background: var(--bg); color: var(--text); cursor: pointer;
+}
+.ab-syl-he { font-size: 34px; line-height: 1.4; }
+.ab-syl-tr { font-size: 15px; font-weight: 600; color: #3a8ad6; }
+.ab-legend { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: 14px; color: var(--hint); margin-top: 6px; }
+.ab-vw { background: var(--soft); border-radius: 10px; padding: 2px 10px; white-space: nowrap; }
+.ab-vw-he { font-size: 24px; color: var(--text); font-family: "Noto Sans Hebrew", "Arial Hebrew", sans-serif; }
+
+.ab-words { display: flex; flex-direction: column; gap: 8px; }
+.ab-word {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 12px; border-radius: 14px; cursor: pointer;
+  border: 2px solid var(--ab-line); border-bottom-width: 4px; background: var(--bg); color: var(--text);
+}
+.ab-word-he { font-size: 40px; line-height: 1.35; }
+.ab-word-ans { display: none; font-size: 17px; }
+.ab-word-tr { font-weight: 700; color: #3a8ad6; }
+.ab-word-hint { font-size: 12px; color: var(--hint); }
+.ab-word.ab-open { border-color: #3cae5c; }
+.ab-word.ab-open .ab-word-ans { display: block; animation: abIn .25s ease; }
+.ab-word.ab-open .ab-word-hint { display: none; }
+
+.ab-nav { display: flex; gap: 10px; margin-top: 22px; }
+.ab-nav > * { flex: 1; }
+.ab-nav .btn { margin: 0; font-size: 16px; padding: 14px 8px; }
+
+.ab-bounce { animation: abBounce .3s ease; }
+@keyframes abBounce { 40% { transform: scale(.92); } }
