@@ -619,9 +619,9 @@
     const taxi = put(s3, "", 4, 552, 264, 132, "hs-taxi");
     taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
     const pass = taxi.querySelector(".hs-pass");
-    put(pass, fig(LOOK.driver), 166, 17, 44, 88);
-    const pFriend = put(pass, fig(friendLook), 82, 17, 44, 88);
-    const pPlayer = put(pass, playerFig("sit"), 116, 17, 44, 88);
+    put(pass, fig(LOOK.driver), 168, 30, 34, 68);
+    const pFriend = put(pass, fig(friendLook), 101, 30, 34, 68);
+    const pPlayer = put(pass, playerFig("sit"), 124, 30, 34, 68);
     pFriend.style.opacity = 0; pPlayer.style.opacity = 0;
     const talkFriend = put(taxi, "", 96, 20, 30, 20);   // точки, над которыми появляются реплики в такси
     const talkPlayer = put(taxi, "", 128, 20, 30, 20);
@@ -944,9 +944,9 @@
       const taxi = put(big, "", 0, 0, 264, 132, "hs-taxi hs-moving hs-driving");
       taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
       const pass = taxi.querySelector(".hs-pass");
-      put(pass, fig(LOOK.driver), 166, 17, 44, 88);
-      who.friend = put(pass, fig(friendLook), 82, 17, 44, 88);
-      who.me = put(pass, playerFig("sit"), 116, 17, 44, 88);
+      put(pass, fig(LOOK.driver), 168, 30, 34, 68);
+      who.friend = put(pass, fig(friendLook), 101, 30, 34, 68);
+      who.me = put(pass, playerFig("sit"), 124, 30, 34, 68);
     } else {
       const shop = put(frame, shopSVG(), 65, 366, 230, 190, "hs-shop");
       who.seller = put(shop, "", 64, 72, 36, 30);        // голова продавца внутри вывески
@@ -1042,16 +1042,32 @@
       el.innerHTML = chopSVG(it, w);
       breadBox.appendChild(el);
       const src = SOURCE[it] || [180, 470];
+      // Мясо: продавец подходит к вертелу и срезает его ножом — кусочки падают, потом летят на питу/лафу
+      let delay = 0;
+      if (it.startsWith("meat")) {
+        delay = 2000;
+        const sl = who.seller;
+        sl.classList.remove("hs-put", "hs-put-l", "hs-put-r"); sl.classList.add("hs-cut");
+        const knife = put(frame, `<svg viewBox="0 0 14 44"><rect x="5" y="0" width="5" height="30" rx="2.5" fill="#d7e0ea"/><path d="M5,2 L10,2 L10,28 Q7.5,32 5,28Z" fill="#eef3f8"/><rect x="4" y="29" width="7" height="14" rx="2.5" fill="#4a3426"/></svg>`, 256, 404, 14, 44, "hs-knife");
+        for (let i = 0; i < 7; i++) {
+          const bit = put(frame, chopSVG(it, 22), 266 + (i % 3) * 6, 420 + (i % 4) * 22, 22, 13, "hs-shave");
+          bit.style.animationDelay = (0.25 + i * 0.2) + "s";
+          setTimeout(() => bit.remove(), 2200);
+        }
+        setTimeout(() => { knife.remove(); sl.classList.remove("hs-cut"); }, 1900);
+      }
       const dx = src[0] - (104 + x + w / 2), dy = src[1] - (520 + y);
       el.animate([
         { transform: `translate(${dx}px, ${dy}px) scale(.8)`, opacity: 0 },
         { transform: `translate(${dx}px, ${dy - 10}px) scale(.8)`, opacity: 1, offset: .15 },
         { transform: `translate(${dx * .45}px, ${Math.min(dy, 0) - 60}px) scale(1)`, offset: .55 },
         { transform: "translate(0, 0) scale(1)" }
-      ], { duration: 900, easing: "ease-in-out", fill: "both" });
-      const s = who.seller;
-      s.classList.remove("hs-put", "hs-put-l", "hs-put-r"); void s.offsetWidth;
-      s.classList.add("hs-put", src[0] < 180 ? "hs-put-l" : "hs-put-r");
+      ], { duration: 900, delay, easing: "ease-in-out", fill: "both" });
+      if (!delay) {
+        const s = who.seller;
+        s.classList.remove("hs-put", "hs-put-l", "hs-put-r"); void s.offsetWidth;
+        s.classList.add("hs-put", src[0] < 180 ? "hs-put-l" : "hs-put-r");
+      }
     }
     // Заворачивает и протягивает тебе
     function wrap(img, cb) {

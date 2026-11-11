@@ -10,6 +10,7 @@
   const SKIN  = ["#f2c7a3", "#eab68c", "#d99d72", "#b97a52", "#7d4e33"];   // без «бледного» тона
   const HAIRC = ["#2b2230", "#5a3a24", "#a0612f", "#e3b04b", "#d4542e", "#9aa0a8"];
   const TOPC  = ["#5aa9f0", "#ff8a35", "#ffffff", "#2b2f3a", "#7fae5a", "#e8413a", "#b57be0"];
+  const KIPPAC = ["#1f2d4f", "#1d1e24", "#ffffff", "#3a8ad6", "#7fae5a", "#b57be0", "#c9a227"];
   const BOTC  = ["#1f2d4f", "#3b5b8c", "#2b2f3a", "#c9b48a", "#7a8592", "#ffffff"];
 
   // ---------- Варианты (бесплатно) ----------
@@ -17,15 +18,22 @@
     head:  [{ id: "round", name: "Круглое" }, { id: "oval", name: "Овальное" }, { id: "square", name: "Квадратное" }],
     eyes:  [{ id: "round", name: "Круглые" }, { id: "dots", name: "Точки" }, { id: "happy", name: "Радостные" }, { id: "lashes", name: "С ресницами" }],
     mouth: [{ id: "smile", name: "Улыбка" }, { id: "grin", name: "Широкая" }, { id: "calm", name: "Спокойная" }, { id: "open", name: "Удивление" }],
+    // g: "m" — только для парней, "f" — только для девушек, без g — для всех
     hair:  [
-      { id: "short", name: "Короткая" }, { id: "side", name: "Пробор" }, { id: "curly", name: "Кудри" }, { id: "buzz", name: "Ёжик" },
-      { id: "long", name: "Длинные" }, { id: "bob", name: "Каре" }, { id: "pony", name: "Хвост" }, { id: "curlylong", name: "Длинные кудри" }
+      { id: "short", name: "Короткая", g: "m" }, { id: "side", name: "Пробор", g: "m" }, { id: "buzz", name: "Ёжик", g: "m" },
+      { id: "curly", name: "Кудри", g: "m" }, { id: "undercut", name: "Андеркат", g: "m" }, { id: "quiff", name: "Кок", g: "m" },
+      { id: "manbun", name: "Пучок", g: "m" }, { id: "afro", name: "Афро", g: "m" },
+      { id: "long", name: "Длинные", g: "f" }, { id: "bob", name: "Каре", g: "f" }, { id: "pony", name: "Хвост", g: "f" },
+      { id: "curlylong", name: "Длинные кудри", g: "f" }, { id: "braid", name: "Коса", g: "f" }
     ],
-    top:    [{ id: "tee", name: "Футболка" }, { id: "hoodie", name: "Худи" }, { id: "shirt", name: "Рубашка" }, { id: "hasid", name: "Лапсердак" }],
-    beard:  [{ id: "none", name: "Без бороды" }, { id: "stubble", name: "Щетина" }, { id: "short", name: "Короткая" }, { id: "long", name: "Длинная" }],
+    top:    [{ id: "tee", name: "Футболка" }, { id: "hoodie", name: "Худи" }, { id: "shirt", name: "Рубашка", g: "m" },
+             { id: "hasid", name: "Лапсердак", g: "m" }, { id: "blouse", name: "Блузка", g: "f" }],
+    beard:  [ // только парням
+{ id: "none", name: "Без бороды" }, { id: "stubble", name: "Щетина" }, { id: "short", name: "Короткая" }, { id: "long", name: "Длинная" }],
     payot:  [{ id: "none", name: "Без пейсов" }, { id: "payot", name: "Пейсы" }],
-    headwear: [{ id: "none", name: "Без убора" }, { id: "kippa", name: "Кипа" }, { id: "hasidhat", name: "Шляпа" }, { id: "tichel", name: "Платок" }],
-    bottom: [{ id: "jeans", name: "Брюки" }, { id: "shorts", name: "Шорты" }, { id: "skirt", name: "Юбка" }]
+    headwear: [{ id: "none", name: "Без убора" }, { id: "kippa", name: "Кипа", g: "m" }, { id: "hasidhat", name: "Шляпа", g: "m" }, { id: "tichel", name: "Платок", g: "f" }],
+    bottom: [{ id: "jeans", name: "Брюки" }, { id: "shorts", name: "Шорты" }, { id: "skirt", name: "Юбка", g: "f" },
+             { id: "longskirt", name: "Длинная юбка", g: "f" }]
   };
 
   // ---------- Платные вещи (магазин). Цены — черновик ----------
@@ -44,10 +52,23 @@
       head: f ? "oval" : "round", skin: 1, eyes: f ? "lashes" : "round", mouth: "smile", body: f ? "slim" : "base",
       hair: f ? "long" : "short", hairColor: 1,
       top: "tee", topColor: 0, bottom: f ? "skirt" : "jeans", bottomColor: 0,
-      beard: "none", payot: "none", headwear: "none",   // борода, пейсы, кипа / шляпа / платок — бесплатно
+      gender: f ? "f" : "m",
+      beard: "none", payot: "none", headwear: "none", kippaColor: 0,   // борода, пейсы, кипа / шляпа / платок — бесплатно
       outer: null, hat: null, glasses: null,        // надетые платные вещи
       owned: []                                      // купленные платные вещи
     };
+  }
+
+  // Убрать то, что не подходит полу (например, после «Сменить имя или пол»)
+  const fits = (o, g) => !o.g || o.g === g;
+  function sanitize(c) {
+    const g = c.gender || "m", d = defaults(g);
+    ["hair", "top", "bottom", "headwear"].forEach(k => {
+      const o = OPTIONS[k].find(x => x.id === c[k]);
+      if (!o || !fits(o, g)) c[k] = d[k];
+    });
+    if (g === "f") { c.beard = "none"; c.payot = "none"; }
+    return c;
   }
 
   // Чуть темнее / светлее цвет
@@ -76,6 +97,11 @@
       case "curlylong": return `<path d="M52,86 L148,86 L152,184 Q100,198 48,184Z" fill="${col}"/>` +
                           [[50,100],[46,124],[48,148],[52,172],[150,100],[154,124],[152,148],[148,172],[72,190],[100,194],[128,190]]
                           .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="12" fill="${col}"/>`).join("");
+      case "manbun":    return `<circle cx="100" cy="24" r="14" fill="${col}"/>`;
+      case "afro":      return `<circle cx="100" cy="68" r="54" fill="${col}"/>` +
+                          Array.from({ length: 16 }, (_, i) => { const t = Math.PI * (0.9 + i / 15 * 1.2) ; return [100 + Math.cos(t) * 52, 68 + Math.sin(t) * 52]; })
+                          .map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="${col}"/>`).join("");
+      case "braid":     return `<path d="M52,88 C46,16 154,16 148,88 L150,118 Q100,126 50,118Z" fill="${col}"/>`;
       case "pony":      return `<ellipse cx="150" cy="104" rx="13" ry="38" fill="${col}" transform="rotate(14 150 104)"/><circle cx="144" cy="70" r="7" fill="#ff8a35"/>`;
       default: return "";
     }
@@ -94,6 +120,19 @@
       case "buzz":  return `<path d="M58,78 C56,26 144,26 142,78 C124,64 76,64 58,78Z" fill="${col}" opacity=".92"/>`;
       case "curly": return `<path d="M54,88 Q50,32 100,28 Q150,32 146,88 Q140,62 100,58 Q60,60 54,88Z" fill="${col}"/>` +
                       curlsHTML(col, [[56,82,10],[54,66,11],[60,50,12],[72,38,12],[86,30,12],[102,27,12],[118,30,12],[132,38,12],[142,52,11],[147,68,10],[148,84,9],[80,48,10],[100,42,10],[120,48,10]]);
+      case "undercut": return `<path d="M56,92 C54,72 56,64 62,60 L62,92Z M144,92 C146,72 144,64 138,60 L138,92Z" fill="${col}" opacity=".45"/>
+                      <path d="M58,74 C54,30 142,22 146,66 C132,52 112,48 94,52 C78,54 66,62 58,74Z" fill="${col}"/>
+                      <path d="M80,40 Q104,30 132,44" stroke="${dark}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+      case "quiff": return `<path d="M54,88 C48,40 70,18 108,18 C140,20 156,42 146,88 C140,62 120,52 100,56 C80,54 62,62 54,88Z" fill="${col}"/>
+                      <path d="M68,46 Q74,4 120,8 Q106,16 100,32 Q88,26 68,46Z" fill="${col}"/>
+                      <path d="M80,30 Q92,12 112,12" stroke="${dark}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+      case "manbun": return `<path d="M54,88 C48,26 152,26 146,88 C138,62 120,54 100,56 C80,54 62,62 54,88Z" fill="${col}"/>
+                      <path d="M72,50 Q86,36 100,36 M128,50 Q114,36 100,36" stroke="${dark}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+      case "afro":  return `<path d="M54,86 Q52,50 100,46 Q148,50 146,86 Q140,64 100,62 Q60,64 54,86Z" fill="${col}"/>`;
+      case "braid": return `<path d="M52,100 C44,18 156,18 148,100 C144,72 124,56 102,60 L100,66 L98,60 C76,56 56,72 52,100Z" fill="${col}"/>
+                      <path d="M58,104 Q56,120 62,128" stroke="${col}" stroke-width="10" fill="none" stroke-linecap="round"/>
+                      ${[132, 146, 160, 174, 188].map((y, i) => `<ellipse cx="${63 - (i % 2) * 2}" cy="${y}" rx="7.5" ry="8.5" fill="${col}"/><path d="M${57 - (i % 2) * 2},${y - 2} q6,5 12,0" stroke="${dark}" stroke-width="1.4" fill="none"/>`).join("")}
+                      <rect x="57" y="196" width="10" height="5" rx="2" fill="#ff8a35"/><path d="M58,201 l-2,10 M62,201 l0,11 M66,201 l2,10" stroke="${col}" stroke-width="3" stroke-linecap="round"/>`;
       case "long":
       case "pony":  return `<path d="M52,100 C44,18 156,18 148,100 C144,72 124,56 102,60 L100,66 L98,60 C76,56 56,72 52,100Z" fill="${col}"/>`;
       case "bob":   return `<path d="M52,98 C44,18 156,18 148,98 L148,78 C128,70 72,70 52,78Z" fill="${col}"/>`;
@@ -169,6 +208,9 @@
                 <path d="M88,148 L98,176 L94,148Z M112,148 L102,176 L106,148Z" fill="#2c2d35"/>
                 <rect x="${xl}" y="236" width="${xr - xl}" height="6" fill="#2c2d35"/>
                 ${[0, 1, 2, 3].map(i => `<path d="M${xl + 4 + i * 2.4},242 l-1,${34 + i * 3} M${xr - 4 - i * 2.4},242 l1,${34 + i * 3}" stroke="#f4f4f4" stroke-width="1.4"/>`).join("")}`;
+    if (c.top === "blouse") body += `<path d="M90,148 L100,166 L110,148Z" fill="${skin}"/>
+                <path d="M88,148 Q92,158 100,166 Q108,158 112,148" stroke="#fff" stroke-width="3" fill="none" opacity=".85"/>
+                <path d="M${xl + 4},200 Q100,208 ${xr - 4},200" stroke="${dk}" stroke-width="2" fill="none" opacity=".5"/>`;
     if (c.top === "shirt")  body += `<path d="M88,148 L100,164 L112,148 L107,144 L100,154 L93,144Z" fill="#fff"/><line x1="100" y1="164" x2="100" y2="248" stroke="${dk}" stroke-width="1.8"/>` +
                               [184, 204, 224].map(y => `<circle cx="100" cy="${y}" r="2.4" fill="${dk}"/>`).join("");
     return arm("l") + arm("r") + body;
@@ -192,6 +234,8 @@
     const hip = slim ? 31 : 36;
     if (pants)                 s += `<rect x="${100 - hip}" y="240" width="${hip * 2}" height="22" rx="6" fill="${col}"/>`;
     if (c.bottom === "shorts") s += `<path d="M${100 - hip},242 L${100 + hip},242 L${102 + hip},290 L104,290 L100,280 L96,290 L${98 - hip},290Z" fill="${col}"/>`;
+    if (c.bottom === "longskirt") s += `<path d="M${100 - hip},240 L${100 + hip},240 L${114 + hip},366 Q100,372 ${86 - hip},366Z" fill="${col}"/>
+                                        <path d="M${100 - hip + 6},250 L${92 - hip},360 M100,248 L100,368 M${100 + hip - 6},250 L${108 + hip},360" stroke="${shade(col, -0.15)}" stroke-width="1.6" opacity=".5"/>`;
     if (c.bottom === "skirt")  s += `<path d="M${100 - hip},240 L${100 + hip},240 L${112 + hip},290 Q100,300 ${88 - hip},290Z" fill="${col}"/>`;
     return s;
   }
@@ -212,8 +256,11 @@
   }
   function headwear(c) {
     if (c.hat) return "";                                   // платная шапка важнее
-    if (c.headwear === "kippa") return `<path d="M76,40 Q100,22 124,40 Q100,33 76,40Z" fill="#1f2d4f"/>
-      <path d="M78,39 Q100,32 122,39" stroke="#ffffff" stroke-width="2" fill="none" opacity=".85"/>`;
+    if (c.headwear === "kippa") {
+      const kc = KIPPAC[c.kippaColor || 0] || KIPPAC[0], rim = kc === "#ffffff" ? "#3a8ad6" : "#ffffff";
+      return `<path d="M74,42 Q100,20 126,42 Q100,34 74,42Z" fill="${kc}" stroke="${shade(kc, -0.15)}" stroke-width=".8"/>
+      <path d="M77,40.5 Q100,33 123,40.5" stroke="${rim}" stroke-width="2" fill="none" opacity=".85"/>`;
+    }
     if (c.headwear === "hasidhat") return `<ellipse cx="100" cy="52" rx="64" ry="10" fill="#141418"/>
       <path d="M66,52 Q63,12 100,10 Q137,12 134,52Z" fill="#1d1e24"/>
       <path d="M67,42 Q100,46 133,42 L134,50 Q100,54 66,50Z" fill="#33343c"/>
@@ -336,6 +383,8 @@
 
   function openEditor(cfg, onDone) {
     cur = JSON.parse(JSON.stringify(cfg)); tryOn = null; tab = "face"; doneCb = onDone;
+    cur.gender = cur.gender || (typeof profile !== "undefined" && profile && profile.gender) || "m";
+    sanitize(cur);
     document.querySelectorAll("body > section").forEach(s => { if (s.id !== "avatarEditor") s.hidden = true; });
     el("avatarEditor").hidden = false;
     renderTabs(); renderPanel(); renderPreview();
@@ -361,7 +410,7 @@
   // Ряд вариантов с маленькими превью
   function optionRow(title, key, list, view) {
     return `<div class="ae-group"><div class="ae-title">${title}</div><div class="ae-row">` +
-      list.map(o => {
+      list.filter(o => fits(o, cur.gender)).map(o => {
         const c = Object.assign({}, cur, { [key]: o.id });
         return `<button class="ae-opt ${cur[key] === o.id ? "on" : ""}" data-k="${key}" data-v="${o.id}">
           <span class="ae-mini">${svg(c, { view })}</span><span class="ae-cap">${o.name}</span></button>`;
@@ -380,13 +429,14 @@
       h += swatchRow("Цвет кожи", "skin", SKIN);
       h += optionRow("Глаза", "eyes", OPTIONS.eyes, "head");
       h += optionRow("Улыбка", "mouth", OPTIONS.mouth, "head");
-      h += optionRow("Борода", "beard", OPTIONS.beard, "head");
+      if (cur.gender !== "f") h += optionRow("Борода", "beard", OPTIONS.beard, "head");
     } else if (tab === "hair") {
       h += optionRow("Причёска", "hair", OPTIONS.hair, "head");
       h += swatchRow("Цвет волос", "hairColor", HAIRC);
-      h += optionRow("Пейсы", "payot", OPTIONS.payot, "head");
+      if (cur.gender !== "f") h += optionRow("Пейсы", "payot", OPTIONS.payot, "head");
     } else if (tab === "wear") {
       h += optionRow("Головной убор", "headwear", OPTIONS.headwear, "head");
+      if (cur.headwear === "kippa") h += swatchRow("Цвет кипы", "kippaColor", KIPPAC);
       h += optionRow("Верх", "top", OPTIONS.top);
       h += swatchRow("Цвет верха", "topColor", TOPC);
       h += optionRow("Низ", "bottom", OPTIONS.bottom);
@@ -433,5 +483,5 @@
   document.addEventListener("DOMContentLoaded", initEditor);
   if (document.readyState !== "loading") initEditor();
 
-  window.HirbisAvatar = { svg, defaults, openEditor, OPTIONS, SHOP, SKIN, HAIRC, TOPC, BOTC };
+  window.HirbisAvatar = { svg, defaults, sanitize, openEditor, OPTIONS, SHOP, SKIN, HAIRC, TOPC, BOTC, KIPPAC };
 })();

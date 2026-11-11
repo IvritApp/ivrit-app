@@ -203,7 +203,7 @@ function chooseOption(btn, o, st) {
     qPoints += FIRE[lvl].points;
     updateQuestFire(true);
     if (lvl > before) setTimeout(() => showMilestone(lvl), 400);
-    meSays(`<div class="he" dir="rtl">${g(o.he)}</div><div class="tr">${g(o.tr)} — ${g(o.ru)}</div>`);
+    meSays(`<div class="he" dir="rtl">${g(o.he)}</div><div class="tr2"><span class="tr">${g(o.tr)} — </span>${g(o.ru)}</div>`);
     speak(g(o.he), { audio: o.audio });
     if (o.add) addToTray([].concat(o.add));
     qStep++;

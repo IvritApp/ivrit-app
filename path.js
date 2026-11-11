@@ -57,6 +57,7 @@ function renderPath() {
   }).join("");
 
   pathView.innerHTML = `
+    <button class="p-settings" id="p-settings" aria-label="Настройки">⚙️</button>
     ${TEST_UNLOCK_ALL ? `<div class="p-test">🔓 Тестовый режим: всё открыто</div>` : ""}
     <div class="p-chapter">
       <div class="p-ch-badge">${ch.id}</div>
@@ -83,6 +84,7 @@ function renderPath() {
     if (+b.dataset.k === 0 && lvl.intro === "taxi" && !store.get("taxiSeen", false)) showTaxi(() => startLesson(id));
     else startLesson(id);
   });
+  document.getElementById("p-settings").onclick = openSettings;
   document.getElementById("p-taxi").onclick = () => showTaxi(() => showPath());
   document.getElementById("p-quest").onclick = () => {
     if (!allDone) { showToast("Пройди все 7 уроков — и квест откроется"); vibrate("warning"); return; }

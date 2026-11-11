@@ -232,3 +232,17 @@
 @keyframes hsBlink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
 .hs-david .hs-head { transform-box: fill-box; transform-origin: 50% 90%; animation: hsNod 3.4s ease-in-out infinite alternate; }
 @keyframes hsNod { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+
+/* Пассажиры видны ТОЛЬКО в окнах такси (форма окон из TAXI_WIN, кадр такси 264×132) */
+.hs-pass { clip-path: path("M111.6,36 L153.6,36 L153.6,58.8 L91.2,58.8Z M160.8,36 L182.4,36 Q187.2,36 190.8,39.6 L210,58.8 L160.8,58.8Z"); }
+
+/* ---------- Продавец срезает мясо с вертела ---------- */
+.hs-seller { transition: transform .45s ease; }
+.hs-seller.hs-cut { transform: translateX(44px); }
+.hs-seller.hs-cut .hs-arm-r { animation: hsCutArm .32s ease-in-out .4s 5 alternate; }
+@keyframes hsCutArm { from { transform: rotate(-70deg); } to { transform: rotate(-105deg); } }
+.hs-knife { z-index: 7; animation: hsKnife .32s ease-in-out .4s 5 alternate both; transform-origin: 50% 90%; }
+@keyframes hsKnife { from { transform: translateY(0) rotate(-8deg); } to { transform: translateY(70px) rotate(4deg); } }
+.hs-shave { z-index: 6; opacity: 0; animation: hsShave .8s ease-in both; }
+@keyframes hsShave { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-10px, 90px) rotate(60deg); } }

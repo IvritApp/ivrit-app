@@ -49,6 +49,19 @@ function todayKey() { const d = new Date(); return "points_" + d.getFullYear() +
 let combo = 0;                          // серия правильных ответов подряд — считается внутри урока
 let lessonPoints = 0;
 
+// =====================================================
+// НАСТРОЙКИ (⚙️ на дорожке уроков): тема, звуки, голос, музыка, вибрация, транскрипция
+// =====================================================
+const SET_DEFAULT = { theme: "auto", sfx: 80, voice: 100, music: 50, vibro: true, translit: null };
+let settings = Object.assign({}, SET_DEFAULT, store.get("settings", {}));
+function saveSettings() { store.set("settings", settings); applySettings(); }
+function applySettings() {
+  const b = document.body;
+  b.classList.toggle("theme-dark", settings.theme === "dark");
+  b.classList.toggle("theme-light", settings.theme === "light");
+  b.classList.toggle("no-tr", settings.translit === false);
+}
+
 // --- Telegram ---
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) { tg.ready(); tg.expand(); }
@@ -135,7 +148,7 @@ function showOnboarding() {
       <h1 class="ob-title">Твоя история</h1>
       <p class="ob-text">Представь: ты скоро переезжаешь в Израиль. Там уже 10 лет живёт ${st.who}. ${st.met} встретит тебя в аэропорту и поможет обосноваться.</p>
       <p class="ob-text">А пока я научу тебя первым словам. Кстати, вот твоя первая фраза:</p>
-      <div class="ob-phrase"><div class="he" dir="rtl">${st.ready.he}</div><div class="tr">${st.ready.tr} — «${st.ready.ru}»</div></div>
+      <div class="ob-phrase"><div class="he" dir="rtl">${st.ready.he}</div><div class="tr2"><span class="tr">${st.ready.tr} — </span>«${st.ready.ru}»</div></div>
       <button class="btn blue" data-next>${draft.gender === "m" ? "Я готов!" : "Я готова!"}</button>`;
     }
   ];
@@ -345,7 +358,7 @@ function startLesson(id) {
       data.phrases = (data.phrases || []).map(w => Object.assign({}, w, { he: g(w.he), tr: g(w.tr), ru: g(w.ru) }));
       lesson = data;
       queue = [...lesson.exercises];          // порядок заданий продуман в файле урока
-      showStep();
+      askTranslit(showStep);
     })
     .catch(() => { screen.textContent = "Не удалось загрузить урок 😕"; });
 }
@@ -392,10 +405,32 @@ function ask(list, key) {                // вопрос без повторов
   if (!askBag[key] || !askBag[key].length) askBag[key] = shuffle([...list]);
   return g(askBag[key].pop());
 }
+// Друг в уроке не стоит столбом: говорит, радуется, огорчается, машет, ест шаурму…
+let hostTimer = null;
+function hostAct(name, ms) {
+  const f = document.querySelector(".host-fig");
+  if (!f) return;
+  f.className = "host-fig act-" + name;
+  clearTimeout(f._t);
+  f._t = setTimeout(() => { f.className = "host-fig"; }, ms || 1400);
+}
+function hostIdle() {
+  clearInterval(hostTimer);
+  hostTimer = setInterval(() => {
+    const f = document.querySelector(".host-fig");
+    if (!f || document.getElementById("lesson").hidden) return;
+    if (f.className !== "host-fig") return;                  // уже что-то делает
+    const acts = [["wave", 1700], ["eat", 2600], ["think", 1800], ["thumb", 1400], ["eat", 2600]];
+    const [n, ms] = acts[Math.floor(Math.random() * acts.length)];
+    hostAct(n, ms);
+  }, 4200);
+}
 function hostHTML(question, inner) {
   const fig = window.friendFigureSVG ? window.friendFigureSVG(profile ? profile.gender : "m") : "";
+  setTimeout(() => hostAct("talk", 1300), 60);   // задаёт вопрос — жестикулирует
+  hostIdle();
   return `<div class="host">
-      <div class="host-fig">${fig}</div>
+      <div class="host-fig">${fig}<img class="host-food" src="assets/gift-shawarma.png" alt=""></div>
       <div class="host-bubble">
         <div class="host-name">${friendName()}</div>
         <div class="host-q">${question}</div>
@@ -411,7 +446,7 @@ function showChooseTranslation(ex) {
 
   screen.innerHTML = hostHTML(ask(ASK_TR, "tr"), `
       <div class="word" dir="rtl">${word.he}</div>
-      <div class="translit">${word.tr} <button class="listen small" id="listen" aria-label="Послушать">🔊</button></div>`) + `
+      <div class="translit"><span class="tr">${word.tr}</span> <button class="listen small" id="listen" aria-label="Послушать">🔊</button></div>`) + `
     <div id="options"></div>
   `;
 
@@ -538,12 +573,15 @@ function showMatchPairs(ex) {
     const b = document.createElement("button");
     b.className = "m-card " + side;
     b.innerHTML = side === "he" ? `<span class="he" dir="rtl">${w.he}</span><span class="tr">${w.tr}</span>` : w.ru;
+    b.onpointerdown = (e) => { e.preventDefault(); b.onclick(); };   // срабатывает сразу при касании
     b.onclick = () => {
-      if (b.disabled) return;
+      if (b.disabled || b._busy) return;
+      b._busy = true; setTimeout(() => b._busy = false, 250);         // защита от двойного срабатывания
       if (side === "he") speak(w.he, { audio: w.audio });
+      if (pick && pick.b === b) { b.classList.remove("sel"); pick = null; return; }   // повторное касание — снять выбор
       if (!pick || pick.side === side) {          // выбрали первую карточку (или передумали)
         if (pick) pick.b.classList.remove("sel");
-        pick = { b, w, side }; b.classList.add("sel"); return;
+        pick = { b, w, side }; b.classList.add("sel"); playSound("pop"); return;
       }
       if (pick.w === w) {                          // пара!
         [pick.b, b].forEach(x => { x.classList.remove("sel"); x.classList.add("ok"); x.disabled = true; });
@@ -573,6 +611,7 @@ function checkAnswer(btn, isRight, ex, word, wrongDetail) {
     else if (b !== btn) b.classList.add("dim");
   });
 
+  hostAct(isRight ? "cheer" : "oops", isRight ? 1300 : 1500);
   if (isRight) {
     const before = fireLevel(combo);
     combo++; store.set("combo", combo);
@@ -734,7 +773,7 @@ function showFinish() {
       box.innerHTML = `
         <div class="bonus-label">🎁 Бонус · ${data.title}</div>
         <div class="bonus-he" dir="rtl">${p.he}</div>
-        <div class="bonus-tr">${p.tr} <button class="listen small" id="bonus-listen" aria-label="Послушать">🔊</button></div>
+        <div class="bonus-tr"><span class="tr">${p.tr}</span> <button class="listen small" id="bonus-listen" aria-label="Послушать">🔊</button></div>
         <div class="bonus-ru">${p.ru}</div>
       `;
       document.getElementById("bonus-listen").onclick = () => speak(p.he);
@@ -765,6 +804,7 @@ function speak(text, opts) {
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
   if (audio) {
     currentAudio = new Audio(`content/${COURSE_LANG}/audio/${audio}`);
+    currentAudio.volume = settings.voice / 100;
     currentAudio.play().catch(() => ttsFallback(text));      // файла нет — говорит устройство
     return;
   }
@@ -772,14 +812,17 @@ function speak(text, opts) {
 }
 function ttsFallback(text) {
   if (!("speechSynthesis" in window) || !text) return;
+  if (!settings.voice) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "he-IL";
+  u.volume = settings.voice / 100;
   speechSynthesis.cancel();
   speechSynthesis.speak(u);
 }
 
 // Вибрация телефона (работает внутри Telegram)
 function vibrate(kind) {
+  if (!settings.vibro) return;
   if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(kind);
 }
 
@@ -795,7 +838,8 @@ const SOUNDS = {
   combo:  { wave: "triangle", notes: [[784, 0, .1], [988, .08, .1], [1175, .16, .1], [1568, .24, .3]] }  // «вжух» вверх
 };
 function playSound(name) {
-  if (!SOUND_ON) return;
+  if (!SOUND_ON || !settings.sfx) return;
+  const vol = 0.25 * settings.sfx / 100;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     const s = SOUNDS[name], now = audioCtx.currentTime;
@@ -805,7 +849,7 @@ function playSound(name) {
       osc.type = s.wave;
       osc.frequency.value = freq;
       gain.gain.setValueAtTime(0.0001, now + start);
-      gain.gain.exponentialRampToValueAtTime(0.25, now + start + 0.02);   // плавно громче
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), now + start + 0.02);   // плавно громче
       gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);  // плавно тише
       osc.connect(gain).connect(audioCtx.destination);
       osc.start(now + start);
@@ -813,3 +857,52 @@ function playSound(name) {
     });
   } catch (e) { /* звук не обязателен — если не вышло, просто молчим */ }
 }
+
+
+// ---------- Окно настроек ----------
+function openSettings() {
+  let box = document.getElementById("settings");
+  if (!box) { box = document.createElement("div"); box.id = "settings"; document.body.appendChild(box); }
+  const seg = (key, list) => `<div class="set-seg">${list.map(([v, t]) =>
+    `<button data-k="${key}" data-v="${v}" class="${String(settings[key]) === String(v) ? "on" : ""}">${t}</button>`).join("")}</div>`;
+  const slider = (key, label, soon) => `<label class="set-row"><span>${label}${soon ? ` <i>скоро</i>` : ""}</span>
+      <input type="range" min="0" max="100" step="10" data-k="${key}" value="${settings[key]}"><b>${settings[key]}</b></label>`;
+  box.innerHTML = `<div class="set-sheet">
+      <div class="set-head"><b>⚙️ Настройки</b><button class="set-x" id="setClose">✕</button></div>
+      <div class="set-title">Тема</div>${seg("theme", [["auto", "Как в Telegram"], ["light", "Светлая"], ["dark", "Тёмная"]])}
+      <div class="set-title">Звук</div>
+      ${slider("sfx", "Звуки (верно, ошибка, огоньки)")}
+      ${slider("voice", "Голос иврита")}
+      ${slider("music", "Музыка", true)}
+      <div class="set-title">Транскрипция русскими буквами</div>
+      ${seg("translit", [["false", "Без неё ⭐"], ["true", "Показывать"]])}
+      <div class="set-note">⭐ Советуем учить без транскрипции — так слова запоминаются лучше. Но выбор за тобой.</div>
+      <div class="set-title">Вибрация</div>${seg("vibro", [["true", "Вкл"], ["false", "Выкл"]])}
+    </div>`;
+  box.className = "show";
+  box.onclick = (e) => { if (e.target === box) closeSettings(); };
+  document.getElementById("setClose").onclick = closeSettings;
+  box.querySelectorAll(".set-seg button").forEach(b => b.onclick = () => {
+    const v = b.dataset.v; settings[b.dataset.k] = v === "true" ? true : v === "false" ? false : v;
+    saveSettings(); playSound("pop"); openSettings();
+  });
+  box.querySelectorAll("input[type=range]").forEach(r => {
+    r.oninput = () => { settings[r.dataset.k] = +r.value; r.nextElementSibling.textContent = r.value; };
+    r.onchange = () => { saveSettings(); if (r.dataset.k === "sfx") playSound("right"); if (r.dataset.k === "voice") speak("שָׁלוֹם"); };
+  });
+}
+function closeSettings() { const b = document.getElementById("settings"); if (b) b.className = ""; }
+
+// ---------- Перед первым уроком: транскрипция или нет ----------
+function askTranslit(then) {
+  if (settings.translit !== null) { then(); return; }
+  screen.innerHTML = hostHTML("Показывать, как читаются слова, русскими буквами?", `
+      <div class="word" dir="rtl">שָׁלוֹם</div><div class="translit"><span class="tr-demo">шалом</span></div>`) + `
+    <button class="option tr-choice" data-v="false"><b>Без транскрипции ⭐</b><br><small>Учу иврит по-настоящему — так лучше запоминается</small></button>
+    <button class="option tr-choice" data-v="true"><b>С транскрипцией</b><br><small>Так проще на старте</small></button>
+    <p class="set-note">Поменять можно в любой момент: ⚙️ Настройки на странице уроков.</p>`;
+  screen.querySelectorAll(".tr-choice").forEach(b => b.onclick = () => {
+    settings.translit = b.dataset.v === "true"; saveSettings(); playSound("pop"); then();
+  });
+}
+applySettings();
