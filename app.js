@@ -37,6 +37,10 @@ function maxFire() { return lesson && lesson.exam ? 3 : 2; }
 function fireLevel(c) { let l = 0; FIRE.forEach((f, i) => { if (c >= f.from && i <= maxFire()) l = i; }); return l; }
 
 // Хранилище на устройстве (временно — потом перенесём на сервер, чтобы работало и в приложении)
+// Уроки и сцены всегда берём свежими (GitHub Pages кэширует файлы на 10 минут)
+const _fetch = window.fetch.bind(window);
+window.fetch = (url, opts) => _fetch(url, Object.assign({ cache: "no-cache" }, opts));
+
 const store = {
   get(k, d) { try { const v = localStorage.getItem("hirbis_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("hirbis_" + k, JSON.stringify(v)); } catch (e) {} }
@@ -176,17 +180,27 @@ function showOnboarding() {
 
 updateToday();
 document.getElementById("reset-profile").onclick = showOnboarding;
-// «Начать сначала»: стереть весь прогресс. Первое нажатие — переспрашиваем, второе — стираем.
+// «Начать сначала»: стереть весь прогресс (с подтверждением).
+function resetAll() {
+  try { Object.keys(localStorage).filter(k => k.startsWith("hirbis_")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  // перезапуск с «чистого листа» (адрес с меткой времени, чтобы ничего не взялось из кэша)
+  location.replace(location.pathname + "?reset=" + Date.now() + location.hash);
+}
 document.getElementById("reset-all").onclick = (e) => {
   const b = e.currentTarget;
+  vibrate("warning");
+  // В Telegram — родное окошко «Да / Отмена»
+  if (tg && tg.showConfirm && tg.initData) {
+    tg.showConfirm("Начать сначала? Весь прогресс, очки и герой сотрутся.", ok => { if (ok) resetAll(); });
+    return;
+  }
+  // В обычном браузере — второе нажатие
   if (!b.classList.contains("confirm")) {
     b.classList.add("confirm"); b.textContent = "Точно? Всё сотрётся. Нажми ещё раз";
-    vibrate("warning");
     clearTimeout(b.t); b.t = setTimeout(() => { b.classList.remove("confirm"); b.textContent = "Начать сначала"; }, 4000);
     return;
   }
-  Object.keys(localStorage).filter(k => k.startsWith("hirbis_")).forEach(k => localStorage.removeItem(k));
-  location.reload();
+  resetAll();
 };
 
 // «Мой герой» — открыть конструктор аватара
