@@ -7,10 +7,10 @@
 // =====================================================
 (function () {
   // ---------- Палитры ----------
-  const SKIN  = ["#fde0c5", "#f5c9a3", "#e3ad83", "#b97a52", "#7d4e33"];
+  const SKIN  = ["#f2c7a3", "#eab68c", "#d99d72", "#b97a52", "#7d4e33"];   // без «бледного» тона
   const HAIRC = ["#2b2230", "#5a3a24", "#a0612f", "#e3b04b", "#d4542e", "#9aa0a8"];
   const TOPC  = ["#5aa9f0", "#ff8a35", "#ffffff", "#2b2f3a", "#7fae5a", "#e8413a", "#b57be0"];
-  const BOTC  = ["#3b5b8c", "#2b2f3a", "#c9b48a", "#7a8592"];
+  const BOTC  = ["#1f2d4f", "#3b5b8c", "#2b2f3a", "#c9b48a", "#7a8592", "#ffffff"];
 
   // ---------- Варианты (бесплатно) ----------
   const OPTIONS = {
@@ -21,7 +21,10 @@
       { id: "short", name: "Короткая" }, { id: "side", name: "Пробор" }, { id: "curly", name: "Кудри" }, { id: "buzz", name: "Ёжик" },
       { id: "long", name: "Длинные" }, { id: "bob", name: "Каре" }, { id: "pony", name: "Хвост" }, { id: "curlylong", name: "Длинные кудри" }
     ],
-    top:    [{ id: "tee", name: "Футболка" }, { id: "hoodie", name: "Худи" }, { id: "shirt", name: "Рубашка" }],
+    top:    [{ id: "tee", name: "Футболка" }, { id: "hoodie", name: "Худи" }, { id: "shirt", name: "Рубашка" }, { id: "hasid", name: "Лапсердак" }],
+    beard:  [{ id: "none", name: "Без бороды" }, { id: "stubble", name: "Щетина" }, { id: "short", name: "Короткая" }, { id: "long", name: "Длинная" }],
+    payot:  [{ id: "none", name: "Без пейсов" }, { id: "payot", name: "Пейсы" }],
+    headwear: [{ id: "none", name: "Без убора" }, { id: "kippa", name: "Кипа" }, { id: "hasidhat", name: "Шляпа" }, { id: "tichel", name: "Платок" }],
     bottom: [{ id: "jeans", name: "Брюки" }, { id: "shorts", name: "Шорты" }, { id: "skirt", name: "Юбка" }]
   };
 
@@ -38,9 +41,10 @@
   function defaults(gender) {
     const f = gender === "f";
     return {
-      head: "round", skin: 1, eyes: f ? "lashes" : "round", mouth: "smile",
+      head: f ? "oval" : "round", skin: 1, eyes: f ? "lashes" : "round", mouth: "smile", body: f ? "slim" : "base",
       hair: f ? "long" : "short", hairColor: 1,
       top: "tee", topColor: 0, bottom: f ? "skirt" : "jeans", bottomColor: 0,
+      beard: "none", payot: "none", headwear: "none",   // борода, пейсы, кипа / шляпа / платок — бесплатно
       outer: null, hat: null, glasses: null,        // надетые платные вещи
       owned: []                                      // купленные платные вещи
     };
@@ -55,174 +59,260 @@
   }
 
   // ---------- Части рисунка ----------
-  function headShape(c, fill) {
-    if (c.head === "oval")   return `<ellipse cx="100" cy="90" rx="45" ry="56" fill="${fill}"/>`;
-    if (c.head === "square") return `<rect x="52" y="36" width="96" height="106" rx="36" fill="${fill}"/>`;
-    return `<ellipse cx="100" cy="90" rx="51" ry="53" fill="${fill}"/>`;
-  }
-  function earsX(c) { return c.head === "oval" ? [56, 144] : [49, 151]; }
+  // Кадр 200×400. Пропорции «мультяшные, но не чиби»: голова ≈ 30% роста,
+  // лицо почти круглое, глаза и брови аккуратные. Ступни ≈ 386 (как у Давида).
+  const FACE = {
+    round:  `M56,86 Q56,40 100,40 Q144,40 144,86 Q144,120 124,131 Q100,141 76,131 Q56,120 56,86Z`,
+    oval:   `M60,86 Q60,38 100,38 Q140,38 140,86 Q140,122 122,134 Q100,145 78,134 Q60,122 60,86Z`,
+    square: `M56,82 Q56,40 100,40 Q144,40 144,82 L143,116 Q140,132 122,137 Q100,142 78,137 Q60,132 57,116Z`
+  };
+  function headShape(c, fill) { return `<path d="${FACE[c.head] || FACE.round}" fill="${fill}"/>`; }
+  function earsX(c) { return c.head === "oval" ? [60, 140] : [56, 144]; }
 
   function hairBack(c, col) {
     switch (c.hair) {
-      case "long":      return `<path d="M44 80 C38 8 162 8 156 80 L162 186 C140 198 60 198 38 186 Z" fill="${col}"/>`;
-      case "bob":       return `<path d="M44 82 C38 8 162 8 156 82 L160 142 C140 152 60 152 40 142 Z" fill="${col}"/>`;
-      case "curlylong": return [[50,110],[46,140],[52,170],[150,110],[154,140],[148,170],[70,182],[100,188],[130,182]]
-                          .map(([x,y]) => `<circle cx="${x}" cy="${y}" r="22" fill="${col}"/>`).join("");
-      case "pony":      return `<ellipse cx="160" cy="96" rx="17" ry="40" fill="${col}" transform="rotate(14 160 96)"/><circle cx="152" cy="62" r="8" fill="#ff8a35"/>`;
+      case "long":      return `<path d="M52,86 C46,16 154,16 148,86 L154,196 C134,208 66,208 46,196Z" fill="${col}"/>`;
+      case "bob":       return `<path d="M52,88 C46,16 154,16 148,88 L152,142 C134,150 66,150 48,142Z" fill="${col}"/>`;
+      case "curlylong": return `<path d="M52,86 L148,86 L152,184 Q100,198 48,184Z" fill="${col}"/>` +
+                          [[50,100],[46,124],[48,148],[52,172],[150,100],[154,124],[152,148],[148,172],[72,190],[100,194],[128,190]]
+                          .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="12" fill="${col}"/>`).join("");
+      case "pony":      return `<ellipse cx="150" cy="104" rx="13" ry="38" fill="${col}" transform="rotate(14 150 104)"/><circle cx="144" cy="70" r="7" fill="#ff8a35"/>`;
       default: return "";
     }
+  }
+  function curlsHTML(col, list) {
+    const light = shade(col, 0.18);
+    return list.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}"/>`).join("") +
+      list.filter((_, i) => i % 2 === 0).map(([x, y]) =>
+        `<path d="M${x - 4},${y + 1.5} q1.5,-6 6,-4.5 q4.5,1.5 1.5,6" stroke="${light}" stroke-width="2" fill="none" stroke-linecap="round"/>`).join("");
   }
   function hairFront(c, col) {
     const dark = shade(col, -0.18);
     switch (c.hair) {
-      case "short": return `<path d="M47 92 C40 8 160 8 153 92 C142 66 122 58 100 62 C80 58 60 66 47 92 Z" fill="${col}"/>`;
-      case "side":  return `<path d="M47 94 C38 6 162 6 153 94 C150 70 140 58 118 55 C98 68 68 62 47 94 Z" fill="${col}"/><path d="M118 55 C112 46 104 42 96 40" stroke="${dark}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
-      case "buzz":  return `<path d="M50 80 C48 16 152 16 150 80 C130 64 70 64 50 80 Z" fill="${col}" opacity=".9"/>`;
-      case "curly": return [[58,62],[76,46],[100,40],[124,46],[142,62],[66,78],[134,78],[88,54],[112,54]]
-                      .map(([x,y]) => `<circle cx="${x}" cy="${y}" r="17" fill="${col}"/>`).join("");
+      case "short": return `<path d="M54,90 C46,18 154,18 146,90 C138,62 122,54 100,56 C78,54 62,62 54,90Z" fill="${col}"/>`;
+      case "side":  return `<path d="M54,92 C44,16 156,16 146,92 C143,68 132,56 114,54 C96,66 70,60 54,92Z" fill="${col}"/><path d="M114,54 C109,46 102,42 95,40" stroke="${dark}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+      case "buzz":  return `<path d="M58,78 C56,26 144,26 142,78 C124,64 76,64 58,78Z" fill="${col}" opacity=".92"/>`;
+      case "curly": return `<path d="M54,88 Q50,32 100,28 Q150,32 146,88 Q140,62 100,58 Q60,60 54,88Z" fill="${col}"/>` +
+                      curlsHTML(col, [[56,82,10],[54,66,11],[60,50,12],[72,38,12],[86,30,12],[102,27,12],[118,30,12],[132,38,12],[142,52,11],[147,68,10],[148,84,9],[80,48,10],[100,42,10],[120,48,10]]);
       case "long":
-      case "pony":  return `<path d="M46 100 C36 6 164 6 154 100 C150 70 124 52 102 58 L100 66 L98 58 C76 52 50 70 46 100 Z" fill="${col}"/>`;
-      case "bob":   return `<path d="M45 96 C38 8 162 8 155 96 L155 74 C132 68 68 68 45 74 Z" fill="${col}"/>`;
-      case "curlylong": return [[58,64],[78,48],[100,42],[122,48],[142,64],[52,86],[148,86]]
-                      .map(([x,y]) => `<circle cx="${x}" cy="${y}" r="17" fill="${col}"/>`).join("");
+      case "pony":  return `<path d="M52,100 C44,18 156,18 148,100 C144,72 124,56 102,60 L100,66 L98,60 C76,56 56,72 52,100Z" fill="${col}"/>`;
+      case "bob":   return `<path d="M52,98 C44,18 156,18 148,98 L148,78 C128,70 72,70 52,78Z" fill="${col}"/>`;
+      case "curlylong": return `<path d="M52,94 Q48,32 100,28 Q152,32 148,94 Q142,64 100,60 Q58,62 52,94Z" fill="${col}"/>` +
+                      curlsHTML(col, [[54,74,9],[58,58,10],[68,44,10],[82,35,10],[100,31,10],[118,35,10],[132,44,10],[142,58,10],[146,74,9]]);
       default: return "";
     }
   }
 
   function eyes(c, hairCol) {
-    const L = 82, R = 118, Y = 92, ink = "#23263a";
-    const brow = shade(hairCol, -0.1);
-    const brows = `<path d="M${L-9} ${Y-16} Q${L} ${Y-21} ${L+9} ${Y-16}" stroke="${brow}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-                   <path d="M${R-9} ${Y-16} Q${R} ${Y-21} ${R+9} ${Y-16}" stroke="${brow}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    const L = 83, R = 117, Y = 90;
+    const fem = c.eyes === "lashes";
+    const brow = shade(hairCol, -0.1), bw = fem ? 2.4 : 3.6;
+    const brows = `<path d="M${L - 9} ${Y - 13} Q${L} ${Y - 18} ${L + 9} ${Y - 14}" stroke="${brow}" stroke-width="${bw}" fill="none" stroke-linecap="round"/>
+                   <path d="M${R - 9} ${Y - 14} Q${R} ${Y - 18} ${R + 9} ${Y - 13}" stroke="${brow}" stroke-width="${bw}" fill="none" stroke-linecap="round"/>`;
+    const iris = "#8a5222", pupil = "#24150e";
     let e = "";
     if (c.eyes === "happy") {
-      e = [L, R].map(x => `<path d="M${x-8} ${Y+2} Q${x} ${Y-7} ${x+8} ${Y+2}" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`).join("");
+      e = [L, R].map(x => `<path d="M${x - 7} ${Y + 2} Q${x} ${Y - 6} ${x + 7} ${Y + 2}" stroke="${pupil}" stroke-width="3.4" fill="none" stroke-linecap="round"/>`).join("");
     } else if (c.eyes === "dots") {
-      e = [L, R].map(x => `<g class="av-eye"><ellipse cx="${x}" cy="${Y}" rx="5" ry="6.5" fill="${ink}"/><circle cx="${x+1.8}" cy="${Y-2.5}" r="1.7" fill="#fff"/></g>`).join("");
+      e = [L, R].map(x => `<g class="av-eye"><ellipse cx="${x}" cy="${Y}" rx="4.4" ry="5.6" fill="${pupil}"/><circle cx="${x + 1.6}" cy="${Y - 2}" r="1.6" fill="#fff"/></g>`).join("");
     } else {
-      e = [L, R].map(x => `<g class="av-eye"><ellipse cx="${x}" cy="${Y}" rx="9.5" ry="10" fill="#fff"/><circle cx="${x+1.5}" cy="${Y+1}" r="5.6" fill="${ink}"/><circle cx="${x+3.2}" cy="${Y-1.5}" r="1.9" fill="#fff"/></g>`).join("");
-      if (c.eyes === "lashes") e += `<path d="M${L-9} ${Y-5} l-5 -3 M${L-6} ${Y-8} l-3 -4 M${R+9} ${Y-5} l5 -3 M${R+6} ${Y-8} l3 -4" stroke="${ink}" stroke-width="2.4" stroke-linecap="round"/>`;
+      e = [L, R].map(x => `<g class="av-eye"><ellipse cx="${x}" cy="${Y}" rx="8" ry="9" fill="#fff"/>
+        <circle cx="${x + .6}" cy="${Y + 1.2}" r="5.6" fill="${iris}"/><circle cx="${x + .6}" cy="${Y + 1.6}" r="3" fill="${pupil}"/>
+        <circle cx="${x + 2.6}" cy="${Y - 1}" r="1.8" fill="#fff"/></g>`).join("");
+      if (fem) e += `<path d="M${L - 8} ${Y - 4} l-4 -2.4 M${L - 6} ${Y - 7} l-2.2 -3.6 M${R + 8} ${Y - 4} l4 -2.4 M${R + 6} ${Y - 7} l2.2 -3.6" stroke="${pupil}" stroke-width="1.8" stroke-linecap="round"/>`;
     }
     return brows + e;
   }
   function mouth(c) {
-    const ink = "#7a3a1a";
+    const ink = "#7a2630";
     switch (c.mouth) {
-      case "grin": return `<path d="M86 110 Q100 128 114 110 Z" fill="${ink}"/><path d="M89 111 Q100 116 111 111 Z" fill="#fff"/>`;
-      case "calm": return `<path d="M92 115 Q100 118 108 115" stroke="${ink}" stroke-width="3.2" fill="none" stroke-linecap="round"/>`;
-      case "open": return `<ellipse cx="100" cy="116" rx="6" ry="7.5" fill="${ink}"/>`;
-      default:     return `<path d="M88 111 Q100 123 112 111" stroke="${ink}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+      case "grin": return `<path d="M86,111 Q100,128 114,111 Q100,115 86,111Z" fill="${ink}"/><path d="M88,111.6 Q100,115.4 112,111.6 L111,114.4 Q100,118 89,114.4Z" fill="#fff"/>`;
+      case "calm": return `<path d="M93,115 Q100,119 107,115" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+      case "open": return `<ellipse cx="100" cy="116" rx="5.4" ry="6.6" fill="${ink}"/><ellipse cx="100" cy="119.4" rx="3.2" ry="2" fill="#ff6b6b"/>`;
+      default:     return `<path d="M90,112 Q100,124 110,112 Q100,115 90,112Z" fill="${ink}"/>
+                           <path d="M91.6,112.6 Q100,115.2 108.4,112.6 L107.6,114.6 Q100,117 92.4,114.6Z" fill="#fff"/>
+                           <ellipse cx="100" cy="119" rx="4" ry="1.8" fill="#ff6b6b"/>`;
     }
   }
 
-  // Верх: футболка / худи / рубашка (+ руки)
+  function sleeveCol(c) {
+    if (c.outer === "leather") return "#2b2b33";
+    if (c.outer === "puffer") return "#ff8a35";
+    if (c.top === "hasid") return "#1d1e24";
+    return TOPC[c.topColor] || TOPC[0];
+  }
+  function isSlim(c) { return c.body ? c.body === "slim" : c.eyes === "lashes"; }
+
+  // Верх (+ руки). W — половина ширины плеч: парни 37, девушки 31
   function torso(c, pose) {
-    const col = TOPC[c.topColor] || TOPC[0], dk = shade(col, -0.14), skin = SKIN[c.skin];
-    const armL = pose === "walk" ? "rotate(14 64 156)" : "rotate(0)";
-    const armR = pose === "walk" ? "rotate(-14 136 156)" : "rotate(0)";
-    const longSleeve = c.top !== "tee";
-    const arm = (side, tr) => {
-      const x0 = side === "L" ? 64 : 136, x1 = side === "L" ? 54 : 146;
-      return `<g class="av-arm-${side.toLowerCase()}" transform="${tr}">
-        <line x1="${x0}" y1="156" x2="${x1}" y2="214" stroke="${longSleeve ? col : skin}" stroke-width="16" stroke-linecap="round"/>
-        ${longSleeve ? "" : `<line x1="${x0}" y1="156" x2="${x0 + (x1 - x0) * .35}" y2="176" stroke="${col}" stroke-width="18" stroke-linecap="round"/>`}
-        <circle cx="${x1}" cy="218" r="9" fill="${skin}"/></g>`;
+    const W = isSlim(c) ? 31 : 37;
+    const col = TOPC[c.topColor] || TOPC[0], dk = shade(col, -0.16), skin = SKIN[c.skin] || SKIN[1];
+    const sc = sleeveCol(c), sdk = shade(sc, -0.16);
+    const longSleeve = c.top !== "tee" || !!c.outer;
+    const xl = 100 - W, xr = 100 + W;
+    const arm = (side) => {
+      const cx = side === "l" ? xl - 7 : xr + 7;             // середина руки
+      const sleeve = longSleeve
+        ? `<rect x="${cx - 8.5}" y="152" width="17" height="86" rx="8.5" fill="${sc}"/><rect x="${cx - 8.5}" y="230" width="17" height="8" rx="4" fill="${sdk}"/>`
+        : `<rect x="${cx - 9.5}" y="150" width="19" height="38" rx="9" fill="${sc}"/>
+           <rect x="${cx - 9.5}" y="182" width="19" height="6" rx="3" fill="${sdk}"/>`;
+      return `<g class="hs-arm hs-arm-${side} av-arm-${side}">
+        <rect x="${cx - 7}" y="160" width="14" height="82" rx="7" fill="${skin}"/>
+        <ellipse cx="${cx}" cy="246" rx="7.6" ry="9" fill="${skin}"/>${sleeve}</g>`;
     };
-    let body = `<path d="M62 160 Q64 146 84 144 L116 144 Q136 146 138 160 L136 232 L64 232 Z" fill="${col}"/>
-                <path d="M118 148 Q136 150 137 166 L136 232 L122 232 Z" fill="${dk}" opacity=".55"/>`;
-    if (c.top === "tee")    body += `<path d="M88 144 Q100 156 112 144" stroke="${dk}" stroke-width="3" fill="none"/>`;
-    if (c.top === "hoodie") body += `<path d="M80 146 Q100 168 120 146" fill="${dk}"/><line x1="94" y1="156" x2="93" y2="178" stroke="#fff" stroke-width="2.5"/><line x1="106" y1="156" x2="107" y2="178" stroke="#fff" stroke-width="2.5"/><rect x="80" y="196" width="40" height="22" rx="8" fill="${dk}"/>`;
-    if (c.top === "shirt")  body += `<path d="M86 144 L100 160 L114 144 L108 140 L100 150 L92 140 Z" fill="#fff"/><line x1="100" y1="160" x2="100" y2="230" stroke="${dk}" stroke-width="2"/>` +
-                              [172, 190, 208].map(y => `<circle cx="100" cy="${y}" r="2.6" fill="${dk}"/>`).join("");
-    return arm("L", armL) + arm("R", armR) + body;
+    let body = `<path d="M${xl},162 Q${xl + 2},150 ${xl + 22},148 L${xr - 22},148 Q${xr - 2},150 ${xr},162 L${xr - 2},248 Q100,254 ${xl + 2},248Z" fill="${col}"/>
+                <path d="M${xr - 18},160 Q${xr - 10},176 ${xr - 12},244 L${xr - 2},244 L${xr},166Z" fill="${dk}" opacity=".4"/>`;
+    if (c.top === "tee")    body += `<path d="M88,149 Q100,158 112,149" stroke="${dk}" stroke-width="3.4" fill="none"/>`;
+    if (c.top === "hoodie") body += `<path d="M82,150 Q100,172 118,150" fill="${dk}"/><line x1="95" y1="160" x2="94" y2="182" stroke="#fff" stroke-width="2.4"/><line x1="105" y1="160" x2="106" y2="182" stroke="#fff" stroke-width="2.4"/><rect x="82" y="212" width="36" height="22" rx="8" fill="${dk}"/>`;
+    if (c.top === "hasid")  body = `<path d="M${xl - 2},162 Q${xl},150 ${xl + 22},148 L${xr - 22},148 Q${xr},150 ${xr + 2},162 L${xr + 8},300 Q100,306 ${xl - 8},300Z" fill="#1d1e24"/>
+                <path d="M88,148 L100,170 L112,148Z" fill="#fff"/><path d="M100,170 L100,300" stroke="#34353d" stroke-width="2"/>
+                <path d="M88,148 L98,176 L94,148Z M112,148 L102,176 L106,148Z" fill="#2c2d35"/>
+                <rect x="${xl}" y="236" width="${xr - xl}" height="6" fill="#2c2d35"/>
+                ${[0, 1, 2, 3].map(i => `<path d="M${xl + 4 + i * 2.4},242 l-1,${34 + i * 3} M${xr - 4 - i * 2.4},242 l1,${34 + i * 3}" stroke="#f4f4f4" stroke-width="1.4"/>`).join("")}`;
+    if (c.top === "shirt")  body += `<path d="M88,148 L100,164 L112,148 L107,144 L100,154 L93,144Z" fill="#fff"/><line x1="100" y1="164" x2="100" y2="248" stroke="${dk}" stroke-width="1.8"/>` +
+                              [184, 204, 224].map(y => `<circle cx="100" cy="${y}" r="2.4" fill="${dk}"/>`).join("");
+    return arm("l") + arm("r") + body;
   }
 
-  // Низ: брюки / шорты / юбка (+ ноги, обувь)
+  // Низ (+ ноги, кеды)
   function legs(c, pose) {
-    const col = BOTC[c.bottomColor] || BOTC[0], skin = SKIN[c.skin];
-    const shoe = "#2b2f3a";
-    const lw = pose === "walk" ? ["rotate(10 84 236)", "rotate(-10 116 236)"] : pose === "sit" ? ["rotate(-70 84 236)", "rotate(-70 116 236)"] : ["", ""];
-    const leg = (x, tr, cls) => {
-      const pants = c.bottom === "jeans";
-      return `<g class="${cls}" transform="${tr}">
-        <rect x="${x - 12}" y="230" width="24" height="52" rx="10" fill="${pants ? col : skin}"/>
-        <ellipse cx="${x + (x < 100 ? -3 : 3)}" cy="286" rx="17" ry="8" fill="${shoe}"/>
-        <rect x="${x - 16}" y="281" width="32" height="4" rx="2" fill="#fff" opacity=".7"/></g>`;
-    };
-    let s = leg(84, lw[0], "av-leg-l") + leg(116, lw[1], "av-leg-r");
-    if (c.bottom === "jeans")  s += `<rect x="64" y="224" width="72" height="20" rx="8" fill="${col}"/>`;
-    if (c.bottom === "shorts") s += `<path d="M64 224 L136 224 L138 256 L104 256 L100 246 L96 256 L62 256 Z" fill="${col}"/>`;
-    if (c.bottom === "skirt")  s += `<path d="M66 222 L134 222 L146 262 Q100 272 54 262 Z" fill="${col}"/>`;
+    const slim = isSlim(c);
+    const col = BOTC[c.bottomColor] || BOTC[0], dk = shade(col, 0.14), skin = SKIN[c.skin] || SKIN[1];
+    const pants = c.bottom === "jeans";
+    const lx = slim ? 89 : 87, rx = slim ? 111 : 113, lw = slim ? 18 : 22;
+    const shoe = (x) => `<path d="M${x - 15},378 Q${x - 15},364 ${x - 3},362 L${x + 8},362 Q${x + 18},365 ${x + 20},378Z" fill="#f4f6f9"/>
+      <rect x="${x - 17}" y="376" width="39" height="8" rx="4" fill="#c9d1db"/>
+      <path d="M${x - 5},366 l8,0 M${x - 5},370.5 l8,0" stroke="#c9d1db" stroke-width="2"/>`;
+    const leg = (x, side) => `<g class="hs-leg hs-leg-${side} av-leg-${side}">
+        ${pants
+          ? `<rect x="${x - lw / 2}" y="244" width="${lw}" height="112" rx="6" fill="${col}"/><rect x="${x - lw / 2 - 1}" y="348" width="${lw + 2}" height="11" rx="4" fill="${dk}"/>`
+          : `<rect x="${x - lw / 2 + 2}" y="258" width="${lw - 4}" height="104" rx="7" fill="${skin}"/>`}
+        ${shoe(x)}</g>`;
+    let s = leg(lx, "l") + leg(rx, "r");
+    const hip = slim ? 31 : 36;
+    if (pants)                 s += `<rect x="${100 - hip}" y="240" width="${hip * 2}" height="22" rx="6" fill="${col}"/>`;
+    if (c.bottom === "shorts") s += `<path d="M${100 - hip},242 L${100 + hip},242 L${102 + hip},290 L104,290 L100,280 L96,290 L${98 - hip},290Z" fill="${col}"/>`;
+    if (c.bottom === "skirt")  s += `<path d="M${100 - hip},240 L${100 + hip},240 L${112 + hip},290 Q100,300 ${88 - hip},290Z" fill="${col}"/>`;
     return s;
   }
 
-  // ---------- Платные вещи ----------
+  // ---------- Борода, пейсы, головные уборы (бесплатно) ----------
+  function beard(c, col) {
+    const must = `<path d="M85,108 Q92,103 100,106 Q108,103 115,108 Q108,107 100,109 Q92,107 85,108Z" fill="${col}"/>`;
+    if (c.beard === "stubble") return `<path d="M58,96 Q60,128 78,136 Q100,146 122,136 Q140,128 142,96 Q136,118 120,122 Q100,116 80,122 Q64,118 58,96Z" fill="${col}" opacity=".32"/>`;
+    if (c.beard === "short") return `<path d="M57,94 Q58,130 78,140 Q100,152 122,140 Q142,130 143,94 Q137,118 120,124 Q100,118 80,124 Q63,118 57,94Z" fill="${col}"/>` + must;
+    if (c.beard === "long") return `<path d="M57,94 Q57,128 72,148 Q82,188 100,198 Q118,188 128,148 Q143,128 143,94 Q137,118 120,124 Q100,118 80,124 Q63,118 57,94Z" fill="${col}"/>
+      <path d="M86,150 Q92,172 100,186 M114,150 Q108,172 100,186 M100,140 L100,180" stroke="${shade(col, -0.2)}" stroke-width="1.6" fill="none" opacity=".6"/>` + must;
+    return "";
+  }
+  function payot(c, col) {
+    if (c.payot !== "payot") return "";
+    const lock = (x, d) => `<path d="M${x},74 q${-4 * d},12 0,22 q${4 * d},8 0,16 q${-4 * d},7 0,14 q${4 * d},6 0,12" stroke="${col}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+    return lock(55, 1) + lock(145, -1);
+  }
+  function headwear(c) {
+    if (c.hat) return "";                                   // платная шапка важнее
+    if (c.headwear === "kippa") return `<path d="M76,40 Q100,22 124,40 Q100,33 76,40Z" fill="#1f2d4f"/>
+      <path d="M78,39 Q100,32 122,39" stroke="#ffffff" stroke-width="2" fill="none" opacity=".85"/>`;
+    if (c.headwear === "hasidhat") return `<ellipse cx="100" cy="52" rx="64" ry="10" fill="#141418"/>
+      <path d="M66,52 Q63,12 100,10 Q137,12 134,52Z" fill="#1d1e24"/>
+      <path d="M67,42 Q100,46 133,42 L134,50 Q100,54 66,50Z" fill="#33343c"/>
+      <path d="M86,14 Q100,22 114,14" stroke="#33343c" stroke-width="3" fill="none"/>`;
+    if (c.headwear === "tichel") return `<path d="M50,100 Q40,22 100,18 Q160,22 150,100 Q146,74 134,62 Q100,46 66,62 Q54,74 50,100Z" fill="#7d5aa6"/>
+      <path d="M58,64 Q100,44 142,64" stroke="#9c7cc4" stroke-width="5" fill="none"/>
+      ${[[76,36],[100,30],[124,36],[64,54],[136,54],[88,46],[112,46]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="#c9b5e6"/>`).join("")}`;
+    return "";
+  }
+  function headwearBack(c) {
+    if (c.hat || c.headwear !== "tichel") return "";
+    return `<path d="M52,86 C46,20 154,20 148,86 L150,120 Q100,128 50,120Z" fill="#6a4a92"/>
+      <circle cx="152" cy="70" r="13" fill="#7d5aa6"/><path d="M156,80 Q170,100 160,120 M150,82 Q160,104 148,122" stroke="#7d5aa6" stroke-width="8" fill="none" stroke-linecap="round"/>`;
+  }
+
+  // ---------- Платные вещи (корпус; рукава — в руках) ----------
   function outerwear(c) {
+    const W = isSlim(c) ? 31 : 37, xl = 100 - W, xr = 100 + W;
     if (c.outer === "leather") return `
-      <path d="M60 162 Q62 146 84 143 L96 146 L92 232 L62 232 Z" fill="#2b2b33"/>
-      <path d="M140 162 Q138 146 116 143 L104 146 L108 232 L138 232 Z" fill="#2b2b33"/>
-      <path d="M84 143 L96 146 L90 170 Z M116 143 L104 146 L110 170 Z" fill="#45454f"/>
-      <line x1="64" y1="156" x2="54" y2="212" stroke="#2b2b33" stroke-width="17" stroke-linecap="round"/>
-      <line x1="136" y1="156" x2="146" y2="212" stroke="#2b2b33" stroke-width="17" stroke-linecap="round"/>
-      <circle cx="96" cy="200" r="2" fill="#c9c9d1"/><circle cx="104" cy="200" r="2" fill="#c9c9d1"/>`;
+      <path d="M${xl - 2},164 Q${xl},150 ${xl + 22},147 L96,150 L92,250 L${xl},250Z" fill="#2b2b33"/>
+      <path d="M${xr + 2},164 Q${xr},150 ${xr - 22},147 L104,150 L108,250 L${xr},250Z" fill="#2b2b33"/>
+      <path d="M${xl + 22},147 L96,150 L90,172Z M${xr - 22},147 L104,150 L110,172Z" fill="#45454f"/>
+      <circle cx="94" cy="206" r="2.2" fill="#c9c9d1"/><circle cx="106" cy="206" r="2.2" fill="#c9c9d1"/>`;
     if (c.outer === "puffer") return `
-      <path d="M58 164 Q60 142 86 140 L114 140 Q140 142 142 164 L140 236 L60 236 Z" fill="#ff8a35"/>
-      ${[170, 192, 214].map(y => `<path d="M60 ${y} Q100 ${y + 7} 140 ${y}" stroke="#e46d1c" stroke-width="3" fill="none"/>`).join("")}
-      <line x1="100" y1="142" x2="100" y2="236" stroke="#e46d1c" stroke-width="3"/>
-      <line x1="64" y1="156" x2="53" y2="212" stroke="#ff8a35" stroke-width="20" stroke-linecap="round"/>
-      <line x1="136" y1="156" x2="147" y2="212" stroke="#ff8a35" stroke-width="20" stroke-linecap="round"/>
-      <rect x="82" y="132" width="36" height="16" rx="8" fill="#e46d1c"/>`;
+      <path d="M${xl - 4},166 Q${xl - 2},144 ${xl + 24},142 L${xr - 24},142 Q${xr + 2},144 ${xr + 4},166 L${xr + 2},254 L${xl - 2},254Z" fill="#ff8a35"/>
+      ${[176, 200, 224].map(y => `<path d="M${xl - 2} ${y} Q100 ${y + 7} ${xr + 2} ${y}" stroke="#e46d1c" stroke-width="3" fill="none"/>`).join("")}
+      <line x1="100" y1="144" x2="100" y2="254" stroke="#e46d1c" stroke-width="3"/>
+      <rect x="84" y="134" width="32" height="15" rx="7" fill="#e46d1c"/>`;
     return "";
   }
   function hat(c) {
     if (c.hat === "beanie") return `
-      <path d="M48 70 C48 22 152 22 152 70 Z" fill="#e8413a"/>
-      <rect x="44" y="62" width="112" height="18" rx="9" fill="#c62f29"/>
-      ${[60, 80, 100, 120, 140].map(x => `<line x1="${x}" y1="64" x2="${x}" y2="78" stroke="#a8241f" stroke-width="3"/>`).join("")}
-      <circle cx="100" cy="22" r="13" fill="#ffffff"/>`;
+      <path d="M54,72 C54,20 146,20 146,72Z" fill="#e8413a"/>
+      <rect x="50" y="64" width="100" height="16" rx="8" fill="#c62f29"/>
+      ${[64, 82, 100, 118, 136].map(x => `<line x1="${x}" y1="66" x2="${x}" y2="78" stroke="#a8241f" stroke-width="2.6"/>`).join("")}
+      <circle cx="100" cy="20" r="11" fill="#ffffff"/>`;
     if (c.hat === "cap") return `
-      <path d="M50 74 C50 26 150 26 150 74 Z" fill="#5aa9f0"/>
-      <path d="M100 66 Q150 62 176 76 Q150 84 100 78 Z" fill="#3a8ad6"/>
-      <circle cx="100" cy="30" r="5" fill="#3a8ad6"/>
-      <path d="M86 52 L92 40 L98 52 L104 38 L110 52" stroke="#ff8a35" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+      <path d="M56,76 C56,26 144,26 144,76Z" fill="#5aa9f0"/>
+      <path d="M100,68 Q146,64 170,78 Q146,86 100,80Z" fill="#3a8ad6"/>
+      <circle cx="100" cy="30" r="4.4" fill="#3a8ad6"/>
+      <path d="M88,52 L93,42 L98,52 L103,40 L108,52" stroke="#ff8a35" stroke-width="3.4" fill="none" stroke-linecap="round"/>`;
     if (c.hat === "crown") return `
-      <path d="M62 50 L70 18 L86 40 L100 8 L114 40 L130 18 L138 50 Z" fill="#ffc928" stroke="#e0a400" stroke-width="3" stroke-linejoin="round"/>
-      <circle cx="100" cy="30" r="5" fill="#ff8a35"/><circle cx="78" cy="38" r="4" fill="#5aa9f0"/><circle cx="122" cy="38" r="4" fill="#5aa9f0"/>
-      <path d="M100 8 L96 -8 M100 8 L104 -8" stroke="#ff8a35" stroke-width="4" stroke-linecap="round"/>`;
+      <path d="M70,46 L77,18 L90,38 L100,10 L110,38 L123,18 L130,46Z" fill="#ffc928" stroke="#e0a400" stroke-width="2.6" stroke-linejoin="round"/>
+      <circle cx="100" cy="30" r="4.4" fill="#ff8a35"/><circle cx="82" cy="38" r="3.4" fill="#5aa9f0"/><circle cx="118" cy="38" r="3.4" fill="#5aa9f0"/>`;
     return "";
   }
   function glasses(c) {
     if (c.glasses !== "sunglass") return "";
-    return `<rect x="66" y="82" width="30" height="20" rx="8" fill="#23263a"/><rect x="104" y="82" width="30" height="20" rx="8" fill="#23263a"/>
-            <line x1="96" y1="90" x2="104" y2="90" stroke="#23263a" stroke-width="4"/>
-            <line x1="70" y1="86" x2="78" y2="86" stroke="#fff" stroke-width="2.5" opacity=".6" stroke-linecap="round"/>
-            <line x1="108" y1="86" x2="116" y2="86" stroke="#fff" stroke-width="2.5" opacity=".6" stroke-linecap="round"/>`;
+    return `<rect x="71" y="81" width="25" height="17" rx="7" fill="#23263a"/><rect x="104" y="81" width="25" height="17" rx="7" fill="#23263a"/>
+            <line x1="96" y1="88" x2="104" y2="88" stroke="#23263a" stroke-width="3"/>
+            <line x1="75" y1="85" x2="83" y2="85" stroke="#fff" stroke-width="2" opacity=".6" stroke-linecap="round"/>
+            <line x1="108" y1="85" x2="116" y2="85" stroke="#fff" stroke-width="2" opacity=".6" stroke-linecap="round"/>`;
   }
 
   // ---------- Сборка ----------
+  let UID = 0;
   function svg(cfg, opts) {
     const c = Object.assign(defaults("m"), cfg || {});
     const pose = (opts && opts.pose) || "stand";
     const skin = SKIN[c.skin] || SKIN[1], hairCol = HAIRC[c.hairColor] || HAIRC[1];
+    const skinD = shade(skin, -0.1);
     const [ex1, ex2] = earsX(c);
     const hideHairTop = c.hat === "beanie" || c.hat === "cap";
-    const vb = opts && opts.view === "head" ? "36 -6 128 136" : "0 -14 200 314";
-    return `<svg class="hb-avatar pose-${pose}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="100" cy="292" rx="52" ry="7" fill="#1e3c6e" opacity=".12"/>
-      ${hairBack(c, hairCol)}
+    const head = opts && opts.view === "head";
+    const vb = head ? "40 4 120 150" : "0 0 200 400";
+    // «Объём»: мягкие градиенты на коже, волосах и одежде (у каждого рисунка свои id)
+    const id = "av" + (++UID);
+    const top = TOPC[c.topColor] || TOPC[0];
+    const G = (str, col, gid) => str.split(`fill="${col}"`).join(`fill="url(#${id}${gid})"`);
+    const coverHair = c.headwear === "tichel" && !c.hat;
+    const hideTop = hideHairTop || coverHair || (c.headwear === "hasidhat" && !c.hat);
+    return `<svg class="hb-avatar hs-person pose-${pose}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+      <defs>
+        <radialGradient id="${id}s" cx="42%" cy="36%" r="72%"><stop offset="0" stop-color="${shade(skin, .16)}"/><stop offset=".55" stop-color="${skin}"/><stop offset="1" stop-color="${shade(skin, -.12)}"/></radialGradient>
+        <linearGradient id="${id}h" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="${shade(hairCol, .26)}"/><stop offset=".5" stop-color="${hairCol}"/><stop offset="1" stop-color="${shade(hairCol, -.14)}"/></linearGradient>
+        <linearGradient id="${id}t" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="${shade(top, .18)}"/><stop offset=".6" stop-color="${top}"/><stop offset="1" stop-color="${shade(top, -.12)}"/></linearGradient>
+      </defs>
+      ${head ? "" : `<ellipse cx="100" cy="386" rx="44" ry="6" fill="#1e3c6e" opacity=".12"/>`}
+      ${coverHair ? headwearBack(c) : G(hairBack(c, hairCol), hairCol, "h")}
       ${legs(c, pose)}
-      <rect x="89" y="128" width="22" height="22" rx="6" fill="${shade(skin, -0.08)}"/>
-      ${torso(c, pose)}
+      <rect x="92" y="130" width="16" height="22" rx="5" fill="${skinD}"/>
+      ${G(torso(c, pose), top, "t")}
       ${outerwear(c)}
-      <circle cx="${ex1}" cy="94" r="10" fill="${skin}"/><circle cx="${ex2}" cy="94" r="10" fill="${skin}"/>
       <g class="av-head">
-        ${headShape(c, skin)}
-        <ellipse cx="72" cy="108" rx="9" ry="5.5" fill="#f07a5e" opacity=".35"/>
-        <ellipse cx="128" cy="108" rx="9" ry="5.5" fill="#f07a5e" opacity=".35"/>
-        <path d="M99 99 Q103 104 99 106" stroke="${shade(skin, -0.25)}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="${ex1}" cy="92" r="9" fill="${skin}"/><circle cx="${ex2}" cy="92" r="9" fill="${skin}"/>
+        <circle cx="${ex1}" cy="92" r="4.5" fill="${skinD}"/><circle cx="${ex2}" cy="92" r="4.5" fill="${skinD}"/>
+        ${headShape(c, `url(#${id}s)`)}
+        <path d="M66,128 Q100,148 134,128 Q120,140 100,141 Q80,140 66,128Z" fill="${skinD}" opacity=".25"/>
+        <ellipse cx="73" cy="106" rx="7" ry="4" fill="#ff8f80" opacity=".35"/>
+        <ellipse cx="127" cy="106" rx="7" ry="4" fill="#ff8f80" opacity=".35"/>
+        <ellipse cx="100" cy="102" rx="3.6" ry="2.6" fill="${skinD}"/>
+        <ellipse cx="101.4" cy="100.6" rx="1.4" ry="1" fill="#fff" opacity=".55"/>
         ${eyes(c, hairCol)}
+        ${beard(c, hairCol)}
         ${mouth(c)}
-        ${hideHairTop ? (c.hair === "long" || c.hair === "bob" || c.hair === "pony" || c.hair === "curlylong" ? `<path d="M47 76 C46 90 47 100 48 104 L58 80 Z M153 76 C154 90 153 100 152 104 L142 80 Z" fill="${hairCol}"/>` : "") : hairFront(c, hairCol)}
+        ${coverHair ? "" : hideTop ? (["long", "bob", "pony", "curlylong"].includes(c.hair) ? `<path d="M53,78 C52,92 53,102 54,108 L62,82Z M147,78 C148,92 147,102 146,108 L138,82Z" fill="${hairCol}"/>` : "") : G(hairFront(c, hairCol), hairCol, "h")}
+        ${coverHair || hideTop || ["buzz"].includes(c.hair) ? "" : `<path d="M76,46 Q98,34 120,42" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".18"/>`}
+        ${payot(c, hairCol)}
+        ${headwear(c)}
         ${glasses(c)}
         ${hat(c)}
       </g>
@@ -290,10 +380,13 @@
       h += swatchRow("Цвет кожи", "skin", SKIN);
       h += optionRow("Глаза", "eyes", OPTIONS.eyes, "head");
       h += optionRow("Улыбка", "mouth", OPTIONS.mouth, "head");
+      h += optionRow("Борода", "beard", OPTIONS.beard, "head");
     } else if (tab === "hair") {
       h += optionRow("Причёска", "hair", OPTIONS.hair, "head");
       h += swatchRow("Цвет волос", "hairColor", HAIRC);
+      h += optionRow("Пейсы", "payot", OPTIONS.payot, "head");
     } else if (tab === "wear") {
+      h += optionRow("Головной убор", "headwear", OPTIONS.headwear, "head");
       h += optionRow("Верх", "top", OPTIONS.top);
       h += swatchRow("Цвет верха", "topColor", TOPC);
       h += optionRow("Низ", "bottom", OPTIONS.bottom);

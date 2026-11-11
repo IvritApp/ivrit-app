@@ -14,7 +14,7 @@
   position: relative; width: 170px; height: 230px; margin: 0 auto; border-radius: 26px;
   background: radial-gradient(circle at 50% 60%, #dcecfd 0%, #eef6ff 60%, transparent 61%);
 }
-.ae-preview { width: 150px; margin: 0 auto; padding-top: 8px; animation: float 3.5s ease-in-out infinite; }
+.ae-preview { width: 112px; margin: 0 auto; padding-top: 8px; animation: float 3.5s ease-in-out infinite; }
 .ae-preview.bump { animation: popIn .35s cubic-bezier(.2,1.4,.4,1), float 3.5s ease-in-out .35s infinite; }
 .ae-try { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); white-space: nowrap;
   font-size: 12px; font-weight: 700; color: #b85f0c; background: #fff3e6; padding: 4px 10px; border-radius: 999px; }
@@ -52,5 +52,9 @@
 
 /* Аватар на главном экране */
 .card.hero-card .icon { background: #eaf4fd; overflow: hidden; padding: 0; }
-.card.hero-card .icon .hb-avatar { width: 52px; margin-top: 4px; }
+.card.hero-card .icon .hb-avatar { width: 52px; margin-top: 2px; }
 .ob-hero { width: 120px; margin: 6px auto 0; }
+
+/* Аватар моргает везде, как Давид */
+.hb-avatar .av-eye { animation: blink 4.6s infinite; }
+.hs-fig .hb-avatar { overflow: visible; height: 100%; }

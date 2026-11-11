@@ -42,7 +42,7 @@
   // ---------- Внешность героев (временные, потом заменим) ----------
   const LOOK = {
     david: { custom: "david" },          // нарисован отдельно (davidSVG) по картинке из Шедеврума
-    tzila: { skin: "#f6d2b4", hair: "long", hairC: "#a8532e", top: C.orangeL, bottom: "#ffffff", skirt: true, legs: "#f6d2b4", shoes: C.blueD },
+    tzila: { custom: "tzila" },          // нарисована отдельно (tzilaSVG) по картинке из Шедеврума, цвета приглушены
     playerM: { skin: "#f1c9a8", hair: "short", hairC: "#6b4a32", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
     playerF: { skin: "#f1c9a8", hair: "long", hairC: "#5a3a26", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
     seller: { skin: "#e8b48c", hair: "short", hairC: "#2b211c", top: "#ffffff", bottom: "#ffffff", shoes: C.ink, hat: "chef", beard: true },
@@ -62,7 +62,7 @@
     const tee = "#1f7fd6", teeD = "#1766b3", jeans = "#1f2d4f", cuff = "#3b4b72";
     let curls = "";
     const ring = [[22,44,8],[21,33,9],[25,22,10],[33,13,10],[43,8,10],[54,7,10],[64,10,10],[73,17,10],[78,28,9],[79,39,8],[30,30,8],[50,16,9],[68,26,8],[40,20,8],[59,18,8]];
-    ring.forEach(([x, y, r]) => { curls += `<circle cx="${x}" cy="${y}" r="${r}" fill="${hair}"/>`; });
+    ring.forEach(([x, y, r]) => { curls += `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#hsDavH)"/>`; });
     let swirls = "";
     [[26,24],[38,12],[52,9],[66,14],[75,27],[23,37],[46,20],[61,21]].forEach(([x, y]) => {
       swirls += `<path d="M${x - 3},${y + 1} q1,-4 4,-3 q3,1 1,4" stroke="${hairL}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
@@ -70,7 +70,14 @@
     const shoe = (x, flip) => `<path d="M${x - 9},190 Q${x - 9},182 ${x - 2},181 L${x + 5},181 Q${x + 11},183 ${x + 12},190 Z" fill="#f4f6f9"/>
       <rect x="${x - 10}" y="189" width="${23}" height="4" rx="2" fill="#c9d1db"/>
       <path d="M${x - 3},183.5 l5,0 M${x - 3},186 l5,0" stroke="#c9d1db" stroke-width="1.1"/>`;
+    // Голова уменьшена до пропорций героев (≈30% роста), тело вытянуто — рост прежний
     return `<svg viewBox="0 0 100 200" class="hs-person hs-david" overflow="visible">
+      <defs>
+        <radialGradient id="hsDavS" cx="42%" cy="36%" r="72%"><stop offset="0" stop-color="#fbd5b4"/><stop offset=".55" stop-color="#f4c39a"/><stop offset="1" stop-color="#dca47c"/></radialGradient>
+        <linearGradient id="hsDavH" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#4a3b4e"/><stop offset=".5" stop-color="#2b2130"/><stop offset="1" stop-color="#1e1722"/></linearGradient>
+        <linearGradient id="hsDavT" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#4a9be4"/><stop offset=".6" stop-color="#1f7fd6"/><stop offset="1" stop-color="#1766b3"/></linearGradient>
+      </defs>
+      <g transform="translate(0 66) scale(1 1.104) translate(0 -78)">
       <g class="hs-leg hs-leg-l">
         <rect x="36.5" y="124" width="13" height="55" rx="3" fill="${jeans}"/>
         <rect x="36" y="174" width="14" height="6" rx="2" fill="${cuff}"/>${shoe(42)}</g>
@@ -88,14 +95,15 @@
         <path d="M79,133 q1,6 -3,8 q-3,1 -5,-1 l-1,-6 q1,-4 5,-4 q3,0 4,3Z" fill="${skin}"/>
         <path d="M76,88 Q70,84 66,88 L67,104 Q73,106 80,103 Z" fill="${tee}"/>
         <path d="M80,101 Q73,104 67,102 L67,105 Q73,107 80,104Z" fill="${teeD}"/></g>
-      <path d="M31,92 Q32,86 42,85 L58,85 Q68,86 69,92 L68,128 Q50,131 32,128Z" fill="${tee}"/>
+      <path d="M31,92 Q32,86 42,85 L58,85 Q68,86 69,92 L68,128 Q50,131 32,128Z" fill="url(#hsDavT)"/>
       <path d="M58,92 Q63,100 62,124 L68,124 L68,96Z" fill="${teeD}" opacity=".45"/>
       <rect x="44.5" y="78" width="11" height="10" rx="3" fill="${skinD}"/>
       <path d="M42,85.5 Q50,91 58,85.5" stroke="${teeD}" stroke-width="2.4" fill="none"/>
-      <g class="hs-head">
+      </g>
+      <g transform="translate(50 70) scale(.7) translate(-50 -87)"><g class="hs-head">
         <circle cx="22.5" cy="50" r="6" fill="${skin}"/><circle cx="77.5" cy="50" r="6" fill="${skin}"/>
         <circle cx="22.5" cy="50" r="3" fill="${skinD}"/><circle cx="77.5" cy="50" r="3" fill="${skinD}"/>
-        <path d="M23,46 Q23,20 50,20 Q77,20 77,46 Q77,70 64,79 Q50,87 36,79 Q23,70 23,46Z" fill="${skin}"/>
+        <path d="M23,46 Q23,20 50,20 Q77,20 77,46 Q77,70 64,79 Q50,87 36,79 Q23,70 23,46Z" fill="url(#hsDavS)"/>
         <path d="M26,56 Q27,74 38,80 Q50,87 62,80 Q73,74 74,56 Q70,70 61,73 Q50,69 39,73 Q30,70 26,56Z" fill="#a9785a" opacity=".42"/>
         <path d="M42,62 Q50,59 58,62" stroke="#a9785a" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
         <ellipse cx="31" cy="60" rx="5" ry="3" fill="#ff8f80" opacity=".4"/><ellipse cx="69" cy="60" rx="5" ry="3" fill="#ff8f80" opacity=".4"/>
@@ -113,12 +121,71 @@
         <ellipse cx="50" cy="70.6" rx="4.4" ry="2" fill="#ff6b6b"/>
         <path d="M22,46 Q19,14 50,12 Q81,14 78,46 Q74,30 50,28 Q28,29 22,46Z" fill="${hair}"/>
         ${curls}${swirls}
-      </g>
+      </g></g>
+    </svg>`;
+  }
+
+  // ---------- ЦИЛЯ (по образцу из Шедеврума, 11.11; цвета спокойнее, чем на картинке) ----------
+  function tzilaSVG() {
+    const skin = "#f0c19c", skinD = "#e0a882", hair = "#7a4a2e", hairL = "#93603f", hairD = "#633a22";
+    const tee = "#ef9a62", teeD = "#dc8550", jeans = "#c7d3d0", cuff = "#b2c0bd", shoeC = "#6aa0c4";
+    const shoe = (x) => `<path d="M${x - 8},190 Q${x - 8},182 ${x - 1},181 L${x + 5},181 Q${x + 10},183 ${x + 11},190Z" fill="${shoeC}"/>
+      <rect x="${x - 9}" y="189" width="21" height="4" rx="2" fill="#eef2f6"/>
+      <path d="M${x - 2},183.4 l4.4,0 M${x - 2},185.8 l4.4,0" stroke="#fff" stroke-width="1"/>`;
+    const freckles = [[43.5,51],[45.5,52.6],[42,53],[56.5,51],[54.5,52.6],[58,53],[47.5,50.2],[52.5,50.2]]
+      .map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".55" fill="#cf9473" opacity=".75"/>`).join("");
+    const eye = (x) => `<ellipse cx="${x}" cy="44" rx="4.4" ry="4.8" fill="#fff"/>
+      <circle cx="${x + .3}" cy="44.6" r="3" fill="#7c9c5c"/><circle cx="${x + .3}" cy="44.8" r="1.6" fill="#22301a"/>
+      <circle cx="${x + 1.3}" cy="43.4" r=".95" fill="#fff"/>`;
+    return `<svg viewBox="0 0 100 200" class="hs-person hs-david hs-tzila" overflow="visible">
+      <defs>
+        <radialGradient id="hsTzS" cx="42%" cy="36%" r="72%"><stop offset="0" stop-color="#f8d3b4"/><stop offset=".55" stop-color="#f0c19c"/><stop offset="1" stop-color="#d9a681"/></radialGradient>
+        <linearGradient id="hsTzH" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#9a6a48"/><stop offset=".5" stop-color="#7a4a2e"/><stop offset="1" stop-color="#5e3620"/></linearGradient>
+        <linearGradient id="hsTzT" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#f6b483"/><stop offset=".6" stop-color="#ef9a62"/><stop offset="1" stop-color="#d9844f"/></linearGradient>
+      </defs>
+      <path fill="url(#hsTzH)" d="M25,40 Q23,11 50,10 Q77,11 75,40 L77,62 Q81,74 77,86 Q81,98 76,108 Q70,116 62,112 L38,112 Q30,116 24,108 Q19,98 23,86 Q19,74 23,62Z"/>
+      <path d="M24,88 Q21,98 26,106 M76,88 Q79,98 74,106" stroke="${hairD}" stroke-width="1.2" fill="none" opacity=".55"/>
+      <g class="hs-leg hs-leg-l"><rect x="41" y="122" width="8.5" height="54" rx="3" fill="${jeans}"/>
+        <rect x="40.5" y="171" width="9.5" height="6" rx="2" fill="${cuff}"/><rect x="42" y="176" width="6.5" height="5" fill="${skin}"/>${shoe(44)}</g>
+      <g class="hs-leg hs-leg-r"><rect x="50.5" y="122" width="8.5" height="54" rx="3" fill="${jeans}"/>
+        <rect x="50" y="171" width="9.5" height="6" rx="2" fill="${cuff}"/><rect x="51.5" y="176" width="6.5" height="5" fill="${skin}"/>${shoe(55)}</g>
+      <path d="M39.5,120 L60.5,120 L61,131 L39,131Z" fill="${jeans}"/>
+      <path d="M50,121 L50,130" stroke="${cuff}" stroke-width=".8"/>
+      <g class="hs-arm hs-arm-l"><rect x="28.6" y="80" width="6.8" height="42" rx="3.4" fill="${skin}"/>
+        <ellipse cx="32" cy="123.5" rx="3.8" ry="4.4" fill="${skin}"/>
+        <rect x="27.2" y="75" width="9.6" height="18" rx="4.6" fill="${tee}"/><rect x="27.2" y="90" width="9.6" height="3" rx="1.5" fill="${teeD}"/></g>
+      <g class="hs-arm hs-arm-r"><rect x="64.6" y="80" width="6.8" height="42" rx="3.4" fill="${skin}"/>
+        <ellipse cx="68" cy="123.5" rx="3.8" ry="4.4" fill="${skin}"/>
+        <rect x="63.2" y="75" width="9.6" height="18" rx="4.6" fill="${tee}"/><rect x="63.2" y="90" width="9.6" height="3" rx="1.5" fill="${teeD}"/></g>
+      <rect x="46" y="63" width="8" height="13" rx="2.5" fill="${skinD}"/>
+      <path d="M35,82 Q36,76 43,75 L57,75 Q64,76 65,82 L64,123 Q50,126 36,123Z" fill="url(#hsTzT)"/>
+      <path d="M57,80 Q61,92 60,121 L64,121 L64.6,84Z" fill="${teeD}" opacity=".45"/>
+      <path d="M44,75.6 Q50,80 56,75.6" stroke="${teeD}" stroke-width="1.6" fill="none"/>
+      <g transform="translate(0 -1)"><g class="hs-head">
+        <circle cx="28" cy="45" r="3.8" fill="${skin}"/><circle cx="72" cy="45" r="3.8" fill="${skin}"/>
+        <circle cx="72.4" cy="50.4" r="1.1" fill="#e8a25c"/>
+        <path d="M28.5,43 Q28.5,20 50,20 Q71.5,20 71.5,43 Q71.5,59 62,65.5 Q50,71 38,65.5 Q28.5,59 28.5,43Z" fill="url(#hsTzS)"/>
+        <ellipse cx="36" cy="53" rx="3.8" ry="2.2" fill="#ff9c8a" opacity=".35"/><ellipse cx="64" cy="53" rx="3.8" ry="2.2" fill="#ff9c8a" opacity=".35"/>
+        ${freckles}
+        <g class="hs-eyes">${eye(41.5)}${eye(58.5)}</g>
+        <path d="M37,40.6 l-2.2,-1.2 M37.6,39.4 l-1.2,-1.9 M63,40.6 l2.2,-1.2 M62.4,39.4 l1.2,-1.9" stroke="#3a2418" stroke-width=".9" stroke-linecap="round"/>
+        <path d="M37.4,37 Q41.5,34.4 45.6,36.4" stroke="${hairD}" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <path d="M54.4,36.4 Q58.5,34.4 62.6,37" stroke="${hairD}" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="50" cy="50.4" rx="1.7" ry="1.2" fill="${skinD}"/>
+        <path d="M44.4,56 Q50,62.8 55.6,56 Q50,57.6 44.4,56Z" fill="#8a3438"/>
+        <path d="M45.4,56.3 Q50,57.9 54.6,56.3 L54.1,57.5 Q50,59 45.9,57.5Z" fill="#fff"/>
+        <path d="M27,47 Q23,15 51,16 Q77,17 73,46 Q70,32 62,27 Q55,33 44,31 Q34,31 27,47Z" fill="url(#hsTzH)"/>
+        <path d="M33,30 Q44,22 58,22 M38,27 Q48,21 62,24" stroke="${hairL}" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".8"/>
+        <rect x="63" y="25" width="6.6" height="6.6" rx="1.6" fill="#e8874a" transform="rotate(14 66.3 28.3)"/>
+        <path d="M65,27.4 q1.4,-1 2.6,.3 q.8,1.2 -.6,2" stroke="#c96f39" stroke-width=".7" fill="none"/>
+      </g></g>
     </svg>`;
   }
 
   function personSVG(o) {
+    if (o.custom === "tzila") return tzilaSVG();
     if (o.custom === "david") return davidSVG();
+    if (o.custom === "avatar" && window.HirbisAvatar) return HirbisAvatar.svg(o.cfg, { pose: "stand" });
     const legC = o.legs || o.bottom;
     const backHair = o.hair === "long"
       ? `<path d="M24,46 Q22,13 50,13 Q78,13 76,46 L79,98 Q64,106 50,99 Q36,106 21,98Z" fill="${o.hairC}"/>` : "";
@@ -552,9 +619,9 @@
     const taxi = put(s3, "", 4, 552, 264, 132, "hs-taxi");
     taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
     const pass = taxi.querySelector(".hs-pass");
-    put(pass, fig(LOOK.driver), 168, 20, 42, 84);
-    const pFriend = put(pass, fig(friendLook), 84, 20, 42, 84);
-    const pPlayer = put(pass, playerFig("sit"), 116, 20, 42, 84);
+    put(pass, fig(LOOK.driver), 166, 17, 44, 88);
+    const pFriend = put(pass, fig(friendLook), 82, 17, 44, 88);
+    const pPlayer = put(pass, playerFig("sit"), 116, 17, 44, 88);
     pFriend.style.opacity = 0; pPlayer.style.opacity = 0;
     const talkFriend = put(taxi, "", 96, 20, 30, 20);   // точки, над которыми появляются реплики в такси
     const talkPlayer = put(taxi, "", 128, 20, 30, 20);
@@ -877,9 +944,9 @@
       const taxi = put(big, "", 0, 0, 264, 132, "hs-taxi hs-moving hs-driving");
       taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
       const pass = taxi.querySelector(".hs-pass");
-      put(pass, fig(LOOK.driver), 168, 20, 42, 84);
-      who.friend = put(pass, fig(friendLook), 84, 20, 42, 84);
-      who.me = put(pass, playerFig("sit"), 116, 20, 42, 84);
+      put(pass, fig(LOOK.driver), 166, 17, 44, 88);
+      who.friend = put(pass, fig(friendLook), 82, 17, 44, 88);
+      who.me = put(pass, playerFig("sit"), 116, 17, 44, 88);
     } else {
       const shop = put(frame, shopSVG(), 65, 366, 230, 190, "hs-shop");
       who.seller = put(shop, "", 64, 72, 36, 30);        // голова продавца внутри вывески
