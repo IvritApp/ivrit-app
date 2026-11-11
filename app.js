@@ -94,7 +94,9 @@ function setGreeting() {
 
 function showOnboarding() {
   homeView.hidden = true; lessonView.hidden = true; onboardView.hidden = false;
-  stopHomeBird && stopHomeBird();
+  // тот же живой Хибри, что и на главном экране: машет, улетает за гостинцами, скучает через 7 сек
+  document.getElementById("ob-bird-slot").appendChild(document.getElementById("homeBird"));
+  startHomeBird();
   let draft = { name: profile ? profile.name : (user ? user.first_name : ""), gender: profile ? profile.gender : null };
 
   const steps = [
@@ -141,6 +143,7 @@ function showOnboarding() {
     next.onclick = () => {
       if (i === 2 && "speechSynthesis" in window) speak(STORY[draft.gender].ready.he);
       if (i < steps.length - 1) { i++; render(); return; }
+      homeView.insertBefore(document.getElementById("homeBird"), homeView.firstChild);
       profile = { name: draft.name.trim(), gender: draft.gender };
       store.set("profile", profile);
       onboardView.hidden = true;
@@ -197,7 +200,7 @@ function birdTrip(withGift, awayMs = 2500, onBack) {
 }
 function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(onIdle, IDLE_MS); }
 function onIdle() {
-  if (homeView.hidden || birdBusy) { resetIdle(); return; }
+  if (!lessonView.hidden || birdBusy) { resetIdle(); return; }
   say("Чего так долго думаешь? 🤔", 2200);
   setTimeout(() => birdTrip(true, 3000, () => say("Я вернулся! Давай учиться? 😉", 2600)), 2200);
   clearTimeout(idleTimer); idleTimer = setTimeout(onIdle, IDLE_AGAIN_MS);
@@ -211,7 +214,7 @@ function startHomeBird() {
 }
 function stopHomeBird() { clearInterval(waveTimer); clearInterval(tripTimer); clearTimeout(idleTimer); }
 ["pointerdown", "touchstart", "keydown", "scroll"].forEach(ev =>
-  document.addEventListener(ev, () => { if (!homeView.hidden) resetIdle(); }, { passive: true }));
+  document.addEventListener(ev, () => { if (lessonView.hidden) resetIdle(); }, { passive: true }));
 rig.onclick = () => {                                    // если нажать на удода
   birdWave();
   say(random(["Шалом! 👋", "Погнали учиться!", "Я удод, кстати 🙂", "Ой, щекотно!", "יאללה! Поехали!"]), 1800);
