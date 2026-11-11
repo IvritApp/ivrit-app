@@ -11,6 +11,12 @@
 </head>
 <body>
   <!-- ===== ГЛАВНЫЙ ЭКРАН ===== -->
+  <!-- ===== ЗНАКОМСТВО (первый запуск): Хибри, имя, пол, завязка истории ===== -->
+  <section id="onboarding" hidden>
+    <img class="ob-bird" src="assets/udod.png" alt="Хибри">
+    <div id="ob-step"></div>
+  </section>
+
   <section id="home">
     <!-- Удод из двух слоёв: тело и крыло отдельно, чтобы крыло могло махать -->
     <div class="bird-wrap" id="homeBird">
@@ -54,6 +60,7 @@
         <span class="badge">Скоро</span>
       </button>
     </div>
+    <button class="link-btn" id="reset-profile">Сменить имя или пол</button>
   </section>
 
   <!-- ===== ЭКРАН УРОКА ===== -->

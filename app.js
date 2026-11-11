@@ -73,9 +73,86 @@ const todayBox   = document.getElementById("today");
 
 // Здороваемся по имени из Telegram
 const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-if (user) document.getElementById("hello").textContent = "Шалом, " + user.first_name + "!";
+
+// =====================================================
+// ПРОФИЛЬ И ЗНАКОМСТВО
+// Пол важен: в иврите глаголы и прилагательные меняются в зависимости от того, кто говорит.
+// От пола зависит и сюжет: парня встречает друг детства Давид, девушку — бывшая одноклассница Циля.
+// =====================================================
+let profile = store.get("profile", null);   // { name, gender: "m" | "f" }
+const STORY = {
+  m: { friend: "Давид", who: "твой друг детства Давид", met: "Он", ready: { he: "אני מוכן", tr: "ани мухан", ru: "я готов" } },
+  f: { friend: "Циля", who: "твоя бывшая одноклассница Циля", met: "Она", ready: { he: "אני מוכנה", tr: "ани мухана", ru: "я готова" } }
+};
+const onboardView = document.getElementById("onboarding");
+const obStep = document.getElementById("ob-step");
+
+function setGreeting() {
+  const name = profile ? profile.name : (user ? user.first_name : "");
+  document.getElementById("hello").textContent = name ? "Шалом, " + name + "!" : "Шалом!";
+}
+
+function showOnboarding() {
+  homeView.hidden = true; lessonView.hidden = true; onboardView.hidden = false;
+  stopHomeBird && stopHomeBird();
+  let draft = { name: profile ? profile.name : (user ? user.first_name : ""), gender: profile ? profile.gender : null };
+
+  const steps = [
+    // 1. Хибри здоровается
+    () => `
+      <h1 class="ob-title">Шалом! Я Хибри 👋</h1>
+      <p class="ob-text">Я удод — национальная птица Израиля. Научу тебя говорить на иврите. Сначала давай познакомимся!</p>
+      <button class="btn blue" data-next>Привет, Хибри!</button>`,
+    // 2. Имя и пол
+    () => `
+      <h1 class="ob-title">Как тебя зовут?</h1>
+      <input class="ob-input" id="ob-name" maxlength="20" placeholder="Твоё имя" value="${draft.name || ""}">
+      <p class="ob-text small">В иврите слова меняются в зависимости от того, кто говорит. Я буду учить тебя твоей форме.</p>
+      <div class="ob-gender">
+        <button class="g-card ${draft.gender === "m" ? "on" : ""}" data-g="m"><span>🙋‍♂️</span>Я парень</button>
+        <button class="g-card ${draft.gender === "f" ? "on" : ""}" data-g="f"><span>🙋‍♀️</span>Я девушка</button>
+      </div>
+      <button class="btn blue" data-next id="ob-go" ${draft.gender && draft.name ? "" : "disabled"}>Дальше</button>`,
+    // 3. Завязка истории
+    () => {
+      const st = STORY[draft.gender];
+      return `
+      <h1 class="ob-title">Твоя история</h1>
+      <p class="ob-text">Представь: ты скоро переезжаешь в Израиль. Там уже 10 лет живёт ${st.who}. ${st.met} встретит тебя в аэропорту и поможет обосноваться.</p>
+      <p class="ob-text">А пока я научу тебя первым словам. Кстати, вот твоя первая фраза:</p>
+      <div class="ob-phrase"><div class="he" dir="rtl">${st.ready.he}</div><div class="tr">${st.ready.tr} — «${st.ready.ru}»</div></div>
+      <button class="btn blue" data-next>${draft.gender === "m" ? "Я готов!" : "Я готова!"}</button>`;
+    }
+  ];
+  let i = 0;
+  function render() {
+    obStep.innerHTML = steps[i]();
+    obStep.classList.remove("slide-in"); void obStep.offsetWidth; obStep.classList.add("slide-in");
+    const nameInput = document.getElementById("ob-name");
+    const go = document.getElementById("ob-go");
+    const check = () => { if (go) go.disabled = !(draft.gender && draft.name.trim()); };
+    if (nameInput) nameInput.oninput = () => { draft.name = nameInput.value; check(); };
+    obStep.querySelectorAll(".g-card").forEach(c => c.onclick = () => {
+      draft.gender = c.dataset.g;
+      obStep.querySelectorAll(".g-card").forEach(x => x.classList.toggle("on", x === c));
+      vibrate("success"); check();
+    });
+    const next = obStep.querySelector("[data-next]");
+    next.onclick = () => {
+      if (i === 2 && "speechSynthesis" in window) speak(STORY[draft.gender].ready.he);
+      if (i < steps.length - 1) { i++; render(); return; }
+      profile = { name: draft.name.trim(), gender: draft.gender };
+      store.set("profile", profile);
+      onboardView.hidden = true;
+      setGreeting();
+      showHome();
+    };
+  }
+  render();
+}
 
 updateToday();
+document.getElementById("reset-profile").onclick = showOnboarding;
 
 // =====================================================
 // УДОД НА ГЛАВНОМ ЭКРАНЕ: машет крылом, улетает и прилетает с подарком,
@@ -84,8 +161,10 @@ updateToday();
 const rig = document.getElementById("rig");
 const bubble = document.getElementById("bubble");
 const carry = document.getElementById("carry");
-const GIFTS = ["🎁", "✉️", "🍊", "📚", "🫒", "⭐", "🥙"];
-const IDLE_MS = 20000;        // через сколько миллисекунд без действий удод «скучает» (20000 = 20 сек)
+// Гостинцы нарисованы в стиле Хибри: assets/gift-<имя>.png
+const GIFTS = ["fig", "passion", "pita", "shawarma", "olive"];   // инжир, маракуйя, пита, шаурма, оливка
+const IDLE_MS = 7000;         // через сколько миллисекунд без действий удод «скучает» (7000 = 7 сек)
+const IDLE_AGAIN_MS = 25000;  // если человек так и не нажал ничего — повторить не раньше, чем через 25 сек
 let birdBusy = false, idleTimer = null, waveTimer = null, tripTimer = null;
 
 function birdWave() {
@@ -103,14 +182,14 @@ function birdTrip(withGift, awayMs = 2500, onBack) {
   birdBusy = true;
   rig.className = "bird-rig flap fly-away";
   setTimeout(() => {
-    carry.textContent = withGift ? random(GIFTS) : "";
+    carry.innerHTML = withGift ? `<img src="assets/gift-${random(GIFTS)}.png" alt="">` : "";
     rig.className = "bird-rig flap fly-in";
     setTimeout(() => {
       rig.className = "bird-rig";
       birdBusy = false;
       if (withGift) {                                   // кладёт подарок на землю
         carry.classList.add("drop");
-        setTimeout(() => { carry.classList.remove("drop"); carry.textContent = ""; }, 1600);
+        setTimeout(() => { carry.classList.remove("drop"); carry.innerHTML = ""; }, 1600);
       }
       if (onBack) onBack();
     }, 1200);
@@ -121,7 +200,7 @@ function onIdle() {
   if (homeView.hidden || birdBusy) { resetIdle(); return; }
   say("Чего так долго думаешь? 🤔", 2200);
   setTimeout(() => birdTrip(true, 3000, () => say("Я вернулся! Давай учиться? 😉", 2600)), 2200);
-  resetIdle();
+  clearTimeout(idleTimer); idleTimer = setTimeout(onIdle, IDLE_AGAIN_MS);
 }
 function startHomeBird() {
   stopHomeBird();
@@ -137,7 +216,9 @@ rig.onclick = () => {                                    // если нажат�
   birdWave();
   say(random(["Шалом! 👋", "Погнали учиться!", "Я удод, кстати 🙂", "Ой, щекотно!", "יאללה! Поехали!"]), 1800);
 };
-startHomeBird();
+// Первый запуск — знакомство, иначе сразу главный экран
+setGreeting();
+if (!profile) showOnboarding(); else startHomeBird();
 
 // «Основное обучение» → открыть урок
 document.getElementById("go-learn").onclick = startLesson;
