@@ -826,3 +826,4 @@ body.theme-dark .p-medal.won { background: #3a3218; }
 .hn-empty { color: var(--hint); font-size: 14px; padding: 16px; border: 2px dashed #dfe6ee; border-radius: 16px; }
 .card.honor-card .icon { background: #fff3c4; }
 body.theme-dark .hn-form, body.theme-dark .hn-how, body.theme-dark .hn-me { background: #2a2a1c; }
+button.p-lvl-go { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; background: #e8f4ff; color: #1b5e9e; }

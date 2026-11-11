@@ -25,11 +25,15 @@ function updateQuestFire(bump) {
 }
 let stageToken = 0;          // защита от «старых» таймеров, если ушли со сцены
 
-// Названия ингредиентов для итогового заказа
-const ING_NAMES = {
-  pita: "пита", lafa: "лафа", "meat-turkey": "индейка", "meat-chicken": "курица", "meat-veal": "телятина",
-  salad: "салат", hummus: "хумус", tahini: "тхина", spicy: "острое", chips: "картошка фри"
-};
+// Названия того, что собираем, берутся из файла квеста (поле "items")
+function itemName(x) { return (quest && quest.items && quest.items[x]) || x; }
+// Уровень, к которому относится квест (ищем в course.json по полю "quest")
+function questLevel(qid) {
+  if (typeof course === "undefined" || !course) return null;
+  for (const ch of course.chapters) for (let i = 0; i < ch.levels.length; i++)
+    if (ch.levels[i].quest && "q-" + ch.levels[i].quest === qid) return { ch, lvl: ch.levels[i], n: i + 1 };
+  return null;
+}
 
 // --- Общие помощники ---
 function openQuestSection() {
@@ -127,22 +131,23 @@ async function playTaxi(sc, onDone) {
 // =====================================================
 // КВЕСТ «ПЕРВАЯ ШАУРМА»
 // =====================================================
+startQuest.preludeShown = {};
 function startQuest(id) {
-  // Перед первым квестом — кусочек кино: такси подъезжает к шаурмичной
-  if (id === "shawarma" && window.playArrivalScene && !store.get("quest_q-shawarma", false) && !startQuest.kinoShown) {
-    startQuest.kinoShown = true;
-    openQuestSection();
-    questView.innerHTML = `<div id="sceneBox"></div>`;
-    window.playArrivalScene(document.getElementById("sceneBox"), { gender: profile ? profile.gender : "m", profile, part: "shop" }, () => startQuest(id));
-    return;
-  }
   openQuestSection();
   questView.innerHTML = `<div class="q-loading">Загрузка…</div>`;
   fetch(`content/${COURSE_LANG}/quests/${id}.json`)
     .then(r => r.json())
     .then(d => {
+      // Перед первым прохождением — кусочек кино (поле "prelude" в файле квеста)
+      const pre = d.prelude;
+      if (pre && window.playArrivalScene && !startQuest.preludeShown[id] && !(pre.once && store.get("quest_" + d.id, false))) {
+        startQuest.preludeShown[id] = true;
+        questView.innerHTML = `<div id="sceneBox"></div>`;
+        window.playArrivalScene(document.getElementById("sceneBox"), { gender: profile ? profile.gender : "m", profile, part: pre.scene }, () => startQuest(id));
+        return;
+      }
       quest = d; qStep = 0; qMistakes = 0; qBag = []; qCombo = 0; qPoints = 0;
-      const token = renderStageShell("counter", "Шаурмичная", "🌯");
+      const token = renderStageShell(d.place || "counter", d.placeTitle || d.title, d.icon || "⭐");
       // Список заказа — по кнопке, а главное видно на прилавке
       const ob = document.getElementById("stOrder"), tray = document.getElementById("qTray");
       ob.hidden = false;
@@ -232,7 +237,7 @@ function addToTray(items) {
     qBag.push(it);
     const el = document.createElement("div");
     el.className = "q-ing";
-    el.innerHTML = `<img src="assets/ing-${it}.png" alt=""><span>${ING_NAMES[it] || it}</span>`;
+    el.innerHTML = `<img src="assets/ing-${it}.png" alt=""><span>${itemName(it)}</span>`;
     tray.appendChild(el);
     if (stage && stage.food) stage.food(it);
     playSound("pop");
@@ -251,11 +256,14 @@ function finishQuest() {
   store.set("quest_" + quest.id, true);
   if (perfect) store.set("questGold_" + quest.id, true);
   // итог уровня
-  const lvlInfo = (typeof course !== "undefined" && course) ? course.chapters[0].levels[0] : null;
+  const where = questLevel(quest.id);
+  const lvlInfo = where ? where.lvl : null;
   const goldN = lvlInfo ? lvlInfo.lessons.filter(id => perfectLessons().includes(id)).length : 0;
   const totalN = lvlInfo ? lvlInfo.lessons.length : 7;
-  const finalImg = qBag.includes("lafa") ? "gift-shawarma" : "gift-pita";
-  const order = qBag.map(x => ING_NAMES[x]).join(", ");
+  const fin = quest.final || {};
+  const rule = (fin.imgIf || []).find(r => qBag.includes(r.has));
+  const finalImg = rule ? rule.img : (fin.img || "gift-shawarma");
+  const order = qBag.map(itemName).join(", ");
   // продавец заворачивает шаурму и протягивает тебе
   setTimeout(() => { if (token === stageToken && stage) stage.wrap(finalImg); }, 2600);
   setTimeout(() => {
@@ -264,12 +272,12 @@ function finishQuest() {
     playSound("finish"); vibrate("success");
     questView.innerHTML = `
       <div class="q-final">
-        <img class="q-final-img" src="assets/${finalImg}.png" alt="Шаурма">
+        <img class="q-final-img" src="assets/${finalImg}.png" alt="${fin.alt || quest.title}">
         <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный квест! 🏆" : "Квест пройден! 🎉"}</h2>
-        ${lvlInfo && levelGold(lvlInfo) ? `<div class="lvl-gold">🏅 Уровень золотой! Ещё ${course.chapters[0].levels.length - course.chapters[0].levels.filter(levelGold).length} — и золотая медаль главы 🥇</div>` : ""}
+        ${lvlInfo && levelGold(lvlInfo) ? `<div class="lvl-gold">🏅 Уровень золотой! ${where.ch.levels.every(levelGold) ? "Все уровни главы золотые 🥇" : `Ещё ${where.ch.levels.length - where.ch.levels.filter(levelGold).length} — и золотая медаль главы 🥇`}</div>` : ""}
         <div class="lvl-done">
           <div class="lvl-badge">🏁</div>
-          <div><b>Уровень 1 «Первая шаурма» пройден!</b><br>
+          <div><b>Уровень ${where ? where.n : 1} «${lvlInfo ? lvlInfo.title : quest.title}» пройден!</b><br>
           <span>Золотых уроков: ★ ${goldN} из ${totalN}${perfect ? " · квест золотой 🏆" : ""}</span></div>
         </div>
         <p class="task">Твой заказ: ${order}</p>

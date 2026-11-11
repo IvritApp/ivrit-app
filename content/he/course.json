@@ -17,12 +17,28 @@
             "a1-1-6",
             "a1-1-7"
           ],
-          "quest": "shawarma"
+          "quest": "shawarma",
+          "questTitle": "Первая шаурма",
+          "questImg": "gift-shawarma",
+          "introButton": "🚕 Сцена: в такси из аэропорта"
         },
         {
           "id": "a1-2",
           "title": "Поход в магазин",
-          "soon": true
+          "soon": true,
+          "draft": "ждёт знатока и сцену магазина",
+          "lessons": [
+            "a1-2-1",
+            "a1-2-2",
+            "a1-2-3",
+            "a1-2-4",
+            "a1-2-5",
+            "a1-2-6",
+            "a1-2-7"
+          ],
+          "quest": "makolet",
+          "questTitle": "Поход в магазин",
+          "questImg": "gift-bag"
         },
         {
           "id": "a1-3",
@@ -38,6 +54,31 @@
           "id": "a1-5",
           "title": "Шабат у друзей",
           "soon": true
+        },
+        {
+          "id": "a1-6",
+          "title": "Кафе и кофе",
+          "soon": true
+        },
+        {
+          "id": "a1-7",
+          "title": "Рынок",
+          "soon": true
+        },
+        {
+          "id": "a1-8",
+          "title": "У врача",
+          "soon": true
+        },
+        {
+          "id": "a1-9",
+          "title": "Работа",
+          "soon": true
+        },
+        {
+          "id": "a1-10",
+          "title": "Банк и почта",
+          "soon": true
         }
       ],
       "exam": {
@@ -46,5 +87,11 @@
       },
       "next": "A2"
     }
-  ]
+  ],
+  "plan": {
+    "A1": "10 уровней",
+    "A2": "12–13 уровней",
+    "newWordsPerLesson": "6–7",
+    "wordsPerLevel": "~50"
+  }
 }

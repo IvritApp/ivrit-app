@@ -11,7 +11,10 @@ const TEST_UNLOCK_ALL = true;
 // =====================================================
 // МЕДАЛИ
 // Уровень ЗОЛОТОЙ: все уроки золотые + квест золотой.
-// Медаль главы: 🥇 все уровни золотые, 🥈 золотых на один меньше (4 из 5), 🥉 глава пройдена.
+// Медаль главы (в процентах золотых уровней): 🥇 100%, 🥈 от 85%, 🥉 от 70%. Меньше — медали нет.
+// Для 10 уровней: золото 10, серебро 9, бронза 7.
+const MEDAL_PCT = { silver: 0.85, bronze: 0.70 };
+function medalNeed(n, k) { return k === "gold" ? n : Math.ceil(n * MEDAL_PCT[k] - 1e-9); }
 // Медали видны в профиле (потом — и друзьям, когда будет сервер).
 // =====================================================
 function levelGold(l) {
@@ -26,7 +29,7 @@ function levelDone(l) {
 function chapterMedal(ch) {
   const n = ch.levels.length, g = ch.levels.filter(levelGold).length, d = ch.levels.filter(levelDone).length;
   if (d < n) return null;
-  return g === n ? "gold" : g >= n - 1 ? "silver" : "bronze";
+  return g >= medalNeed(n, "gold") ? "gold" : g >= medalNeed(n, "silver") ? "silver" : g >= medalNeed(n, "bronze") ? "bronze" : null;
 }
 const MEDAL = { gold: ["🥇", "Золотая"], silver: ["🥈", "Серебряная"], bronze: ["🥉", "Бронзовая"] };
 function updateMedals() {                       // запоминаем лучшие медали за главы
@@ -63,9 +66,18 @@ function autoIntro() {
   return true;
 }
 
+// Какой уровень показывать: выбранный игроком, иначе первый ещё не пройденный (из готовых)
+function currentLevelIdx(ch) {
+  const ready = ch.levels.map((l, i) => l.soon ? -1 : i).filter(i => i >= 0);
+  const picked = store.get("level_" + ch.id, null);
+  if (picked !== null && ready.includes(picked)) return picked;
+  const open = ready.find(i => !levelDone(ch.levels[i]));
+  return open !== undefined ? open : ready[ready.length - 1];
+}
 function renderPath() {
   const ch = course.chapters[0];                 // пока одна глава — A1
-  const lvl = ch.levels[0];
+  const lvlIdx = currentLevelIdx(ch);
+  const lvl = ch.levels[lvlIdx];
   updateMedals();
   const goldLevels = ch.levels.filter(levelGold).length;
   const myMedal = store.get("medals", {})[ch.id];
@@ -95,27 +107,29 @@ function renderPath() {
     ${TEST_UNLOCK_ALL ? `<div class="p-test">🔓 Тестовый режим: всё открыто</div>` : ""}
     <div class="p-chapter">
       <div class="p-ch-badge">${ch.id}</div>
-      <div><div class="p-ch-title">${ch.title}</div><div class="p-ch-sub">Уровень 1 из ${ch.levels.length}</div></div>
+      <div><div class="p-ch-title">${ch.title}</div><div class="p-ch-sub">Уровень ${lvlIdx + 1} из ${ch.levels.length}</div></div>
     </div>
     <div class="p-medals">
       ${["gold", "silver", "bronze"].map(k => `<div class="p-medal ${myMedal === k ? "won" : ""}"><span>${MEDAL[k][0]}</span><small>${
-        k === "gold" ? `все ${ch.levels.length} уровней золотые` : k === "silver" ? `${ch.levels.length - 1} из ${ch.levels.length} золотые` : "глава пройдена"}</small></div>`).join("")}
+        k === "gold" ? `все ${ch.levels.length} уровней золотые` : `${medalNeed(ch.levels.length, k)} из ${ch.levels.length} золотые (${Math.round(MEDAL_PCT[k] * 100)}%)`}</small></div>`).join("")}
       <div class="p-medal-note">Золотых уровней: <b>${goldLevels} из ${ch.levels.length}</b></div>
     </div>
     <div class="p-level">
-      <div class="p-level-title">Уровень 1 · ${lvl.title}${isGoldLvl ? ` <span class="p-lvl-gold">🏅 золотой</span>` : ""}</div>
+      <div class="p-level-title">Уровень ${lvlIdx + 1} · ${lvl.title}${isGoldLvl ? ` <span class="p-lvl-gold">🏅 золотой</span>` : ""}</div>
       <div class="p-level-sub">${done.filter(id => lvl.lessons.includes(id)).length} из ${lvl.lessons.length} уроков${goldCount ? ` · <span class="p-gold">★ ${goldCount} золот${goldCount === 1 ? "ой" : "ых"}</span>` : ""}</div>
       ${isGoldLvl ? "" : `<div class="p-level-hint">Золотой уровень: все уроки ★ золотые + квест без ошибок</div>`}
       <div class="p-level-bar"><div style="width:${done.filter(id => lvl.lessons.includes(id)).length / lvl.lessons.length * 100}%"></div></div>
     </div>
-    <button class="p-scene" id="p-taxi">🚕 Сцена: в такси из аэропорта</button>
+    ${lvl.introButton ? `<button class="p-scene" id="p-taxi">${lvl.introButton}</button>` : ""}
     <div class="p-track">${nodes}</div>
     <button class="p-quest ${allDone ? (questDone ? (questGold ? "done gold" : "done") : "open") : "locked"}" id="p-quest">
-      <img src="assets/gift-shawarma.png" alt="">
-      <span><b>Квест: Первая шаурма</b><br>${allDone ? (questDone ? (questGold ? "Идеально 🏆 · можно ещё раз" : "Пройден ✓ · можно ещё раз") : "Открыт — вперёд!") : "Откроется после 7 уроков 🔒"}</span>
+      <img src="assets/${lvl.questImg || "gift-shawarma"}.png" alt="">
+      <span><b>Квест: ${lvl.questTitle || lvl.title}</b><br>${allDone ? (questDone ? (questGold ? "Идеально 🏆 · можно ещё раз" : "Пройден ✓ · можно ещё раз") : "Открыт — вперёд!") : `Откроется после ${lvl.lessons.length} уроков 🔒`}</span>
     </button>
-    ${ch.levels.slice(1).map((l, i) => `<div class="p-soon"><b>Уровень ${i + 2} · ${l.title}</b><span>скоро</span></div>`).join("")}
-    <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после 5 уровней</span></div>
+    ${ch.levels.map((l, i) => i === lvlIdx ? "" : l.soon
+      ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
+      : `<button class="p-soon p-lvl-go" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${levelGold(l) ? "🏅" : levelDone(l) ? "✓" : "›"}</span></button>`).join("")}
+    <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после ${ch.levels.length} уровней</span></div>
     <div class="p-soon next"><b>Дальше — глава ${ch.next}</b><span>🔒</span></div>`;
 
   pathView.querySelectorAll(".p-node").forEach(b => b.onclick = () => {
@@ -125,9 +139,11 @@ function renderPath() {
     else startLesson(id);
   });
   document.getElementById("p-settings").onclick = openSettings;
-  document.getElementById("p-taxi").onclick = () => showTaxi(() => showPath());
+  const tb = document.getElementById("p-taxi");
+  if (tb) tb.onclick = () => showTaxi(() => showPath());
+  pathView.querySelectorAll(".p-lvl-go").forEach(b => b.onclick = () => { store.set("level_" + ch.id, +b.dataset.lvl); renderPath(); window.scrollTo(0, 0); });
   document.getElementById("p-quest").onclick = () => {
-    if (!allDone) { showToast("Пройди все 7 уроков — и квест откроется"); vibrate("warning"); return; }
+    if (!allDone) { showToast(`Пройди все ${lvl.lessons.length} уроков — и квест откроется`); vibrate("warning"); return; }
     startQuest(lvl.quest);
   };
   const cur = pathView.querySelector(".p-node.current");

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hirbis — проверка слов: уровень 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --blue:#5aa9f0; --blueD:#3a8ad6; --orange:#ff8a35; --green:#3cae5c; --greenBg:#e3f7e8; --red:#e5484d; --redBg:#ffe7e7; --amber:#e8930c; --amberBg:#fff3dc; --bg:#f4f9fe; --card:#fff; --ink:#1f2433; --hint:#7c8597; --line:#e3ecf5; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif; padding-bottom:120px; }
+  header { background:#fff; padding:18px 16px 14px; border-bottom:1px solid var(--line); }
+  .wrap { max-width:760px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:22px; color:var(--blueD); }
+  h1 b { color:var(--orange); }
+  .intro { margin:6px 0 0; color:#4b5468; font-size:15px; }
+  .intro li { margin:3px 0; }
+  .progress { height:8px; background:var(--line); border-radius:99px; margin:12px 0 4px; overflow:hidden; }
+  .progress i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--blue),#7cc0ff); transition:width .3s; }
+  .stats { font-size:13px; color:var(--hint); }
+  .tabs { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+  .tabs button { border:1px solid var(--line); background:#fff; border-radius:99px; padding:6px 12px; font-size:14px; color:#4b5468; cursor:pointer; }
+  .tabs button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.05em; color:var(--blueD); margin:22px 16px 8px; }
+  .card { background:var(--card); margin:0 12px 10px; border-radius:16px; padding:12px 14px; border:2px solid transparent; box-shadow:0 1px 0 rgba(30,60,110,.06),0 3px 10px rgba(58,138,214,.08); }
+  .card.ok { border-color:#bfe8c9; }
+  .card.bad { border-color:#f6b9bb; background:#fffafa; }
+  .card.doubt { border-color:#f5d39a; background:#fffdf7; }
+  .top { display:flex; gap:10px; align-items:flex-start; }
+  .num { flex:none; min-width:30px; height:30px; border-radius:10px; background:var(--bg); color:var(--hint); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .main { flex:1; min-width:0; }
+  .he { font-family:"Noto Sans Hebrew","Arial Hebrew",Arial,sans-serif; font-size:30px; line-height:1.45; direction:rtl; text-align:right; font-weight:600; }
+  .plain { font-family:"Noto Sans Hebrew",Arial,sans-serif; direction:rtl; text-align:right; font-size:16px; color:var(--hint); }
+  .plain span { direction:ltr; unicode-bidi:isolate; font-family:-apple-system,"Segoe UI",Roboto,sans-serif; font-size:12px; }
+  .tr { font-size:17px; color:var(--blueD); margin-top:4px; }
+  .ru { font-size:17px; }
+  .meta { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .chip { font-size:12px; padding:3px 8px; border-radius:99px; background:var(--bg); color:#4b5468; }
+  .chip.m { background:#e4f0fc; color:var(--blueD); }
+  .chip.f { background:#fff0e4; color:#c4621a; }
+  .btns { display:flex; gap:8px; margin-top:10px; }
+  .btns button { flex:1; border:none; border-radius:12px; padding:10px 4px; font-size:15px; font-weight:600; cursor:pointer; background:var(--bg); color:#4b5468; transition:transform .1s; }
+  .btns button:active { transform:scale(.96); }
+  .card.ok .b-ok { background:var(--green); color:#fff; }
+  .card.bad .b-bad { background:var(--red); color:#fff; }
+  .card.doubt .b-doubt { background:var(--amber); color:#fff; }
+  .fix { display:none; margin-top:10px; }
+  .card.bad .fix, .card.doubt .fix { display:block; }
+  .fix p { margin:0 0 6px; font-size:13px; color:var(--hint); }
+  .what { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .what button { border:1px solid var(--line); background:#fff; border-radius:99px; padding:5px 10px; font-size:13px; cursor:pointer; color:#4b5468; }
+  .what button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fix input, .fix textarea { width:100%; border:1px solid var(--line); border-radius:10px; padding:9px 10px; font:16px -apple-system,"Segoe UI",Roboto,sans-serif; margin-bottom:6px; background:#fff; }
+  .fix input.heIn { font-family:"Noto Sans Hebrew",Arial,sans-serif; font-size:20px; }
+  .fix textarea { min-height:44px; resize:vertical; }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:rgba(255,255,255,.96); backdrop-filter:blur(8px); border-top:1px solid var(--line); padding:10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .bar .wrap { display:flex; gap:8px; align-items:center; }
+  .bar .cnt { flex:1; font-size:13px; color:var(--hint); line-height:1.3; }
+  .bar .cnt b { color:var(--ink); }
+  .bar button { border:none; border-radius:12px; padding:11px 14px; font-size:15px; font-weight:700; cursor:pointer; }
+  .send { background:var(--blue); color:#fff; }
+  .share { background:var(--orange); color:#fff; }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; opacity:0; transition:.3s; pointer-events:none; z-index:9; }
+  .toast.on { opacity:1; transform:translateX(-50%); }
+  .empty { text-align:center; color:var(--hint); padding:30px; }
+  .reset { background:none; border:none; color:var(--hint); text-decoration:underline; font-size:13px; cursor:pointer; margin:24px auto; display:block; }
+  #report { display:none; margin:10px 12px; width:calc(100% - 24px); min-height:160px; font:13px monospace; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Hirbis — проверка <b>иврита</b> · уровень 2</h1>
+  <ul class="intro">
+    <li>Под каждым словом нажми <b>✓ Верно</b>, <b>✗ Ошибка</b> или <b>? Не уверен</b>.</li>
+    <li>Если ошибка — отметь, <b>что не так</b> (слово, огласовки, транскрипция, перевод), и напиши, как правильно.</li>
+    <li>Отметки сохраняются в этом браузере — можно закрыть и вернуться.</li>
+    <li>В конце нажми <b>«Скопировать отчёт»</b> и вставь текст в Telegram.</li>
+  </ul>
+  <div class="progress"><i id="pg"></i></div>
+  <div class="stats" id="stats"></div>
+  <div class="tabs" id="tabs">
+    <button data-f="all" class="on">Все</button>
+    <button data-f="todo">Не проверено</button>
+    <button data-f="bad">Ошибки и сомнения</button>
+  </div>
+</div></header>
+
+<main class="wrap" id="list"></main>
+<button class="reset" id="reset">Стереть все отметки и начать заново</button>
+<textarea id="report" readonly></textarea>
+
+<div class="bar"><div class="wrap">
+  <div class="cnt" id="cnt"></div>
+  <button class="share" id="share" hidden>Поделиться</button>
+  <button class="send" id="copy">Скопировать отчёт</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const ITEMS = [{"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "בֹּקֶר", "tr": "бокер", "ru": "утро", "where": "Новое слово урока", "who": "всем", "id": 1}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "טוֹב", "tr": "тов", "ru": "хорошо, хороший", "where": "Новое слово урока", "who": "всем", "id": 2}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "מָה נִשְׁמָע?", "tr": "ма нишма?", "ru": "как дела?", "where": "Новое слово урока", "who": "всем", "id": 3}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "בְּסֵדֶר", "tr": "бэсэдэр", "ru": "в порядке, нормально", "where": "Новое слово урока", "who": "всем", "id": 4}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "יוֹם", "tr": "йом", "ru": "день", "where": "Новое слово урока", "who": "всем", "id": 5}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "עֶרֶב", "tr": "эрев", "ru": "вечер", "where": "Новое слово урока", "who": "всем", "id": 6}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "לַיְלָה", "tr": "лайла", "ru": "ночь", "where": "Новое слово урока", "who": "всем", "id": 7}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "בֹּקֶר טוֹב! מָה נִשְׁמָע?", "tr": "бокер тов! ма нишма?", "ru": "Доброе утро! Как дела?", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 8}, {"sec": "Уровень 2: урок 1 «Доброе утро!»", "he": "הַכֹּל בְּסֵדֶר, תּוֹדָה", "tr": "а-коль бэсэдэр, тода", "ru": "Всё в порядке, спасибо", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 9}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "לֶחֶם", "tr": "лехем", "ru": "хлеб", "where": "Новое слово урока", "who": "всем", "id": 10}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "חָלָב", "tr": "халав", "ru": "молоко", "where": "Новое слово урока", "who": "всем", "id": 11}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "גְּבִינָה", "tr": "гвина", "ru": "сыр", "where": "Новое слово урока", "who": "всем", "id": 12}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "בֵּיצִים", "tr": "бейцим", "ru": "яйца", "where": "Новое слово урока", "who": "всем", "id": 13}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "חֶמְאָה", "tr": "хемъа", "ru": "сливочное масло", "where": "Новое слово урока", "who": "всем", "id": 14}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "קָפֶה", "tr": "кафэ", "ru": "кофе", "where": "Новое слово урока", "who": "всем", "id": 15}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "תֵּה", "tr": "тэ", "ru": "чай", "where": "Новое слово урока", "who": "всем", "id": 16}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "אֲנִי רוֹצֶה לֶחֶם", "tr": "ани роцэ лехем", "ru": "Я хочу хлеб", "where": "Фраза («Собери фразу»)", "who": "парню", "id": 17}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "אֲנִי רוֹצָה לֶחֶם", "tr": "ани роца лехем", "ru": "Я хочу хлеб", "where": "Фраза («Собери фразу»)", "who": "девушке", "id": 18}, {"sec": "Уровень 2: урок 2 «Завтрак»", "he": "לֶחֶם עִם גְּבִינָה", "tr": "лехем им гвина", "ru": "Хлеб с сыром", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 19}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "יֵשׁ", "tr": "еш", "ru": "есть (имеется)", "where": "Новое слово урока", "who": "всем", "id": 20}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "אֵין", "tr": "эйн", "ru": "нет (не имеется)", "where": "Новое слово урока", "who": "всем", "id": 21}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "עוֹד", "tr": "од", "ru": "ещё", "where": "Новое слово урока", "who": "всем", "id": 22}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "גַּם", "tr": "гам", "ru": "тоже, также", "where": "Новое слово урока", "who": "всем", "id": 23}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "רַק", "tr": "рак", "ru": "только", "where": "Новое слово урока", "who": "всем", "id": 24}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "הַרְבֵּה", "tr": "hарбэ", "ru": "много", "where": "Новое слово урока", "who": "всем", "id": 25}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "קְצָת", "tr": "кцат", "ru": "немного", "where": "Новое слово урока", "who": "всем", "id": 26}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "יֵשׁ חָלָב?", "tr": "еш халав?", "ru": "Есть молоко?", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 27}, {"sec": "Уровень 2: урок 3 «Есть молоко?»", "he": "אֵין לֶחֶם", "tr": "эйн лехем", "ru": "Хлеба нет", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 28}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "עַגְבָנִיּוֹת", "tr": "агваниёт", "ru": "помидоры", "where": "Новое слово урока", "who": "всем", "id": 29}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "מְלָפְפוֹנִים", "tr": "мелафефоним", "ru": "огурцы", "where": "Новое слово урока", "who": "всем", "id": 30}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "תַּפּוּחִים", "tr": "тапухим", "ru": "яблоки", "where": "Новое слово урока", "who": "всем", "id": 31}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "קִילוֹ", "tr": "кило", "ru": "килограмм", "where": "Новое слово урока", "who": "всем", "id": 32}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "בָּנָנוֹת", "tr": "бананот", "ru": "бананы", "where": "Новое слово урока", "who": "всем", "id": 33}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "בָּצָל", "tr": "бацаль", "ru": "лук", "where": "Новое слово урока", "who": "всем", "id": 34}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "תַּפּוּחֵי אֲדָמָה", "tr": "тапухэй адама", "ru": "картошка", "where": "Новое слово урока", "who": "всем", "id": 35}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "קִילוֹ עַגְבָנִיּוֹת, בְּבַקָּשָׁה", "tr": "кило агваниёт, бевакаша", "ru": "Килограмм помидоров, пожалуйста", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 36}, {"sec": "Уровень 2: урок 4 «Овощи»", "he": "גַּם מְלָפְפוֹנִים", "tr": "гам мелафефоним", "ru": "И огурцы тоже", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 37}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "אֵיפֹה", "tr": "эйфо", "ru": "где", "where": "Новое слово урока", "who": "всем", "id": 38}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "פֹּה", "tr": "по", "ru": "здесь", "where": "Новое слово урока", "who": "всем", "id": 39}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "שָׁם", "tr": "шам", "ru": "там", "where": "Новое слово урока", "who": "всем", "id": 40}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "יָמִינָה", "tr": "ямина", "ru": "направо", "where": "Новое слово урока", "who": "всем", "id": 41}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "שְׂמֹאלָה", "tr": "смола", "ru": "налево", "where": "Новое слово урока", "who": "всем", "id": 42}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "יָשָׁר", "tr": "яшар", "ru": "прямо", "where": "Новое слово урока", "who": "всем", "id": 43}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "לְיַד", "tr": "леяд", "ru": "рядом с", "where": "Новое слово урока", "who": "всем", "id": 44}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "אֵיפֹה הֶחָלָב?", "tr": "эйфо hэ-халав?", "ru": "Где молоко?", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 45}, {"sec": "Уровень 2: урок 5 «Где это?»", "he": "שָׁם, יָמִינָה", "tr": "шам, ямина", "ru": "Там, направо", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 46}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "אַחַת", "tr": "ахат", "ru": "одна (1)", "where": "Новое слово урока", "who": "всем", "id": 47}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "שְׁתַּיִם", "tr": "штаим", "ru": "две (2)", "where": "Новое слово урока", "who": "всем", "id": 48}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "שָׁלוֹשׁ", "tr": "шалош", "ru": "три (3)", "where": "Новое слово урока", "who": "всем", "id": 49}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "עֶשֶׂר", "tr": "эсэр", "ru": "десять (10)", "where": "Новое слово урока", "who": "всем", "id": 50}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "עֶשְׂרִים", "tr": "эсрим", "ru": "двадцать (20)", "where": "Новое слово урока", "who": "всем", "id": 51}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "אַרְבַּע", "tr": "арба", "ru": "четыре (4)", "where": "Новое слово урока", "who": "всем", "id": 52}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "חָמֵשׁ", "tr": "хамеш", "ru": "пять (5)", "where": "Новое слово урока", "who": "всем", "id": 53}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "עֶשֶׂר בֵּיצִים, בְּבַקָּשָׁה", "tr": "эсэр бейцим, бевакаша", "ru": "Десять яиц, пожалуйста", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 54}, {"sec": "Уровень 2: урок 6 «Считаем»", "he": "עֶשְׂרִים שֶׁקֶל", "tr": "эсрим шекель", "ru": "Двадцать шекелей", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 55}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "שַׂקִּית", "tr": "сакит", "ru": "пакет", "where": "Новое слово урока", "who": "всем", "id": 56}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "כַּרְטִיס", "tr": "картис", "ru": "карта (банковская)", "where": "Новое слово урока", "who": "всем", "id": 57}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "מְזֻמָּן", "tr": "мезуман", "ru": "наличные", "where": "Новое слово урока", "who": "всем", "id": 58}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "אֶפְשָׁר", "tr": "эфшар", "ru": "можно", "where": "Новое слово урока", "who": "всем", "id": 59}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "צָרִיךְ", "tr": "царих", "ru": "нужно, нужен", "where": "Новое слово урока", "who": "всем", "id": 60}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "קַבָּלָה", "tr": "кабала", "ru": "чек", "where": "Новое слово урока", "who": "всем", "id": 61}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "עֹדֶף", "tr": "одэф", "ru": "сдача", "where": "Новое слово урока", "who": "всем", "id": 62}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "אֶפְשָׁר בְּכַרְטִיס?", "tr": "эфшар бэ-картис?", "ru": "Можно картой?", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 63}, {"sec": "Уровень 2: урок 7 «На кассе»", "he": "כֵּן, שַׂקִּית אַחַת", "tr": "кен, сакит ахат", "ru": "Да, один пакет", "where": "Фраза («Собери фразу»)", "who": "всем", "id": 64}, {"sec": "Квест «Поход в магазин»", "he": "בֹּקֶר טוֹב! מָה נִשְׁמָע?", "tr": "бокер тов! ма нишма?", "ru": "Доброе утро! Как дела?", "where": "Шаг 1: говорит продавец", "who": "всем", "id": 65}, {"sec": "Квест «Поход в магазин»", "he": "בֹּקֶר טוֹב! הַכֹּל בְּסֵדֶר", "tr": "бокер тов! а-коль бэсэдэр", "ru": "Доброе утро! Всё в порядке", "where": "Шаг 1: ответ игрока (верный)", "who": "всем", "id": 66}, {"sec": "Квест «Поход в магазин»", "he": "בְּתֵאָבוֹן", "tr": "бэ-тэавон", "ru": "Приятного аппетита", "where": "Шаг 1: ответ игрока (неверный)", "who": "всем", "id": 67}, {"sec": "Квест «Поход в магазин»", "he": "יֵשׁ לֶחֶם?", "tr": "еш лехем?", "ru": "Есть хлеб?", "where": "Шаг 2: ответ игрока (верный)", "who": "всем", "id": 68}, {"sec": "Квест «Поход в магазин»", "he": "אֵין לֶחֶם", "tr": "эйн лехем", "ru": "Хлеба нет", "where": "Шаг 2: ответ игрока (неверный)", "who": "всем", "id": 69}, {"sec": "Квест «Поход в магазин»", "he": "כֵּן, הִנֵּה. עוֹד מַשֶּׁהוּ?", "tr": "кен, hинэ. од машеhу?", "ru": "Да, вот. Что-нибудь ещё?", "where": "Шаг 3: говорит продавец", "who": "всем", "id": 70}, {"sec": "Квест «Поход в магазин»", "he": "חָלָב וּגְבִינָה, בְּבַקָּשָׁה", "tr": "халав у-гвина, бевакаша", "ru": "Молоко и сыр, пожалуйста", "where": "Шаг 3: ответ игрока (верный)", "who": "всем", "id": 71}, {"sec": "Квест «Поход в магазин»", "he": "עֶשֶׂר בֵּיצִים, בְּבַקָּשָׁה", "tr": "эсэр бейцим, бевакаша", "ru": "Десять яиц, пожалуйста", "where": "Шаг 3: ответ игрока (верный)", "who": "всем", "id": 72}, {"sec": "Квест «Поход в магазин»", "he": "לֹא, תּוֹדָה", "tr": "ло, тода", "ru": "Нет, спасибо", "where": "Шаг 3: ответ игрока (неверный)", "who": "всем", "id": 73}, {"sec": "Квест «Поход в магазин»", "he": "אֵיפֹה הָעַגְבָנִיּוֹת?", "tr": "эйфо hа-агваниёт?", "ru": "Где помидоры?", "where": "Шаг 4: ответ игрока (верный)", "who": "всем", "id": 74}, {"sec": "Квест «Поход в магазин»", "he": "כַּמָּה עַגְבָנִיּוֹת?", "tr": "кама агваниёт?", "ru": "Сколько помидоров?", "where": "Шаг 4: ответ игрока (неверный)", "who": "всем", "id": 75}, {"sec": "Квест «Поход в магазин»", "he": "שָׁם, שְׂמֹאלָה", "tr": "шам, смола", "ru": "Там, налево", "where": "Шаг 5: говорит продавец", "who": "всем", "id": 76}, {"sec": "Квест «Поход в магазин»", "he": "קִילוֹ עַגְבָנִיּוֹת", "tr": "кило агваниёт", "ru": "Килограмм помидоров", "where": "Шаг 5: ответ игрока (верный)", "who": "всем", "id": 77}, {"sec": "Квест «Поход в магазин»", "he": "קִילוֹ מְלָפְפוֹנִים", "tr": "кило мелафефоним", "ru": "Килограмм огурцов", "where": "Шаг 5: ответ игрока (верный)", "who": "всем", "id": 78}, {"sec": "Квест «Поход в магазин»", "he": "קִילוֹ תַּפּוּחִים", "tr": "кило тапухим", "ru": "Килограмм яблок", "where": "Шаг 5: ответ игрока (верный)", "who": "всем", "id": 79}, {"sec": "Квест «Поход в магазин»", "he": "כַּמָּה זֶה?", "tr": "кама зэ?", "ru": "Сколько это?", "where": "Шаг 6: ответ игрока (верный)", "who": "всем", "id": 80}, {"sec": "Квест «Поход в магазин»", "he": "אֵיפֹה זֶה?", "tr": "эйфо зэ?", "ru": "Где это?", "where": "Шаг 6: ответ игрока (неверный)", "who": "всем", "id": 81}, {"sec": "Квест «Поход в магазин»", "he": "עֶשְׂרִים וַחֲמִשָּׁה שֶׁקֶל. צָרִיךְ שַׂקִּית?", "tr": "эсрим ва-хамиша шекель. царих сакит?", "ru": "Двадцать пять шекелей. Нужен пакет?", "where": "Шаг 7: говорит продавец", "who": "всем", "id": 82}, {"sec": "Квест «Поход в магазин»", "he": "כֵּן, שַׂקִּית אַחַת", "tr": "кен, сакит ахат", "ru": "Да, один пакет", "where": "Шаг 7: ответ игрока (верный)", "who": "всем", "id": 83}, {"sec": "Квест «Поход в магазин»", "he": "לֹא, תּוֹדָה", "tr": "ло, тода", "ru": "Нет, спасибо", "where": "Шаг 7: ответ игрока (верный)", "who": "всем", "id": 84}, {"sec": "Квест «Поход в магазин»", "he": "שָׁלוֹשׁ", "tr": "шалош", "ru": "Три", "where": "Шаг 7: ответ игрока (неверный)", "who": "всем", "id": 85}, {"sec": "Квест «Поход в магазин»", "he": "אֶפְשָׁר בְּכַרְטִיס?", "tr": "эфшар бэ-картис?", "ru": "Можно картой?", "where": "Шаг 8: ответ игрока (верный)", "who": "всем", "id": 86}, {"sec": "Квест «Поход в магазин»", "he": "יֵשׁ כַּרְטִיס?", "tr": "еш картис?", "ru": "Есть карта?", "where": "Шаг 8: ответ игрока (неверный)", "who": "всем", "id": 87}, {"sec": "Квест «Поход в магазин»", "he": "בֶּטַח! יוֹם טוֹב!", "tr": "бэтах! йом тов!", "ru": "Конечно! Хорошего дня!", "where": "Финал: говорит продавец", "who": "всем", "id": 88}];
+const VERSION = "lvl2";
+const KEY = "hirbis-check-" + VERSION;
+const WHAT = ["в слове", "в огласовках", "в транскрипции", "в переводе", "так не говорят"];
+let marks = {};
+try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+let filter = "all";
+
+const plain = s => s.replace(/[֑-ׇֽֿׁׂׅׄ]/g, "");
+const hasNikud = s => plain(s) !== s;
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]);
+function save() { try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (e) {} }
+
+function render() {
+  const list = document.getElementById("list");
+  let html = "", sec = "", shown = 0;
+  ITEMS.forEach(it => {
+    const m = marks[it.id] || {};
+    if (filter === "todo" && m.s) return;
+    if (filter === "bad" && !(m.s === "bad" || m.s === "doubt")) return;
+    if (it.sec !== sec) { sec = it.sec; html += `<h2>${esc(sec)}</h2>`; }
+    shown++;
+    const who = it.who === "парню" ? `<span class="chip m">парню ♂</span>` : it.who === "девушке" ? `<span class="chip f">девушке ♀</span>` : "";
+    html += `<div class="card ${m.s || ""}" data-id="${it.id}">
+      <div class="top"><div class="num">${it.id}</div><div class="main">
+        <div class="he" dir="rtl">${esc(it.he)}</div>
+        ${hasNikud(it.he) ? `<div class="plain" dir="rtl">${esc(plain(it.he))} <span>— без огласовок</span></div>` : ""}
+        <div class="tr">${esc(it.tr)}</div>
+        <div class="ru">${esc(it.ru)}</div>
+        <div class="meta">${who}<span class="chip">${esc(it.where)}</span></div>
+      </div></div>
+      <div class="btns">
+        <button class="b-ok" data-s="ok">✓ Верно</button>
+        <button class="b-bad" data-s="bad">✗ Ошибка</button>
+        <button class="b-doubt" data-s="doubt">? Не уверен</button>
+      </div>
+      <div class="fix">
+        <p>Что не так? (можно несколько)</p>
+        <div class="what">${WHAT.map(w => `<button data-w="${w}" class="${(m.w || []).includes(w) ? "on" : ""}">${w}</button>`).join("")}</div>
+        <input class="heIn" dir="auto" placeholder="Как правильно (иврит / транскрипция)" data-k="fix" value="${esc(m.fix)}">
+        <textarea dir="auto" placeholder="Комментарий (необязательно)" data-k="note">${esc(m.note)}</textarea>
+      </div>
+    </div>`;
+  });
+  list.innerHTML = html || `<div class="empty">Здесь пусто 🙂</div>`;
+  stats();
+}
+
+function stats() {
+  const n = ITEMS.length;
+  const c = { ok:0, bad:0, doubt:0 };
+  Object.values(marks).forEach(m => { if (c[m.s] !== undefined) c[m.s]++; });
+  const done = c.ok + c.bad + c.doubt;
+  document.getElementById("pg").style.width = (done / n * 100) + "%";
+  document.getElementById("stats").textContent = `Проверено ${done} из ${n}`;
+  document.getElementById("cnt").innerHTML = `<b>${done}/${n}</b> проверено<br>✓ ${c.ok} · ✗ ${c.bad} · ? ${c.doubt}`;
+}
+
+document.getElementById("list").addEventListener("click", e => {
+  const card = e.target.closest(".card"); if (!card) return;
+  const id = card.dataset.id; const m = marks[id] = marks[id] || {};
+  const sb = e.target.closest("[data-s]");
+  if (sb) {
+    m.s = m.s === sb.dataset.s ? undefined : sb.dataset.s;   // повторное нажатие снимает отметку
+    if (!m.s) delete marks[id];
+    card.className = "card " + (m.s || "");
+    save(); stats();
+    if (m.s === "bad" || m.s === "doubt") setTimeout(() => card.querySelector(".what").scrollIntoView({ behavior:"smooth", block:"nearest" }), 50);
+    return;
+  }
+  const wb = e.target.closest("[data-w]");
+  if (wb) {
+    m.w = m.w || [];
+    const w = wb.dataset.w;
+    m.w = m.w.includes(w) ? m.w.filter(x => x !== w) : m.w.concat(w);
+    wb.classList.toggle("on");
+    save();
+  }
+});
+document.getElementById("list").addEventListener("input", e => {
+  const k = e.target.dataset.k; if (!k) return;
+  const id = e.target.closest(".card").dataset.id;
+  marks[id] = marks[id] || {}; marks[id][k] = e.target.value; save();
+});
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  render();
+});
+
+function report() {
+  const n = ITEMS.length; let ok = 0, lines = [];
+  ITEMS.forEach(it => {
+    const m = marks[it.id]; if (!m || !m.s) return;
+    if (m.s === "ok") { ok++; return; }
+    lines.push(`${m.s === "bad" ? "❌ ОШИБКА" : "❓ СОМНЕНИЕ"} #${it.id} [${it.sec}${it.who !== "всем" ? ", " + it.who : ""}]`);
+    lines.push(`   ${it.he}`);
+    lines.push(`   ${it.tr} — ${it.ru}`);
+    if (m.w && m.w.length) lines.push(`   Что не так: ${m.w.join(", ")}`);
+    if (m.fix) lines.push(`   Как правильно: ${m.fix}`);
+    if (m.note) lines.push(`   Комментарий: ${m.note}`);
+    lines.push("");
+  });
+  const done = Object.values(marks).filter(m => m.s).length;
+  const todo = ITEMS.filter(it => !(marks[it.id] && marks[it.id].s)).map(it => it.id);
+  return [
+    `Hirbis — проверка иврита (список ${VERSION})`,
+    `Проверено ${done} из ${n}. Верно: ${ok}. Ошибок/сомнений: ${done - ok}.`,
+    todo.length ? `Не проверены: ${todo.join(", ")}` : "Проверено всё 👍",
+    "",
+    ...(lines.length ? lines : ["Ошибок не найдено ✓"])
+  ].join("\n");
+}
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 2200); }
+document.getElementById("copy").onclick = async () => {
+  const text = report();
+  try { await navigator.clipboard.writeText(text); toast("Отчёт скопирован — вставь его в Telegram"); }
+  catch (e) {
+    const ta = document.getElementById("report"); ta.value = text; ta.style.display = "block";
+    ta.focus(); ta.select();
+    try { document.execCommand("copy"); toast("Отчёт скопирован — вставь его в Telegram"); } catch (e2) { toast("Выдели текст внизу и скопируй вручную"); }
+    ta.scrollIntoView({ behavior: "smooth" });
+  }
+};
+if (navigator.share) {
+  const s = document.getElementById("share"); s.hidden = false;
+  s.onclick = () => navigator.share({ text: report() }).catch(() => {});
+}
+document.getElementById("reset").onclick = () => {
+  if (confirm("Стереть все отметки?")) { marks = {}; save(); render(); }
+};
+render();
+</script>
+</body>
+</html>

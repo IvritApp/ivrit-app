@@ -3,6 +3,35 @@
   "title": "Первая шаурма",
   "status": "проверено знатоком 11.11.2026",
   "points": 50,
+  "place": "counter",
+  "placeTitle": "Шаурмичная",
+  "icon": "🌯",
+  "prelude": {
+    "scene": "shop",
+    "once": true
+  },
+  "items": {
+    "pita": "пита",
+    "lafa": "лафа",
+    "meat-turkey": "индейка",
+    "meat-chicken": "курица",
+    "meat-veal": "телятина",
+    "salad": "салат",
+    "hummus": "хумус",
+    "tahini": "тхина",
+    "spicy": "острое",
+    "chips": "картошка фри"
+  },
+  "final": {
+    "img": "gift-pita",
+    "alt": "Шаурма",
+    "imgIf": [
+      {
+        "has": "lafa",
+        "img": "gift-shawarma"
+      }
+    ]
+  },
   "steps": [
     {
       "seller": {
