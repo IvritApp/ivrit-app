@@ -176,6 +176,18 @@ function showOnboarding() {
 
 updateToday();
 document.getElementById("reset-profile").onclick = showOnboarding;
+// «Начать сначала»: стереть весь прогресс. Первое нажатие — переспрашиваем, второе — стираем.
+document.getElementById("reset-all").onclick = (e) => {
+  const b = e.currentTarget;
+  if (!b.classList.contains("confirm")) {
+    b.classList.add("confirm"); b.textContent = "Точно? Всё сотрётся. Нажми ещё раз";
+    vibrate("warning");
+    clearTimeout(b.t); b.t = setTimeout(() => { b.classList.remove("confirm"); b.textContent = "Начать сначала"; }, 4000);
+    return;
+  }
+  Object.keys(localStorage).filter(k => k.startsWith("hirbis_")).forEach(k => localStorage.removeItem(k));
+  location.reload();
+};
 
 // «Мой герой» — открыть конструктор аватара
 function myAvatar() { return (profile && profile.avatar) || HirbisAvatar.defaults(profile ? profile.gender : "m"); }
@@ -239,7 +251,7 @@ function onIdle() {
 }
 function startHomeBird() {
   stopHomeBird();
-  setTimeout(birdWave, 700);
+  setTimeout(birdWave, 1400);
   waveTimer = setInterval(birdWave, 5000);                                         // машет каждые 5 сек
   tripTimer = setInterval(() => { if (Math.random() < 0.5) birdTrip(true); }, 17000); // иногда летает за подарком
   resetIdle();
@@ -269,6 +281,7 @@ document.querySelectorAll(".card.soon").forEach(card => {
 
 function showHome() {
   hideFeedback();
+  if (typeof closeStage === "function") closeStage();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "home");
   homeView.classList.remove("slide-in"); void homeView.offsetWidth; homeView.classList.add("slide-in");
   if (tg && tg.BackButton) tg.BackButton.hide();
@@ -348,16 +361,40 @@ function goNext() {
 }
 
 // --- Мини-игра «Выбери перевод» ---
+// --- Друг-ведущий: Давид (или Циля) стоит и задаёт вопросы ---
+const ASK_TR = [                       // «что значит слово на иврите?»
+  "Что значит это слово?", "Как это перевести?", "Слышал{m:}{f:а} такое? Что это значит?",
+  "Я тут часто это слышу. Это…", "Проверим! Что это значит?", "Ну-ка, переведи!"
+];
+const ASK_HE = [                       // «как сказать по-русски → на иврите?»
+  "Как сказать на иврите «$»?", "Помоги: как будет «$»?", "А как на иврите «$»?",
+  "Представь, нужно сказать «$». Что скажешь?", "Вспомнишь, как будет «$»?"
+];
+const askBag = {};
+function ask(list, key) {                // вопрос без повторов подряд
+  if (!askBag[key] || !askBag[key].length) askBag[key] = shuffle([...list]);
+  return g(askBag[key].pop());
+}
+function hostHTML(question, inner) {
+  const fig = window.friendFigureSVG ? window.friendFigureSVG(profile ? profile.gender : "m") : "";
+  return `<div class="host">
+      <div class="host-fig">${fig}</div>
+      <div class="host-bubble">
+        <div class="host-name">${friendName()}</div>
+        <div class="host-q">${question}</div>
+        ${inner}
+      </div>
+    </div>`;
+}
+
 function showChooseTranslation(ex) {
   const word = lesson.words[ex.word];
   const others = lesson.words.filter(w => w !== word);
   const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
 
-  screen.innerHTML = `
-    <div class="task">Выбери перевод</div>
-    <div class="word" dir="rtl">${word.he}</div>
-    <div class="translit">${word.tr}</div>
-    <button class="listen" id="listen" aria-label="Послушать">🔊</button>
+  screen.innerHTML = hostHTML(ask(ASK_TR, "tr"), `
+      <div class="word" dir="rtl">${word.he}</div>
+      <div class="translit">${word.tr} <button class="listen small" id="listen" aria-label="Послушать">🔊</button></div>`) + `
     <div id="options"></div>
   `;
 
@@ -381,9 +418,7 @@ function showChooseHebrew(ex) {
   const others = lesson.words.filter(w => w !== word);
   const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
 
-  screen.innerHTML = `
-    <div class="task">Как это на иврите?</div>
-    <div class="word ru-word">${word.ru}</div>
+  screen.innerHTML = hostHTML(ask(ASK_HE, "he").replace("$", word.ru), "") + `
     <div id="options" class="he-options"></div>
   `;
   const box = document.getElementById("options");

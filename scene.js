@@ -647,5 +647,141 @@
     return { skip: finish };
   }
 
+
+  // =====================================================
+  // СЦЕНА-ДИАЛОГ: сверху картинка (такси едет / шаурмичная),
+  // реплики выскакивают пузырями над героями. Варианты ответа
+  // рисует приложение снизу, в своей панели.
+  //
+  //   const st = createStage(viewEl, { gender, profile, place: "taxi" | "shop" })
+  //   st.say("friend" | "me" | "seller", html)   → показать реплику (прошлая исчезает)
+  //   st.hide()     → убрать реплику
+  //   st.destroy()  → убрать сцену
+  // =====================================================
+  const VIEW_MIN = 300;                    // сколько «кадра» минимум видно по ширине и высоте
+  function createStage(view, opts) {
+    opts = opts || {};
+    const female = opts.gender === "f";
+    const profile = opts.profile || {};
+    const friendLook = female ? LOOK.tzila : LOOK.david;
+    const playerLook = female ? LOOK.playerF : LOOK.playerM;
+    const place = opts.place || "taxi";
+    const anims = [];
+    let dead = false;
+
+    const root = document.createElement("div");
+    root.className = "hs-stage";
+    root.innerHTML = DEFS;
+    const frame = document.createElement("div");
+    frame.className = "hs-frame hs-stage-frame";
+    root.appendChild(frame);
+    view.appendChild(root);
+
+    function put(parent, html, x, y, w, h, cls) {
+      const e = document.createElement("div");
+      e.className = "hs-abs " + (cls || "");
+      e.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
+      e.innerHTML = html;
+      parent.appendChild(e);
+      return e;
+    }
+    function playerFig(pose) {
+      try {
+        if (window.HirbisAvatar && typeof HirbisAvatar.svg === "function") {
+          const sv = HirbisAvatar.svg(profile.avatar, { pose: pose });
+          if (sv) return `<div class="hs-fig hs-custom">${sv}</div>`;
+        }
+      } catch (e) {}
+      return `<div class="hs-fig">${personSVG(playerLook)}</div>`;
+    }
+    const fig = (look) => `<div class="hs-fig">${personSVG(look)}</div>`;
+
+    // Фон улицы
+    frame.insertAdjacentHTML("beforeend", bgStreetSky());
+    const far = put(frame, farTile() + farTile(), 0, 0, 1440, 700, "hs-layer");
+    put(frame, bgStreetGround(), 0, 0, 360, 700);
+    const mid = put(frame, midTile() + midTile() + midTile(), 0, 0, 1080, 700, "hs-layer");
+    let dashHTML = ""; for (let i = 0; i < 5; i++) dashHTML += dashTile();
+    const dashes = put(frame, dashHTML, 0, 0, 600, 700, "hs-layer");
+
+    const who = {};                        // к кому «привязывать» пузыри
+    if (place === "taxi") {
+      const loops = [
+        far.animate([{ transform: "translateX(0)" }, { transform: "translateX(-720px)" }], { duration: 9000, iterations: Infinity }),
+        mid.animate([{ transform: "translateX(0)" }, { transform: "translateX(-360px)" }], { duration: 1800, iterations: Infinity }),
+        dashes.animate([{ transform: "translateX(0)" }, { transform: "translateX(-120px)" }], { duration: 420, iterations: Infinity })
+      ];
+      anims.push(...loops);
+      const big = put(frame, "", 48, 552, 264, 132, "hs-taxi-big");
+      const taxi = put(big, "", 0, 0, 264, 132, "hs-taxi hs-moving hs-driving");
+      taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
+      const pass = taxi.querySelector(".hs-pass");
+      put(pass, fig(LOOK.driver), 172, 30, 34, 68);
+      who.friend = put(pass, fig(friendLook), 92, 30, 34, 68);
+      who.me = put(pass, playerFig("sit"), 124, 30, 34, 68);
+    } else {
+      const shop = put(frame, shopSVG(), 65, 366, 230, 190, "hs-shop");
+      who.seller = put(shop, "", 64, 72, 36, 30);        // голова продавца внутри вывески
+      who.me = put(frame, playerFig("stand"), 34, 470, 65, 130, "hs-player");
+      who.friend = put(frame, fig(friendLook), 262, 470, 65, 130);
+    }
+
+    function fit() {
+      const w = view.clientWidth, h = view.clientHeight;
+      const sc = Math.min(w / VIEW_MIN, h / VIEW_MIN);
+      const bottom = place === "taxi" ? H : 628;          // у шаурмичной дорогу внизу не показываем
+      frame.style.transform = `translate(${(w - W * sc) / 2}px, ${Math.min(0, h - bottom * sc)}px) scale(${sc})`;
+    }
+    fit();
+    window.addEventListener("resize", fit);
+    // Панель с ответами снизу меняет высоту картинки — подстраиваемся
+    let ro = null;
+    if (window.ResizeObserver) { ro = new ResizeObserver(() => { fit(); placeBubble(); }); ro.observe(view); }
+
+    // Пузырь с репликой (в пикселях экрана, поверх картинки)
+    let bubble = null, bubbleAnchor = null;
+    function placeBubble() {
+      if (!bubble || !bubbleAnchor) return;
+      const b = bubble, anchor = bubbleAnchor;
+      const vr = view.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+      const cx = ar.left - vr.left + ar.width / 2;
+      const headTop = ar.top - vr.top;
+      const bw = b.offsetWidth, vw = view.clientWidth;
+      const left = Math.min(Math.max(cx - bw / 2, 8), vw - 8 - bw);
+      b.style.left = left + "px";
+      b.style.bottom = Math.max(view.clientHeight - headTop + 10, 0) + "px";
+      b.style.setProperty("--tx", Math.min(Math.max(cx - left, 18), bw - 18) + "px");
+    }
+    function hide() {
+      if (!bubble) return;
+      const b = bubble; bubble = null; bubbleAnchor = null;
+      b.classList.remove("show");
+      setTimeout(() => b.remove(), 300);
+    }
+    function say(speaker, html) {
+      hide();
+      if (dead) return null;
+      const anchor = who[speaker] || who.friend;
+      const b = document.createElement("div");
+      b.className = "hs-st-bubble " + speaker;
+      b.innerHTML = html;
+      root.appendChild(b);
+      bubble = b; bubbleAnchor = anchor;
+      placeBubble();
+      requestAnimationFrame(() => b.classList.add("show"));
+      return b;
+    }
+    function destroy() {
+      dead = true;
+      anims.forEach(a => { try { a.cancel(); } catch (e) {} });
+      window.removeEventListener("resize", fit);
+      if (ro) ro.disconnect();
+      root.remove();
+    }
+    return { say, hide, destroy, fit, root };
+  }
+  window.createStage = createStage;
+  // Фигура друга (Давид / Циля) для уроков: он задаёт вопросы
+  window.friendFigureSVG = (gender) => personSVG(gender === "f" ? LOOK.tzila : LOOK.david);
   window.playArrivalScene = playArrivalScene;
 })();

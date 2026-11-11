@@ -13,6 +13,7 @@ function markDone(id) { const d = doneLessons(); if (!d.includes(id)) { d.push(i
 
 function showPath() {
   stopHomeBird(); hideFeedback();
+  if (typeof closeStage === "function") closeStage();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "path");
   if (tg && tg.BackButton) tg.BackButton.show();
   if (course) { renderPath(); return; }

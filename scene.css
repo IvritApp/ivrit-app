@@ -167,3 +167,38 @@
 @media (prefers-reduced-motion: reduce) {
   .hs-rays, .hs-frond { animation: none; }
 }
+
+/* ---------- Игрок (аватар) одного роста с другом ----------
+   Аватар нарисован в другом масштабе, чем временные человечки:
+   подгоняем, чтобы макушка и ступни были на тех же местах. */
+.hs-custom { position: relative; }
+.hs-fig.hs-custom > svg { position: absolute; width: 132.6%; height: 104%; left: -16.3%; top: -7.1%; }
+
+/* =====================================================
+   СЦЕНА-ДИАЛОГ (createStage): картинка сверху, реплики пузырями
+   ===================================================== */
+.hs-stage { position: absolute; inset: 0; overflow: hidden;
+  background: linear-gradient(#b9ddf7, #f3faff 70%, #b4c1ce 70.1%); }
+.hs-stage-frame { left: 0; top: 0; transform-origin: 0 0; }
+.hs-taxi-big { transform: scale(1.12); transform-origin: 50% 100%; }
+.hs-st-bubble {
+  position: absolute; z-index: 25; box-sizing: border-box;
+  width: max-content; max-width: min(300px, calc(100% - 16px));
+  padding: 10px 14px 11px; border-radius: 18px;
+  background: #fff; color: #222; font-size: 16px; line-height: 1.32; text-align: center;
+  box-shadow: 0 2px 0 rgba(42, 74, 106, .1), 0 8px 20px rgba(58, 138, 214, .25);
+  opacity: 0; transform: translateY(8px) scale(.6);
+  transform-origin: var(--tx, 50%) 100%;
+  transition: opacity .25s, transform .4s cubic-bezier(.3, 1.6, .5, 1);
+}
+.hs-st-bubble.show { opacity: 1; transform: none; }
+.hs-st-bubble::after {
+  content: ""; position: absolute; top: 100%; left: var(--tx, 50%); margin-left: -9px;
+  border: 9px solid transparent; border-top-color: #fff; border-bottom: 0;
+}
+.hs-st-bubble.me { background: #e3f1ff; }
+.hs-st-bubble.me::after { border-top-color: #e3f1ff; }
+.hs-st-bubble .hs-who { font-size: 12px; }
+.hs-st-bubble .he { font-size: 22px; font-weight: 700; color: #1d4f86; }
+.hs-st-bubble .tr { font-size: 13px; color: #7c8a99; }
+.hs-st-bubble .ru { font-size: 14px; color: #555; margin-top: 2px; }
