@@ -327,6 +327,7 @@ function addToTray(items, noStage) {
 
 // --- Финал ---
 function finishQuest() {
+  if (typeof streakDone === "function") streakDone();     // квест тоже засчитывает день
   const token = stageToken;
   const o = quest.outro;
   stage.say("seller", sellerHTML(o.seller)); speak(g(o.seller.he), { audio: o.seller.audio });

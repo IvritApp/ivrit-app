@@ -330,8 +330,12 @@ function updateToday() {
   const medals = store.get("medals", {});
   const icons = { gold: "🥇", silver: "🥈", bronze: "🥉" };
   const list = Object.keys(medals).map(ch => `<span class="h-medal" title="Глава ${ch}">${icons[medals[ch]]}<small>${ch}</small></span>`).join("");
-  todayBox.innerHTML = (pts > 0 ? `${flameSVG(fireLevel(combo))}<span>Сегодня: <b>${pts}</b> очков</span>` : "") +
+  const sk = typeof streakInfo === "function" ? streakInfo() : null;
+  todayBox.innerHTML = (sk ? `<button class="h-streak${sk.todayDone ? " lit" : ""}" id="hStreak">🔥 <b>${sk.count}</b> ${daysWord(sk.count)}${sk.freezes ? ` <span class="h-ice">❄️${sk.freezes}</span>` : ""}</button>` : "") +
+    (pts > 0 ? `${flameSVG(fireLevel(combo))}<span>Сегодня: <b>${pts}</b> очков</span>` : "") +
     (list ? `<span class="h-medals">Медали: ${list}</span>` : "");
+  const hs = document.getElementById("hStreak");
+  if (hs) hs.onclick = () => openStreak();
 }
 
 function showToast(text) {
@@ -387,7 +391,7 @@ function showStep() {
   const ex = queue[step];
   if (ex.type === "choose_translation") showChooseTranslation(ex);
   else if (ex.type === "choose_hebrew") showChooseHebrew(ex);
-  else if (ex.type === "listen") showListen(ex);
+  else if (ex.type === "listen") { if (noListen()) showChooseTranslation(ex); else showListen(ex); }
   else if (ex.type === "build_phrase") showBuildPhrase(ex);
   else if (ex.type === "match_pairs") showMatchPairs(ex);
   else if (ex.type === "blitz") showBlitz(ex);
@@ -514,6 +518,19 @@ const ASK_BUILD = [
 const ASK_MATCH = ["Соедини пары: слово — перевод", "Быстро! Найди пары", "Проверим память: найди пары"];
 
 // --- «Выбери на слух»: слово не показываем, только звук ---
+// «Не могу слушать» (как в Duolingo): на 15 минут задания на слух заменяются обычными
+const NO_LISTEN_MIN = 15;
+function noListen() { return Date.now() < store.get("nolisten_until", 0); }
+function noListenText() {
+  const t = new Date(store.get("nolisten_until", 0));
+  return `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+}
+function setNoListen(on) {
+  store.set("nolisten_until", on ? Date.now() + NO_LISTEN_MIN * 60000 : 0);
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+}
+
 function showListen(ex) {
   const word = lesson.words[ex.word];
   const others = lesson.words.filter(w => w !== word && w.ru !== word.ru);
@@ -535,6 +552,14 @@ function showListen(ex) {
     btn.onclick = () => { document.getElementById("reveal").hidden = false; checkAnswer(btn, opt === word, ex, word); };
     box.appendChild(btn);
   });
+  const nl = document.createElement("button");
+  nl.className = "no-listen"; nl.textContent = "🔇 Сейчас не могу слушать";
+  nl.onclick = () => {
+    setNoListen(true); playSound("pop");
+    showToast(`Задания на слух выключены на ${NO_LISTEN_MIN} минут`);
+    showChooseTranslation(ex);           // это же слово — но без звука
+  };
+  box.after(nl);
 }
 
 // --- «Собери фразу»: нажимай слова по порядку ---
@@ -784,6 +809,7 @@ function flashRed() {
 function showFinish() {
   bar.style.width = "100%";
   markDone(lesson.id);
+  if (typeof streakDone === "function") streakDone();     // день засчитан в серию
   // Идеальный урок (ни одной ошибки) — золотой, очки за урок ×2
   const perfect = mistakes === 0;
   if (perfect) {
@@ -945,6 +971,9 @@ function openSettings() {
       ${slider("sfx", "Звуки (верно, ошибка, огоньки)")}
       ${slider("voice", "Голос иврита")}
       ${slider("music", "Музыка", true)}
+      ${noListen()
+        ? `<div class="set-test"><span>🔇 Задания на слух выключены до ${noListenText()}</span><button class="btn ghost" id="listenOn">Включить</button></div>`
+        : `<div class="set-test"><span>Нет наушников или шумно?</span><button class="btn ghost" id="listenOff">🔇 Не могу слушать</button></div>`}
       <div class="set-title">Транскрипция русскими буквами</div>
       ${seg("translit", [["false", "Без неё ⭐"], ["true", "Показывать"]])}
       <div class="set-note">⭐ Советуем учить без транскрипции — так слова запоминаются лучше. Но выбор за тобой.</div>
@@ -962,6 +991,9 @@ function openSettings() {
     saveSettings(); playSound("pop"); openSettings();
   });
   // Режим тестировщика (пароль хранится не открытым текстом — защита от случайных игроков)
+  const lOn = document.getElementById("listenOn"), lOff = document.getElementById("listenOff");
+  if (lOn) lOn.onclick = () => { setNoListen(false); showToast("Задания на слух снова включены 🔊"); openSettings(); };
+  if (lOff) lOff.onclick = () => { setNoListen(true); showToast(`Задания на слух выключены на ${NO_LISTEN_MIN} минут`); openSettings(); };
   const tOn = document.getElementById("testOn"), tOff = document.getElementById("testOff");
   if (tOn) tOn.onclick = () => {
     const v = document.getElementById("testPass").value.trim();
@@ -995,6 +1027,8 @@ function askTranslit(then) {
   });
 }
 applySettings();
+// Серия дней: при открытии проверяем пропуски (заморозки тратятся сами)
+if (typeof streakCheck === "function") { const m = streakCheck(); if (m) setTimeout(() => showToast(m), 900); updateToday(); }
 
 
 // =====================================================

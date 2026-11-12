@@ -23,6 +23,8 @@
       { id: "short", name: "Короткая", g: "m" }, { id: "side", name: "Пробор", g: "m" }, { id: "buzz", name: "Ёжик", g: "m" },
       { id: "curly", name: "Кудри", g: "m" }, { id: "undercut", name: "Андеркат", g: "m" }, { id: "quiff", name: "Кок", g: "m" },
       { id: "manbun", name: "Пучок", g: "m" }, { id: "afro", name: "Афро", g: "m" },
+      { id: "fade", name: "Фейд", g: "m" }, { id: "crop", name: "Кроп", g: "m" }, { id: "slick", name: "Зачёс назад", g: "m" },
+      { id: "wavy", name: "Волнистые", g: "m" }, { id: "twists", name: "Твисты", g: "m" },
       { id: "long", name: "Длинные", g: "f" }, { id: "bob", name: "Каре", g: "f" }, { id: "pony", name: "Хвост", g: "f" },
       { id: "curlylong", name: "Длинные кудри", g: "f" }, { id: "braid", name: "Коса", g: "f" }
     ],
@@ -90,8 +92,19 @@
   function headShape(c, fill) { return `<path d="${FACE[c.head] || FACE.round}" fill="${fill}"/>`; }
   function earsX(c) { return c.head === "oval" ? [60, 140] : [56, 144]; }
 
+  // Волосы закрыты сверху (шапка, кепка, шляпа, платок)?
+  function hairCovered(c) { return c.hat === "beanie" || c.hat === "cap" || (!c.hat && (c.headwear === "hasidhat" || c.headwear === "tichel")); }
+  // Насколько поднять кипу / корону над пышной причёской (чтобы сидели сверху, а не «тонули»)
+  const HAIR_LIFT = { afro: -24, curly: -8, twists: -8, quiff: -10, manbun: -4 };
   function hairBack(c, col) {
+    if (hairCovered(c)) {
+      // под убором — только то, что выглядывает по бокам и сзади (ничего не торчит сверху)
+      if (c.hair === "afro") return [[52, 86, 13], [148, 86, 13], [50, 104, 12], [150, 104, 12], [56, 120, 10], [144, 120, 10]]
+        .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}"/>`).join("");
+      if (c.hair === "manbun") return "";
+    }
     switch (c.hair) {
+      case "wavy":      return `<path d="M50,86 C44,20 156,20 150,86 L153,118 Q140,130 126,121 Q114,128 100,122 Q86,128 74,121 Q60,130 47,118Z" fill="${col}"/>`;
       case "long":      return `<path d="M52,86 C46,16 154,16 148,86 L154,196 C134,208 66,208 46,196Z" fill="${col}"/>`;
       case "bob":       return `<path d="M52,88 C46,16 154,16 148,88 L152,142 C134,150 66,150 48,142Z" fill="${col}"/>`;
       case "curlylong": return `<path d="M52,86 L148,86 L152,184 Q100,198 48,184Z" fill="${col}"/>` +
@@ -129,6 +142,21 @@
       case "manbun": return `<path d="M54,88 C48,26 152,26 146,88 C138,62 120,54 100,56 C80,54 62,62 54,88Z" fill="${col}"/>
                       <path d="M72,50 Q86,36 100,36 M128,50 Q114,36 100,36" stroke="${dark}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
       case "afro":  return `<path d="M54,86 Q52,50 100,46 Q148,50 146,86 Q140,64 100,62 Q60,64 54,86Z" fill="${col}"/>`;
+      case "fade":  return `<path d="M55,94 C53,76 55,66 61,62 L63,94Z M145,94 C147,76 145,66 139,62 L137,94Z" fill="${col}" opacity=".32"/>
+                      <path d="M58,74 C52,10 148,6 142,74 C134,60 120,55 104,57 C96,51 84,53 76,59 C68,61 62,66 58,74Z" fill="${col}"/>
+                      <path d="M72,44 q6,-7 13,-3 M88,36 q6,-7 13,-3 M105,36 q6,-7 13,-3 M120,44 q5,-5 11,-1 M80,52 q5,-5 11,-2 M98,48 q5,-5 11,-2" stroke="${dark}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+      case "crop":  return `<path d="M55,94 C53,78 55,68 60,64 L62,94Z M145,94 C147,78 145,68 140,64 L138,94Z" fill="${col}" opacity=".35"/>
+                      <path d="M57,80 C51,26 149,26 143,80 L142,64 Q100,57 58,64Z" fill="${col}"/>
+                      ${[64, 73, 82, 91, 100, 109, 118, 127, 136].map(x => `<path d="M${x},55 l2,8" stroke="${dark}" stroke-width="2" stroke-linecap="round"/>`).join("")}`;
+      case "slick": return `<path d="M54,88 C44,10 156,8 146,88 C142,66 130,56 112,52 C96,48 78,52 66,62 C60,68 56,76 54,88Z" fill="${col}"/>
+                      <path d="M66,62 Q98,38 140,58 M74,52 Q102,30 136,46 M84,42 Q108,26 130,36" stroke="${dark}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                      <path d="M80,46 Q100,34 120,38" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".22"/>`;
+      case "wavy":  return `<path d="M52,98 C44,18 156,18 148,98 C146,76 138,62 122,56 Q112,66 98,58 Q84,66 72,60 Q58,72 52,98Z" fill="${col}"/>
+                      <path d="M64,44 q8,-6 16,0 t16,0 t16,0 t16,0 M58,62 q6,-6 12,0 M130,62 q6,-6 12,0" stroke="${dark}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+      case "twists": return `<path d="M56,88 C50,30 150,30 144,88 C138,64 122,58 100,60 C78,58 62,64 56,88Z" fill="${col}"/>` +
+                      [[60, 70, -30], [64, 54, -24], [72, 42, -16], [84, 34, -8], [98, 30, 0], [112, 32, 6], [126, 38, 14], [136, 50, 22], [141, 66, 30],
+                       [76, 54, -12], [92, 46, -4], [108, 46, 4], [122, 52, 12]]
+                      .map(([x, y, r]) => `<ellipse cx="${x}" cy="${y}" rx="5.2" ry="10" fill="${col}" transform="rotate(${r} ${x} ${y})"/><path d="M${x - 3},${y - 4} l6,3 M${x - 3},${y + 2} l6,3" stroke="${dark}" stroke-width="1.2" transform="rotate(${r} ${x} ${y})"/>`).join("");
       case "braid": return `<path d="M52,100 C44,18 156,18 148,100 C144,72 124,56 102,60 L100,66 L98,60 C76,56 56,72 52,100Z" fill="${col}"/>
                       <path d="M58,104 Q56,120 62,128" stroke="${col}" stroke-width="10" fill="none" stroke-linecap="round"/>
                       ${[132, 146, 160, 174, 188].map((y, i) => `<ellipse cx="${63 - (i % 2) * 2}" cy="${y}" rx="7.5" ry="8.5" fill="${col}"/><path d="M${57 - (i % 2) * 2},${y - 2} q6,5 12,0" stroke="${dark}" stroke-width="1.4" fill="none"/>`).join("")}
@@ -359,9 +387,9 @@
         ${coverHair ? "" : hideTop ? (["long", "bob", "pony", "curlylong"].includes(c.hair) ? `<path d="M53,78 C52,92 53,102 54,108 L62,82Z M147,78 C148,92 147,102 146,108 L138,82Z" fill="${hairCol}"/>` : "") : G(hairFront(c, hairCol), hairCol, "h")}
         ${coverHair || hideTop || ["buzz"].includes(c.hair) ? "" : `<path d="M76,46 Q98,34 120,42" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".18"/>`}
         ${payot(c, hairCol)}
-        ${headwear(c)}
+        <g transform="translate(0 ${HAIR_LIFT[c.hair] || 0})">${headwear(c)}</g>
         ${glasses(c)}
-        ${hat(c)}
+        <g transform="translate(0 ${c.hat === "crown" ? (HAIR_LIFT[c.hair] || 0) : 0})">${hat(c)}</g>
       </g>
     </svg>`;
   }

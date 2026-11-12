@@ -834,3 +834,24 @@ button.p-lvl-go { width: 100%; border: 0; font: inherit; text-align: left; curso
 .set-test .btn { width: auto; margin: 0; padding: 10px 14px; }
 .p-soon.p-lvl-go.locked { background: #f1f3f6; color: #98a2ae; }
 body.theme-dark .set-test input { background: #1c2430; color: var(--text); border-color: #2c3a4c; }
+.no-listen { display: block; margin: 14px auto 0; border: 0; background: none; color: #7c8a99; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 12px; }
+.no-listen:active { color: #3a8ad6; }
+/* Серия дней */
+.h-streak { border: 0; background: #fff3e6; color: #c25f0a; border-radius: 14px; padding: 5px 11px; font: inherit; font-size: 15px; cursor: pointer; filter: grayscale(.6); }
+.h-streak.lit { filter: none; background: #ffe6cc; }
+.h-streak .h-ice { color: #3a8ad6; font-size: 13px; margin-left: 2px; }
+#streakSheet { position: fixed; inset: 0; z-index: 80; background: rgba(20,30,50,.35); display: none; align-items: flex-end; justify-content: center; }
+#streakSheet.show { display: flex; animation: fadeIn .25s ease; }
+.sk-big { text-align: center; font-size: 56px; font-weight: 800; color: #ff8a35; line-height: 1; margin: 6px 0 12px; }
+.sk-big small { display: block; font-size: 15px; font-weight: 600; color: var(--hint, #7c8a99); margin-top: 4px; }
+.sk-week { display: flex; justify-content: space-between; gap: 4px; margin: 4px 0 10px; }
+.sk-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border-radius: 12px; background: #f1f4f8; font-size: 12px; color: #7c8a99; }
+.sk-day b { font-size: 18px; }
+.sk-day.on { background: #ffe6cc; color: #c25f0a; }
+.sk-day.ice { background: #e3f0fb; color: #2f6fb2; }
+.sk-day.now { outline: 2px dashed #ffb37a; }
+.sk-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid #eef1f5; font-size: 15px; }
+.sk-row small { font-weight: 400; color: #7c8a99; }
+.sk-note { font-size: 13px; color: #7c8a99; margin: 2px 0 8px; }
+body.theme-dark .sk-day { background: #1c2430; }
+body.theme-dark .sk-row { border-color: #2c3a4c; }
