@@ -632,7 +632,7 @@ body {
 .host { display: flex; align-items: flex-end; gap: 10px; margin: 6px 0 14px; text-align: left; }
 .host-fig { flex: none; width: 70px; height: 140px; animation: hostIn .6s cubic-bezier(.2,1.3,.4,1) both; }
 .host-fig svg { width: 100%; height: 100%; overflow: visible; }
-.host-bubble { position: relative; flex: 1; background: #fff; border: 2px solid #dfe6ee; border-radius: 18px;
+.host-bubble { position: relative; flex: 1; background: var(--bg); color: var(--text); border: 2px solid #dfe6ee; border-radius: 18px;
   padding: 10px 14px 12px; margin-bottom: 40px; box-shadow: 0 4px 14px rgba(30,60,110,.08);
   animation: popIn .45s cubic-bezier(.2,1.4,.4,1) .2s both; transform-origin: 0 100%; }
 .host-bubble::before { content: ""; position: absolute; left: -11px; bottom: 16px; border: 10px solid transparent;
@@ -862,3 +862,8 @@ body > section:not(#alphabet) [dir="rtl"], body > section:not(#alphabet) .word,
 body > div [dir="rtl"], #settings [dir="rtl"], .hs-st-bubble [dir="rtl"] {
   font-family: -apple-system, "Segoe UI", Roboto, "Arial Hebrew", Arial, sans-serif !important;
 }
+
+/* Облачко урока и окошко заказа: цвет текста всегда контрастный фону (раньше в тёмной теме Telegram был белый текст на белом) */
+.host-bubble::after { border-right-color: var(--bg); }
+.host-bubble .word, .host-bubble .translit, .host-bubble .host-q { color: var(--text); }
+.st-view .q-tray { color: #222; }
