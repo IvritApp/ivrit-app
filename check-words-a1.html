@@ -66,6 +66,11 @@
   .empty { text-align:center; color:var(--hint); padding:30px; }
   .reset { background:none; border:none; color:var(--hint); text-decoration:underline; font-size:13px; cursor:pointer; margin:24px auto; display:block; }
   #report { display:none; margin:10px 12px; width:calc(100% - 24px); min-height:160px; font:13px monospace; }
+.parts { display: flex; gap: 6px; margin: 10px 0 8px; }
+.parts button { flex: 1; border: 2px solid #d9e6f2; background: #fff; border-radius: 12px; padding: 8px 4px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; line-height: 1.2; color: #1d4f86; }
+.parts button small { font-weight: 400; color: #7c8a99; }
+.parts button.on { background: #3a8ad6; border-color: #3a8ad6; color: #fff; }
+.parts button.on small { color: #e3f0fb; }
 </style>
 </head>
 <body>
@@ -77,6 +82,11 @@
     <li>Отметки сохраняются в этом браузере — можно закрыть и вернуться.</li>
     <li>В конце нажми <b>«Скопировать отчёт»</b> и вставь текст в Telegram.</li>
   </ul>
+  <div class="parts" id="parts">
+    <button data-p="1">👤 Я знаток 1<br><small>уровни 3–6</small></button>
+    <button data-p="2">👤 Я знаток 2<br><small>уровни 7–10</small></button>
+    <button data-p="0">Всё<br><small>все уровни</small></button>
+  </div>
   <div class="progress"><i id="pg"></i></div>
   <div class="stats" id="stats"></div>
   <div class="tabs" id="tabs">
@@ -105,6 +115,11 @@ const WHAT = ["в слове", "в огласовках", "в транскрип
 let marks = {};
 try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
 let filter = "all";
+// Две половины для двух знатоков: каждый проверяет свою часть, отчёты потом сводятся в один
+let part = 0; try { part = +(localStorage.getItem(KEY + "-part") || 0); } catch (e) {}
+const lvlOf = it => { const m = /Уровень (\d+)/.exec(it.sec); return m ? +m[1] : 0; };
+const inPart = it => part === 0 || (part === 1 ? lvlOf(it) <= 6 : lvlOf(it) >= 7);
+const PART_NAME = ["все уровни", "Знаток 1 — уровни 3–6", "Знаток 2 — уровни 7–10"];
 
 const plain = s => s.replace(/[֑-ׇֽֿׁׂׅׄ]/g, "");
 const hasNikud = s => plain(s) !== s;
@@ -115,6 +130,7 @@ function render() {
   const list = document.getElementById("list");
   let html = "", sec = "", shown = 0;
   ITEMS.forEach(it => {
+    if (!inPart(it)) return;
     const m = marks[it.id] || {};
     if (filter === "todo" && m.s) return;
     if (filter === "bad" && !(m.s === "bad" || m.s === "doubt")) return;
@@ -147,9 +163,10 @@ function render() {
 }
 
 function stats() {
-  const n = ITEMS.length;
+  const mine = ITEMS.filter(inPart);
+  const n = mine.length;
   const c = { ok:0, bad:0, doubt:0 };
-  Object.values(marks).forEach(m => { if (c[m.s] !== undefined) c[m.s]++; });
+  mine.forEach(it => { const m = marks[it.id]; if (m && c[m.s] !== undefined) c[m.s]++; });
   const done = c.ok + c.bad + c.doubt;
   document.getElementById("pg").style.width = (done / n * 100) + "%";
   document.getElementById("stats").textContent = `Проверено ${done} из ${n}`;
@@ -190,8 +207,9 @@ document.getElementById("tabs").addEventListener("click", e => {
 });
 
 function report() {
-  const n = ITEMS.length; let ok = 0, lines = [];
-  ITEMS.forEach(it => {
+  const mine = ITEMS.filter(inPart);
+  const n = mine.length; let ok = 0, lines = [];
+  mine.forEach(it => {
     const m = marks[it.id]; if (!m || !m.s) return;
     if (m.s === "ok") { ok++; return; }
     lines.push(`${m.s === "bad" ? "❌ ОШИБКА" : "❓ СОМНЕНИЕ"} #${it.id} [${it.sec}${it.who !== "всем" ? ", " + it.who : ""}]`);
@@ -202,16 +220,23 @@ function report() {
     if (m.note) lines.push(`   Комментарий: ${m.note}`);
     lines.push("");
   });
-  const done = Object.values(marks).filter(m => m.s).length;
-  const todo = ITEMS.filter(it => !(marks[it.id] && marks[it.id].s)).map(it => it.id);
+  const done = mine.filter(it => marks[it.id] && marks[it.id].s).length;
+  const todo = mine.filter(it => !(marks[it.id] && marks[it.id].s)).map(it => it.id);
   return [
-    `Hirbis — проверка иврита (список ${VERSION})`,
+    `Hirbis — проверка иврита (список ${VERSION}, ${PART_NAME[part]})`,
     `Проверено ${done} из ${n}. Верно: ${ok}. Ошибок/сомнений: ${done - ok}.`,
     todo.length ? `Не проверены: ${todo.join(", ")}` : "Проверено всё 👍",
     "",
     ...(lines.length ? lines : ["Ошибок не найдено ✓"])
   ].join("\n");
 }
+function showParts() { document.querySelectorAll("#parts button").forEach(b => b.classList.toggle("on", +b.dataset.p === part)); }
+document.getElementById("parts").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  part = +b.dataset.p; try { localStorage.setItem(KEY + "-part", part); } catch (e) {}
+  showParts(); render(); stats(); window.scrollTo(0, 0);
+});
+setTimeout(showParts, 0);
 function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 2200); }
 document.getElementById("copy").onclick = async () => {
   const text = report();

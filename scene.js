@@ -413,7 +413,8 @@
   }
 
   // ---------- Такси 220×110 (три слоя: салон, пассажиры, кузов с окнами-дырками) ----------
-  const TAXI_BODY = "M10,72 Q10,56 28,53 L62,50 L82,25 Q86,20 94,20 L150,20 Q158,20 163,25 L188,50 L202,53 Q214,56 214,72 L214,84 Q214,90 208,90 L16,90 Q10,90 10,84Z";
+  // Перёд справа: длинный капот, короткий багажник сзади (раньше было наоборот — казалось, что едет задом)
+  const TAXI_BODY = "M38,72 Q38,58 50,55 L66,52 L82,25 Q86,20 94,20 L150,20 Q158,20 163,25 L188,50 L212,53 Q226,56 226,72 L226,84 Q226,90 220,90 L44,90 Q38,90 38,84Z";
   const TAXI_WIN = "M93,30 L128,30 L128,49 L76,49Z M134,30 L152,30 Q156,30 159,33 L175,49 L134,49Z";
   function taxiBackSVG() {
     return `<svg viewBox="0 0 220 110"><path d="${TAXI_WIN}" fill="#cfe3f4"/></svg>`;   // салон виден только в окнах
@@ -430,12 +431,12 @@
       <text x="124" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Arial, 'DejaVu Sans', sans-serif">מונית</text>
       <path d="${TAXI_WIN}" fill="#bfe0f8" opacity=".28"/>
       <path d="M95,29 L100,29 L84,46 L79,46Z" fill="#fff" opacity=".6"/>
-      <rect x="12" y="62" width="200" height="6" fill="${C.orange}"/>
+      <rect x="40" y="62" width="184" height="6" fill="${C.orange}"/>
       <path d="M131,50 L131,86 M71,50 L67,86" stroke="#dfe7ef" stroke-width="2"/>
       <rect x="112" y="56" width="10" height="3" rx="1.5" fill="#b5c4d3"/><rect x="164" y="56" width="10" height="3" rx="1.5" fill="#b5c4d3"/>
-      <ellipse cx="210" cy="60" rx="4" ry="5" fill="#ffd86b"/><rect x="10" y="57" width="4" height="9" rx="2" fill="#ff6b5a"/>
-      <rect x="4" y="78" width="16" height="7" rx="3.5" fill="#dfe7ef"/><rect x="202" y="78" width="16" height="7" rx="3.5" fill="#dfe7ef"/>
-      ${wheel(56)}${wheel(172)}
+      <ellipse cx="222" cy="60" rx="4" ry="5" fill="#ffd86b"/><rect x="38" y="57" width="4" height="9" rx="2" fill="#ff6b5a"/>
+      <rect x="32" y="78" width="16" height="7" rx="3.5" fill="#dfe7ef"/><rect x="216" y="78" width="16" height="7" rx="3.5" fill="#dfe7ef"/>
+      ${wheel(68)}${wheel(190)}
     </svg>`;
   }
 
@@ -618,7 +619,7 @@
     const friend3 = put(s3, fig(friendLook), 262, 466, 65, 130);
     const player3 = put(s3, playerFig("stand"), 186, 466, 65, 130, "hs-player");
     put(player3, suitcaseSVG(), -22, 86, 30, 44, "hs-bag");
-    const taxi = put(s3, "", 4, 552, 264, 132, "hs-taxi");
+    const taxi = put(s3, "", -22, 552, 264, 132, "hs-taxi");
     taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
     const pass = taxi.querySelector(".hs-pass");
     put(pass, fig(LOOK.driver), 168, 30, 34, 68);
@@ -1036,7 +1037,7 @@
         dashes.animate([{ transform: "translateX(0)" }, { transform: "translateX(-120px)" }], { duration: 420, iterations: Infinity })
       ];
       anims.push(...loops);
-      const big = put(frame, "", 48, 552, 264, 132, "hs-taxi-big");
+      const big = put(frame, "", 20, 552, 264, 132, "hs-taxi-big");
       const taxi = put(big, "", 0, 0, 264, 132, "hs-taxi hs-moving hs-driving");
       taxi.innerHTML = `<div class="hs-abs hs-full">${taxiBackSVG()}</div><div class="hs-abs hs-full hs-pass"></div><div class="hs-abs hs-full">${taxiFrontSVG()}</div>`;
       const pass = taxi.querySelector(".hs-pass");
