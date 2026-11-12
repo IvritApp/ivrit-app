@@ -1,5 +1,17 @@
 /* Стили раздела «Алфавит». Все классы начинаются с .ab- */
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;700&display=swap");
+/* Шрифт лежит у нас (Google Fonts в России грузится плохо).
+   Файлы: assets/alphabet/NotoSansHebrew-Regular.ttf и -Bold.ttf.
+   Пока файлов нет — браузер молча берёт системный шрифт иврита. */
+@font-face {
+  font-family: "Noto Sans Hebrew";
+  src: url("assets/alphabet/NotoSansHebrew-Regular.ttf") format("truetype");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Noto Sans Hebrew";
+  src: url("assets/alphabet/NotoSansHebrew-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
 
 #alphabet { --ab-line: #dfe6ee; --ab-seen: #e6f6dc; --ab-seen-b: #8fd16a; }
 body.theme-dark #alphabet { --ab-line: #2c3747; --ab-seen: #1f3a26; --ab-seen-b: #4c9a3a; }
@@ -9,7 +21,8 @@ body.theme-dark #alphabet { --ab-line: #2c3747; --ab-seen: #1f3a26; --ab-seen-b:
 @keyframes abIn { from { opacity: 0; transform: translateY(10px); } }
 .ab-loading { padding: 60px 20px; color: var(--hint); }
 
-[dir="rtl"], .ab-tile-he, .ab-big, .ab-name-he, .ab-form-he, .ab-syl-he, .ab-word-he, .ab-vw-he {
+/* Шрифт — только внутри раздела «Алфавит» (раньше правило [dir="rtl"] задевало уроки и прятало иврит) */
+#alphabet [dir="rtl"], .ab-tile-he, .ab-big, .ab-name-he, .ab-form-he, .ab-syl-he, .ab-word-he, .ab-vw-he {
   font-family: "Noto Sans Hebrew", "Arial Hebrew", "David", sans-serif;
 }
 
