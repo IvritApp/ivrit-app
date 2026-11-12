@@ -302,6 +302,11 @@ document.getElementById("go-learn").onclick = () => showPath();
 document.getElementById("go-alphabet").onclick = () => {
   if (typeof window.openAlphabet !== "function") { showToast("Алфавит загружается… попробуй ещё раз"); return; }
   stopHomeBird();
+  if (!document.getElementById("alphabetCss")) {         // стили алфавита — только когда открыли алфавит
+    const l = document.createElement("link");
+    l.id = "alphabetCss"; l.rel = "stylesheet"; l.href = "alphabet.css?v=" + (window.ALPHABET_V || Date.now());
+    document.head.appendChild(l);
+  }
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "alphabet");
   if (tg && tg.BackButton) tg.BackButton.show();
   window.openAlphabet(document.getElementById("alphabet"));

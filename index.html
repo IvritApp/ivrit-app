@@ -7,9 +7,9 @@
   <!-- Библиотека Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Оформление -->
-  <link rel="stylesheet" href="style.css?v=20261112j">
-  <link rel="stylesheet" href="avatar.css?v=20261112j">
-  <link rel="stylesheet" href="scene.css?v=20261112j">
+  <link rel="stylesheet" href="style.css?v=20261112k">
+  <link rel="stylesheet" href="avatar.css?v=20261112k">
+  <link rel="stylesheet" href="scene.css?v=20261112k">
 </head>
 <body>
   <!-- ===== ГЛАВНЫЙ ЭКРАН ===== -->
@@ -127,18 +127,18 @@
   <div id="milestone"></div>
 
   <!-- Логика приложения -->
-  <script src="avatar.js?v=20261112j"></script>
-  <script src="scene.js?v=20261112j"></script>
-  <script src="store.js?v=20261112j"></script>
-  <script src="streak.js?v=20261112j"></script>
-  <script src="app.js?v=20261112j"></script>
-  <script src="quest.js?v=20261112j"></script>
-  <script src="path.js?v=20261112j"></script>
+  <script src="avatar.js?v=20261112k"></script>
+  <script src="scene.js?v=20261112k"></script>
+  <script src="store.js?v=20261112k"></script>
+  <script src="streak.js?v=20261112k"></script>
+  <script src="app.js?v=20261112k"></script>
+  <script src="quest.js?v=20261112k"></script>
+  <script src="path.js?v=20261112k"></script>
   <!-- Алфавит грузится всегда свежим (метка времени), чтобы его обновления не зависели от метки v= выше -->
   <script>
     (function () {
       var v = Date.now();
-      var l = document.createElement("link"); l.rel = "stylesheet"; l.href = "alphabet.css?v=" + v; document.head.appendChild(l);
+      window.ALPHABET_V = v;   // стили алфавита грузятся только при входе в «Алфавит» (app.js), чтобы не задевать уроки
       var s = document.createElement("script"); s.src = "alphabet.js?v=" + v; document.body.appendChild(s);
     })();
   </script>

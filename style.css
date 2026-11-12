@@ -855,3 +855,10 @@ body.theme-dark .set-test input { background: #1c2430; color: var(--text); borde
 .sk-note { font-size: 13px; color: #7c8a99; margin: 2px 0 8px; }
 body.theme-dark .sk-day { background: #1c2430; }
 body.theme-dark .sk-row { border-color: #2c3a4c; }
+
+/* Иврит в приложении (кроме раздела «Алфавит») — всегда системным шрифтом телефона.
+   Правило сильнее любого [dir="rtl"] из alphabet.css, поэтому чужие стили не могут спрятать текст в уроках. */
+body > section:not(#alphabet) [dir="rtl"], body > section:not(#alphabet) .word,
+body > div [dir="rtl"], #settings [dir="rtl"], .hs-st-bubble [dir="rtl"] {
+  font-family: -apple-system, "Segoe UI", Roboto, "Arial Hebrew", Arial, sans-serif !important;
+}
