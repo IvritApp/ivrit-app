@@ -131,7 +131,19 @@ def nick_is_bad(h):
     return False
 
 
-BAD_NICK_RUDE = "Такой ник нельзя: в нём неприличное слово. Придумай другой 🙂"
+BAD_NICK_JOKES = [
+    "Ай-яй-яй, поганец 😏 Такой ник нельзя. Придумай другой!",
+    "Плохой мальчик, да? 😼 Нет, такой ник не пройдёт.",
+    "Хибри всё видел 👀 Давай без неприличных слов.",
+    "Ого, смелый ник! Но нет 🙅 Придумай другой.",
+    "Хибри покраснел 🙈 Такой ник нельзя.",
+    "Мама бы не одобрила 😅 Попробуй другой ник.",
+    "Не-не-не, хулиган 😄 С таким ником учитель иврита выгонит из класса.",
+    "Хорошая попытка 😉 Но фильтр не обманешь.",
+    "Цифрами не спрячешь 🕵️ Придумай нормальный ник.",
+]
+def bad_nick_msg():
+    return random.choice(BAD_NICK_JOKES)
 
 
 def norm(h):
@@ -308,7 +320,7 @@ class Handler(BaseHTTPRequestHandler):
             if not HANDLE_RE.match(h):
                 return 200, {"ok": False, "error": BAD_NICK}
             if nick_is_bad(h):
-                return 200, {"ok": False, "error": BAD_NICK_RUDE}
+                return 200, {"ok": False, "error": bad_nick_msg()}
             o = owner_of(c, h)
             return 200, {"ok": o is None or o == uid, "error": "" if o is None or o == uid else "Этот ник уже занят"}
 
@@ -353,7 +365,7 @@ class Handler(BaseHTTPRequestHandler):
             if not HANDLE_RE.match(h):
                 return 200, me(error=BAD_NICK)
             if nick_is_bad(h) and route != "/hapi/nicks/remove":
-                return 200, me(error=BAD_NICK_RUDE)
+                return 200, me(error=bad_nick_msg())
             o = owner_of(c, h)
             mine = nicks_of(c, uid)
             if route == "/hapi/handle":                            # сменить основной ник
