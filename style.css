@@ -867,3 +867,10 @@ body > div [dir="rtl"], #settings [dir="rtl"], .hs-st-bubble [dir="rtl"] {
 .host-bubble::after { border-right-color: var(--bg); }
 .host-bubble .word, .host-bubble .translit, .host-bubble .host-q { color: var(--text); }
 .st-view .q-tray { color: #222; }
+
+/* Картинки к словам (icons.js) */
+.w-ico { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.w-ico > svg, .w-ico > img { width: 100%; height: 100%; }
+#options.pic-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#options.pic-options .option { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; margin: 0; }
+.q-pic { display: flex; justify-content: center; margin: 4px 0 0; }

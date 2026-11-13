@@ -479,10 +479,14 @@ function showChooseTranslation(ex) {
   speak(word.he, { audio: word.audio });
 
   const box = document.getElementById("options");
+  // Картинки к вариантам — только если они есть у всех четырёх (иначе картинка подсказывала бы ответ)
+  const withPics = typeof wordIcon === "function" && options.every(o => wordIcon(o, 10));
+  if (withPics) box.classList.add("pic-options");
   options.forEach(opt => {
     const btn = document.createElement("button");
     btn.className = "option";
-    btn.textContent = opt.ru;
+    if (withPics) { btn.innerHTML = wordIcon(opt, 54) + "<span></span>"; btn.lastChild.textContent = opt.ru; }
+    else btn.textContent = opt.ru;
     if (opt === word) btn.dataset.right = "1";
     btn.onclick = () => checkAnswer(btn, opt === word, ex, word);
     box.appendChild(btn);
@@ -495,7 +499,8 @@ function showChooseHebrew(ex) {
   const others = lesson.words.filter(w => w !== word);
   const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
 
-  screen.innerHTML = hostHTML(ask(ASK_HE, "he").replace("$", word.ru), "") + `
+  const pic = typeof wordIcon === "function" ? wordIcon(word, 72) : "";
+  screen.innerHTML = hostHTML(ask(ASK_HE, "he").replace("$", word.ru), pic ? `<div class="q-pic">${pic}</div>` : "") + `
     <div id="options" class="he-options"></div>
   `;
   const box = document.getElementById("options");

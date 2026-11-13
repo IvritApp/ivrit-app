@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hirbis — картинки к словам</title>
+<style>
+  :root { --bg:#f4f7fb; --card:#fff; --text:#222; --hint:#7c8a99; --blue:#3a8ad6; --green:#3cae5c; --red:#e5484d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:#fff; padding:12px 14px 10px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  h1 { font-size:19px; margin:0 0 4px; }
+  .stats { font-size:13px; color:var(--hint); }
+  .tabs { display:flex; gap:6px; margin-top:8px; overflow-x:auto; }
+  .tabs button { flex:none; border:2px solid #d9e6f2; background:#fff; border-radius:12px; padding:6px 10px; font:inherit; font-size:14px; cursor:pointer; }
+  .tabs button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+  main { padding:10px 12px 120px; max-width:900px; margin:0 auto; }
+  h2 { font-size:16px; margin:18px 4px 8px; color:#1d4f86; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+  .card { background:var(--card); border-radius:16px; padding:10px; box-shadow:0 2px 8px rgba(30,60,110,.07); border:2px solid transparent; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .card.like { border-color:var(--green); } .card.dislike { border-color:var(--red); }
+  .pic { width:92px; height:92px; display:flex; align-items:center; justify-content:center; }
+  .w-ico { display:inline-flex; align-items:center; justify-content:center; }
+  .none { width:92px; height:92px; border-radius:14px; background:#eef1f5; color:#a3adb9; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .he { font-size:22px; font-weight:700; margin-top:6px; }
+  .ru { font-size:14px; color:var(--hint); min-height:18px; }
+  .btns { display:flex; gap:6px; margin-top:8px; width:100%; }
+  .btns button { flex:1; border:2px solid #e3e8ef; background:#fff; border-radius:10px; padding:6px 0; font-size:18px; cursor:pointer; }
+  .btns button.on.l { background:#e3f7e8; border-color:var(--green); } .btns button.on.d { background:#fde8e8; border-color:var(--red); }
+  textarea { width:100%; margin-top:6px; border:2px solid #e3e8ef; border-radius:10px; padding:6px; font:inherit; font-size:14px; resize:vertical; min-height:40px; }
+  footer { position:fixed; left:0; right:0; bottom:0; background:#fff; padding:10px 14px; box-shadow:0 -2px 10px rgba(0,0,0,.08); display:flex; gap:8px; }
+  footer button { flex:1; border:0; border-radius:12px; padding:12px; font:inherit; font-weight:700; font-size:15px; cursor:pointer; background:var(--blue); color:#fff; }
+  #toast { position:fixed; left:50%; bottom:80px; transform:translateX(-50%); background:#2b2f3a; color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; }
+  #toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🖼️ Hirbis — картинки к словам</h1>
+  <div class="stats" id="stats">Загружаю слова…</div>
+  <div class="tabs" id="tabs">
+    <button data-f="drawn" class="on">Нарисованные</button>
+    <button data-f="todo">Не оценены</button>
+    <button data-f="dislike">👎 Не нравятся</button>
+    <button data-f="all">Все слова</button>
+  </div>
+</header>
+<main id="list"></main>
+<footer><button id="copy">📋 Скопировать отзыв</button></footer>
+<div id="toast"></div>
+<script src="store.js"></script>
+<script src="icons.js"></script>
+<script>
+const KEY = "hirbis-pics-review";
+let marks = {}; try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (e) {} };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]);
+const strip = s => String(s || "").replace(/\{m:([^}]*)\}\{f:[^}]*\}/g, "$1");
+let words = [], filter = "drawn";
+
+async function load() {
+  const course = await (await fetch("content/he/course.json", { cache: "no-cache" })).json();
+  const seen = new Set();
+  for (const ch of course.chapters) for (let li = 0; li < ch.levels.length; li++) {
+    const lv = ch.levels[li]; if (!lv.lessons) continue;
+    for (const id of lv.lessons) {
+      let d; try { d = await (await fetch(`content/he/lessons/${id}.json`, { cache: "no-cache" })).json(); } catch (e) { continue; }
+      d.words.slice(0, d.newCount || d.words.length).forEach(w => {
+        const k = strip(w.ru); if (seen.has(k)) return; seen.add(k);
+        words.push({ key: k, he: strip(w.he), ru: k, lvl: `Уровень ${li + 1} · ${lv.title}`, w });
+      });
+    }
+  }
+  render();
+}
+function render() {
+  const list = document.getElementById("list");
+  let html = "", sec = "", grid = false, shown = 0;
+  words.forEach(x => {
+    const ico = wordIcon(x.w, 92), m = marks[x.key] || {};
+    if (filter === "drawn" && !ico) return;
+    if (filter === "todo" && (!ico || m.v)) return;
+    if (filter === "dislike" && m.v !== "d") return;
+    if (x.lvl !== sec) { if (grid) html += "</div>"; sec = x.lvl; html += `<h2>${esc(sec)}</h2><div class="grid">`; grid = true; }
+    shown++;
+    html += `<div class="card ${m.v === "l" ? "like" : m.v === "d" ? "dislike" : ""}" data-k="${esc(x.key)}">
+      <div class="pic">${ico || `<div class="none">скоро</div>`}</div>
+      <div class="he" dir="rtl">${esc(x.he)}</div><div class="ru">${esc(x.ru)}</div>
+      ${ico ? `<div class="btns"><button class="l ${m.v === "l" ? "on" : ""}" data-v="l">👍</button><button class="d ${m.v === "d" ? "on" : ""}" data-v="d">👎</button></div>
+      ${m.v === "d" ? `<textarea placeholder="Что не так? Как нарисовать?" data-k="${esc(x.key)}">${esc(m.note)}</textarea>` : ""}` : ""}
+    </div>`;
+  });
+  if (grid) html += "</div>";
+  list.innerHTML = html || `<p style="text-align:center;color:#7c8a99;margin-top:40px">Здесь пусто 🙂</p>`;
+  stats();
+}
+function stats() {
+  const drawn = words.filter(x => wordIcon(x.w, 10)).length;
+  const l = Object.values(marks).filter(m => m.v === "l").length, d = Object.values(marks).filter(m => m.v === "d").length;
+  document.getElementById("stats").textContent = `Слов: ${words.length} · нарисовано: ${drawn} · 👍 ${l} · 👎 ${d}`;
+}
+document.getElementById("list").addEventListener("click", e => {
+  const b = e.target.closest("[data-v]"); if (!b) return;
+  const k = b.closest(".card").dataset.k; const m = marks[k] = marks[k] || {};
+  m.v = m.v === b.dataset.v ? undefined : b.dataset.v; if (!m.v) delete marks[k];
+  save(); render();
+});
+document.getElementById("list").addEventListener("input", e => {
+  const t = e.target.closest("textarea"); if (!t) return;
+  marks[t.dataset.k] = Object.assign(marks[t.dataset.k] || { v: "d" }, { note: t.value }); save();
+});
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f; document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b)); render(); window.scrollTo(0, 0);
+});
+function report() {
+  const drawn = words.filter(x => wordIcon(x.w, 10));
+  const l = drawn.filter(x => (marks[x.key] || {}).v === "l"), d = drawn.filter(x => (marks[x.key] || {}).v === "d");
+  const todo = drawn.filter(x => !(marks[x.key] || {}).v);
+  return [`Hirbis — отзыв о картинках`, `Нарисовано ${drawn.length}. 👍 ${l.length} · 👎 ${d.length} · не оценено ${todo.length}`, "",
+    ...(d.length ? ["Не нравятся:", ...d.map(x => `👎 ${x.ru} (${x.he})${marks[x.key].note ? " — " + marks[x.key].note : ""}`)] : ["Все оценённые нравятся 👍"])].join("\n");
+}
+document.getElementById("copy").onclick = async () => {
+  const t = report();
+  try { await navigator.clipboard.writeText(t); toast("Отзыв скопирован — вставь его в чат"); }
+  catch (e) { prompt("Скопируй отзыв:", t); }
+};
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 2200); }
+load();
+</script>
+</body>
+</html>

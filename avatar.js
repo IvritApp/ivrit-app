@@ -33,7 +33,7 @@
     beard:  [ // только парням
 { id: "none", name: "Без бороды" }, { id: "stubble", name: "Щетина" }, { id: "short", name: "Короткая" }, { id: "long", name: "Длинная" }],
     payot:  [{ id: "none", name: "Без пейсов" }, { id: "payot", name: "Пейсы" }],
-    headwear: [{ id: "none", name: "Без убора" }, { id: "kippa", name: "Кипа", g: "m" }, { id: "hasidhat", name: "Шляпа", g: "m" }, { id: "tichel", name: "Платок", g: "f" }],
+    headwear: [{ id: "none", name: "Без убора" }, { id: "kippa", name: "Кипа", g: "m" }, { id: "hasidhat", name: "Хасидская шляпа", g: "m" }, { id: "shtreimel", name: "Штраймл (меховая)", g: "m" }, { id: "tichel", name: "Платок", g: "f" }],
     bottom: [{ id: "jeans", name: "Брюки" }, { id: "shorts", name: "Шорты" }, { id: "skirt", name: "Юбка", g: "f" },
              { id: "longskirt", name: "Длинная юбка", g: "f" }]
   };
@@ -93,7 +93,7 @@
   function earsX(c) { return c.head === "oval" ? [60, 140] : [56, 144]; }
 
   // Волосы закрыты сверху (шапка, кепка, шляпа, платок)?
-  function hairCovered(c) { return c.hat === "beanie" || c.hat === "cap" || (!c.hat && (c.headwear === "hasidhat" || c.headwear === "tichel")); }
+  function hairCovered(c) { return c.hat === "beanie" || c.hat === "cap" || (!c.hat && (c.headwear === "hasidhat" || c.headwear === "shtreimel" || c.headwear === "tichel")); }
   // Насколько поднять кипу / корону над пышной причёской (чтобы сидели сверху, а не «тонули»)
   const HAIR_LIFT = { afro: -24, curly: -8, twists: -8, quiff: -10, manbun: -4 };
   function hairBack(c, col) {
@@ -293,6 +293,22 @@
       <path d="M66,52 Q63,12 100,10 Q137,12 134,52Z" fill="#1d1e24"/>
       <path d="M67,42 Q100,46 133,42 L134,50 Q100,54 66,50Z" fill="#33343c"/>
       <path d="M86,14 Q100,22 114,14" stroke="#33343c" stroke-width="3" fill="none"/>`;
+    if (c.headwear === "shtreimel") {
+      // Штраймл: высокий широкий меховой «цилиндр» с бархатным верхом (хасидская шапка на шабат)
+      let fur = "";
+      for (let row = 0; row < 3; row++) {
+        for (let i = 0; i <= 14; i++) {
+          const x = 40 + i * 8.6, y = 26 + row * 12 + (i % 2) * 3;
+          fur += `<ellipse cx="${x.toFixed(1)}" cy="${y}" rx="6.5" ry="9" fill="${(i + row) % 3 === 0 ? "#5e3822" : (i + row) % 3 === 1 ? "#73472b" : "#875535"}" transform="rotate(${(i % 3 - 1) * 10} ${x.toFixed(1)} ${y})"/>`;
+        }
+      }
+      return `<path d="M34,60 L34,26 Q34,10 100,10 Q166,10 166,26 L166,60 Q166,70 100,70 Q34,70 34,60Z" fill="#4f2f1c"/>
+        <ellipse cx="100" cy="18" rx="60" ry="9" fill="#141418"/>
+        <ellipse cx="100" cy="17" rx="44" ry="5" fill="#26262e"/>
+        ${fur}
+        <path d="M34,58 Q100,74 166,58 L166,62 Q100,78 34,62Z" fill="#3b2314" opacity=".7"/>
+        ${[48, 70, 92, 114, 136, 156].map(x => `<path d="M${x},30 q3,10 -1,22" stroke="#a87650" stroke-width="1.6" fill="none" opacity=".55"/>`).join("")}`;
+    }
     if (c.headwear === "tichel") return `<path d="M50,100 Q40,22 100,18 Q160,22 150,100 Q146,74 134,62 Q100,46 66,62 Q54,74 50,100Z" fill="#7d5aa6"/>
       <path d="M58,64 Q100,44 142,64" stroke="#9c7cc4" stroke-width="5" fill="none"/>
       ${[[76,36],[100,30],[124,36],[64,54],[136,54],[88,46],[112,46]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="#c9b5e6"/>`).join("")}`;
@@ -359,7 +375,7 @@
     const top = TOPC[c.topColor] || TOPC[0];
     const G = (str, col, gid) => str.split(`fill="${col}"`).join(`fill="url(#${id}${gid})"`);
     const coverHair = c.headwear === "tichel" && !c.hat;
-    const hideTop = hideHairTop || coverHair || (c.headwear === "hasidhat" && !c.hat);
+    const hideTop = hideHairTop || coverHair || ((c.headwear === "hasidhat" || c.headwear === "shtreimel") && !c.hat);
     return `<svg class="hb-avatar hs-person pose-${pose}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" overflow="visible">
       <defs>
         <radialGradient id="${id}s" cx="42%" cy="36%" r="72%"><stop offset="0" stop-color="${shade(skin, .16)}"/><stop offset=".55" stop-color="${skin}"/><stop offset="1" stop-color="${shade(skin, -.12)}"/></radialGradient>
@@ -387,7 +403,7 @@
         ${coverHair ? "" : hideTop ? (["long", "bob", "pony", "curlylong"].includes(c.hair) ? `<path d="M53,78 C52,92 53,102 54,108 L62,82Z M147,78 C148,92 147,102 146,108 L138,82Z" fill="${hairCol}"/>` : "") : G(hairFront(c, hairCol), hairCol, "h")}
         ${coverHair || hideTop || ["buzz"].includes(c.hair) ? "" : `<path d="M76,46 Q98,34 120,42" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".18"/>`}
         ${payot(c, hairCol)}
-        <g transform="translate(0 ${HAIR_LIFT[c.hair] || 0})">${headwear(c)}</g>
+        <g transform="translate(0 ${c.headwear === "kippa" ? (HAIR_LIFT[c.hair] || 0) : 0})">${headwear(c)}</g>
         ${glasses(c)}
         <g transform="translate(0 ${c.hat === "crown" ? (HAIR_LIFT[c.hair] || 0) : 0})">${hat(c)}</g>
       </g>
