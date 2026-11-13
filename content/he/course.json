@@ -3,7 +3,10 @@
     {
       "id": "A1",
       "title": "Глава A1",
-      "hero": { "m": "david", "f": "tzila" },
+      "hero": {
+        "m": "david",
+        "f": "tzila"
+      },
       "levels": [
         {
           "id": "a1-1",
@@ -42,7 +45,6 @@
         {
           "id": "a1-3",
           "title": "Новая квартира",
-          "soon": true,
           "draft": "ждёт знатока и сцену квартиры",
           "lessons": [
             "a1-3-1",

@@ -63,7 +63,8 @@ function renderStageShell(place, title, icon) {
         <div class="q-options" id="qOpts"></div>
       </div>
     </div>`;
-  const make = place === "makolet" && window.createStore ? window.createStore : window.createStage;
+  const make = place === "makolet" && window.createStore ? window.createStore
+    : (window.PLACES && window.PLACES[place] && window.createPlace) ? window.createPlace : window.createStage;
   stage = make(document.getElementById("stView"), { gender: profile ? profile.gender : "m", profile, place });
   return stageToken;
 }
@@ -165,7 +166,7 @@ function startQuest(id) {
 function sellerHTML(s) {
   const he = g(s.he), tr = g(s.tr);
   const id = "ru" + Math.floor(Math.random() * 1e6);
-  return `${nameTag("Продавец")}<div class="he" dir="rtl">${he}</div>
+  return `${nameTag((stage && stage.hostName) || "Продавец")}<div class="he" dir="rtl">${he}</div>
     <div class="tr">${tr}</div>
     <div class="q-tools">
       <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊</button>
@@ -244,7 +245,7 @@ function startShopping(st) {
   const opts = document.getElementById("qOpts");
   opts.innerHTML = `
     <div class="mk-list">${sh.list.map(x => `<button class="mk-chip" data-item="${x.item}"><span class="he" dir="rtl">${g(x.he)}</span><span class="tr">${g(x.tr)}</span></button>`).join("")}</div>
-    <div class="mk-where" id="mkWhere">${VIEW_NAMES[stage.current()]}</div>
+    <div class="mk-where" id="mkWhere">${(stage.viewNames || VIEW_NAMES)[stage.current()]}</div>
     <div class="mk-nav"><button class="btn ghost" id="mkL">◀ Налево</button><button class="btn ghost" id="mkR">Направо ▶</button></div>`;
   opts.querySelectorAll(".mk-chip").forEach(c => c.onclick = () => {
     const x = sh.list.find(y => y.item === c.dataset.item);
@@ -253,7 +254,7 @@ function startShopping(st) {
   const go = (d) => {
     stage.look(stage.current() + d);
     const i = stage.current();
-    document.getElementById("mkWhere").textContent = VIEW_NAMES[i];
+    document.getElementById("mkWhere").textContent = (stage.viewNames || VIEW_NAMES)[i];
     document.getElementById("mkL").disabled = i === 0;
     document.getElementById("mkR").disabled = i === stage.views - 1;
     stage.hide();
@@ -318,7 +319,7 @@ function addToTray(items, noStage) {
     qBag.push(it);
     const el = document.createElement("div");
     el.className = "q-ing";
-    el.innerHTML = `<img src="assets/ing-${it}.png" alt=""><span>${itemName(it)}</span>`;
+    el.innerHTML = `${stage && stage.itemIcon ? `<i class="q-ing-svg">${stage.itemIcon(it, 40)}</i>` : `<img src="assets/ing-${it}.png" alt="">`}<span>${itemName(it)}</span>`;
     tray.appendChild(el);
     if (stage && stage.food && !noStage) stage.food(it);
     playSound("pop");
@@ -354,7 +355,7 @@ function finishQuest() {
     playSound("finish"); vibrate("success");
     questView.innerHTML = `
       <div class="q-final">
-        <img class="q-final-img" src="assets/${finalImg}.png" alt="${fin.alt || quest.title}">
+        ${window.placeGift && placeGift(finalImg) ? `<div class="q-final-img q-final-svg">${placeGift(finalImg)}</div>` : `<img class="q-final-img" src="assets/${finalImg}.png" alt="${fin.alt || quest.title}">`}
         <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный квест! 🏆" : "Квест пройден! 🎉"}</h2>
         ${lvlInfo && levelGold(lvlInfo) ? `<div class="lvl-gold">🏅 Уровень золотой! ${where.ch.levels.every(levelGold) ? "Все уровни главы золотые 🥇" : `Ещё ${where.ch.levels.length - where.ch.levels.filter(levelGold).length} — и золотая медаль главы 🥇`}</div>` : ""}
         <div class="lvl-done">
