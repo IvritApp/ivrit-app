@@ -80,6 +80,60 @@ def check_init_data(init_data):
         return None
 
 
+# ---------- ФИЛЬТР НЕПРИЛИЧНЫХ НИКОВ ----------
+# Ники — латиница, поэтому русский мат ловим в латинской записи (hui, xuy, blyat…).
+# Хитрости тоже ловим: цифры и _ внутри (6953gey478, 6g4e3y), цифры вместо букв (g3y, p1zda),
+# повторы букв (geeeey). Мягкие слова (govno, dryan, dermo, zhopa, shit) — разрешены.
+BAD_WORDS = [
+    # русский мат и грубые оскорбления (латиницей)
+    "hui", "huy", "huj", "xui", "xuy", "xuj", "xyu", "xyi", "khui", "khuy", "huesos", "huil", "hulі",
+    "pizd", "pisd", "pizdec", "pezd",
+    "ebat", "ebal", "eblan", "eban", "ebuch", "ebok", "ebny", "ebna", "yebat", "yebal", "yoban", "jeban", "uebo", "uebi", "dolboe", "zaeb", "vyeb", "naeb", "oteb", "poeb",
+    "blya", "blyat", "blyad", "bliat", "bliad", "blyt",
+    "suka", "cyka", "suchk", "suchar",
+    "mudak", "mudil", "mudlo", "mudozv",
+    "zalup", "gandon", "gondon", "shlyuh", "shluh", "shalav", "prostitut",
+    "pidor", "pidar", "pidr", "pidaras", "pedik", "pederas",
+    "chmo", "chmyr", "debil", "daun", "dauny", "ublyud", "ubludok", "vyrodok",
+    "manda", "mandavosh", "dristn", "sperm", "drochi", "droch", "konchi", "trah", "seks", "porno", "porn",
+    # ЛГБТ-слова (по решению владельца)
+    "gay", "gey", "gei", "geii", "lgbt", "lgbtq", "lesbi", "lesb", "lezb", "lesbo", "gomik", "gomos", "gomoseks", "queer", "fag",
+    # английские ругательства и пошлость
+    "fuck", "fuk", "fck", "phuck", "bitch", "biatch", "cunt", "dick", "cock", "pussy", "penis", "vagina", "whore", "slut",
+    "sex", "xxx", "nude", "naked", "boob", "tits", "dildo", "horny", "orgasm", "rape", "rapist", "bastard", "asshole", "motherf",
+    # ненависть
+    "nigg", "nigga", "nazi", "hitler", "heil", "sieg", "kkk", "isis",
+]
+# Слова, внутри которых «плохой» кусок случаен — их не трогаем
+SAFE_WORDS = ["mandarin", "kommandar", "komanda", "command", "commander", "sukan", "issue", "hitlist", "dickens", "cocktail", "cockpit",
+              "peacock", "hancock", "sussex", "essex", "middlesex", "geiger", "geisha", "begay", "sugay", "trahan",
+              "sextet", "sexton", "dauntless", "debilit", "sergey", "sergei", "sergeev", "sergeich"]
+LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "6": "b", "7": "t", "8": "b", "9": "g", "@": "a", "$": "s"})
+
+
+def _squeeze(t):
+    return re.sub(r"(.)\1+", r"\1", t)
+
+
+def nick_is_bad(h):
+    h = str(h or "").lower()
+    letters_only = re.sub(r"[^a-z]", "", h)                          # 6953gey478 → gey ; 6g4e3y → gey
+    leet = re.sub(r"[^a-z]", "", h.translate(LEET))                    # g3y → gey ; p1zda → pizda
+    variants = {letters_only, leet, _squeeze(letters_only), _squeeze(leet)}
+    for v in variants:
+        clean = v
+        for sw in SAFE_WORDS:
+            clean = clean.replace(sw, "#")
+        for w in BAD_WORDS:
+            sw2 = _squeeze(w)
+            if w in clean or (len(sw2) >= 3 and sw2 in clean):
+                return True
+    return False
+
+
+BAD_NICK_RUDE = "Такой ник нельзя: в нём неприличное слово. Придумай другой 🙂"
+
+
 def norm(h):
     return str(h or "").strip().lstrip("@").lower()
 
@@ -101,7 +155,7 @@ def limit_of(r):
 
 def new_handle(c, tg_username):
     u = norm(tg_username)
-    if HANDLE_RE.match(u) and owner_of(c, u) is None:
+    if HANDLE_RE.match(u) and not nick_is_bad(u) and owner_of(c, u) is None:
         return u
     while True:
         h = "player" + str(random.randint(10000, 99999))
@@ -253,6 +307,8 @@ class Handler(BaseHTTPRequestHandler):
             h = norm(p.get("handle"))
             if not HANDLE_RE.match(h):
                 return 200, {"ok": False, "error": BAD_NICK}
+            if nick_is_bad(h):
+                return 200, {"ok": False, "error": BAD_NICK_RUDE}
             o = owner_of(c, h)
             return 200, {"ok": o is None or o == uid, "error": "" if o is None or o == uid else "Этот ник уже занят"}
 
@@ -296,6 +352,8 @@ class Handler(BaseHTTPRequestHandler):
             h = norm(p.get("handle"))
             if not HANDLE_RE.match(h):
                 return 200, me(error=BAD_NICK)
+            if nick_is_bad(h) and route != "/hapi/nicks/remove":
+                return 200, me(error=BAD_NICK_RUDE)
             o = owner_of(c, h)
             mine = nicks_of(c, uid)
             if route == "/hapi/handle":                            # сменить основной ник
@@ -514,6 +572,9 @@ def cli():
         else:
             c.execute("UPDATE players SET admin=? WHERE tg_id=?", (1 if cmd == "make-admin" else 0, o)); c.commit()
             print(("Готово: @%s теперь админ 👑" if cmd == "make-admin" else "Готово: @%s больше не админ") % h)
+    elif cmd == "bad-nicks":                         # показать уже занятые неприличные ники
+        rows = [r for r in c.execute("SELECT h.handle, p.name FROM handles h JOIN players p ON p.tg_id = h.tg_id") if nick_is_bad(r["handle"])]
+        print("\n".join(f"@{r['handle']}  ({r['name']})" for r in rows) or "Неприличных ников нет 👍")
     elif cmd == "list":
         for r in c.execute("SELECT * FROM players ORDER BY last_seen DESC"):
             print(f"@{r['handle']:16} {r['name'] or '':20} tg:@{r['tg_username'] or '-':16} ники:{','.join(nicks_of(c, r['tg_id']))} {'АДМИН' if r['admin'] else ''} {datetime.fromtimestamp(r['last_seen'], MSK):%d.%m %H:%M}")
