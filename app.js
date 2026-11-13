@@ -146,10 +146,11 @@ function showOnboarding() {
       return `
       <h1 class="ob-title">Придумай ник</h1>
       <p class="ob-text small">По нику тебя найдут друзья — как @юзернейм в Telegram.</p>
-      ${tgNick ? `<button class="btn ob-tg" id="ob-tgnick">✈️ Перенести из Telegram<small>@${tgNick}</small></button>
+      ${tgNick ? `<button class="btn ob-tg" id="ob-tgnick">✈️ Перенести из Telegram<small>@${tgNick.toLowerCase()}</small></button>
       <div class="ob-or">или придумай свой</div>` : ""}
       <label class="ob-nick"><span>@</span><input id="ob-nick" maxlength="32" placeholder="твой_ник" autocomplete="off" autocapitalize="off" spellcheck="false" value="${draft.nick || ""}"></label>
       <div class="ob-nick-st" id="ob-nick-st"></div>
+      <p class="ob-text small ob-rule">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя.</p>
       <p class="ob-text small">Нажимая «Дальше», ты соглашаешься, что твой прогресс хранится на нашем сервере в России — чтобы он не потерялся при смене телефона и перешёл в приложение Hirbis.</p>
       <button class="btn blue" data-next id="ob-go2" disabled>Дальше</button>`;
     },
@@ -186,15 +187,15 @@ function showOnboarding() {
       const test = async () => {
         const v = nick.value.trim().replace(/^@/, "").toLowerCase(); draft.nick = v; draft.nickOk = false; go2.disabled = true;
         if (!v) { st.textContent = ""; st.className = "ob-nick-st"; return; }
-        if (!/^[a-z0-9_]{3,32}$/.test(v)) { st.textContent = "3–32 символа: латинские буквы, цифры и _"; st.className = "ob-nick-st bad"; return; }
+        if (!/^[a-z0-9_]{3,32}$/.test(v)) { st.textContent = "Нужно от 3 до 32 символов"; st.className = "ob-nick-st bad"; return; }
         st.textContent = "Проверяю…"; st.className = "ob-nick-st";
         const my = ++seq, r = await hirbisSync.checkHandle(v); if (my !== seq) return;
         if (r.ok) { st.textContent = r.offline ? "Проверим, когда появится связь" : `✓ @${v} свободен`; st.className = "ob-nick-st ok"; draft.nickOk = true; go2.disabled = false; }
         else { st.textContent = "✗ " + (r.error || "Ник занят"); st.className = "ob-nick-st bad"; }
       };
-      nick.oninput = () => { nick.value = nick.value.replace(/[^A-Za-z0-9_@]/g, ""); clearTimeout(tmr); tmr = setTimeout(test, 400); };
+      nick.oninput = () => { nick.value = nick.value.toLowerCase().replace(/[^a-z0-9_]/g, ""); clearTimeout(tmr); tmr = setTimeout(test, 400); };
       const tgb = document.getElementById("ob-tgnick");
-      if (tgb) tgb.onclick = () => { nick.value = user.username; vibrate("success"); test(); };
+      if (tgb) tgb.onclick = () => { nick.value = user.username.toLowerCase(); vibrate("success"); test(); };
       if (nick.value) test();
     }
     const next = obStep.querySelector("[data-next]");
@@ -979,7 +980,12 @@ function ttsFallback(text) {
 // Вибрация телефона (работает внутри Telegram)
 function vibrate(kind) {
   if (!settings.vibro) return;
-  if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(kind);
+  if (!tg || !tg.HapticFeedback) return;
+  // light / medium / heavy — «толчок»; success / warning / error — «уведомление». Ошибка вибрации не должна ломать нажатие.
+  try {
+    if (["light", "medium", "heavy", "rigid", "soft"].includes(kind)) tg.HapticFeedback.impactOccurred(kind);
+    else tg.HapticFeedback.notificationOccurred(kind);
+  } catch (e) {}
 }
 
 // --- Звуки ---

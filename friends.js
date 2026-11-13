@@ -48,8 +48,8 @@
   document.querySelectorAll("body > section").forEach(s => mo.observe(s, { attributes: true, attributeFilter: ["hidden"] }));
   bar.onclick = (e) => {
     const b = e.target.closest("button"); if (!b) return;
-    if (typeof vibrate === "function") vibrate("light");
     if (b.dataset.tab === "learn") showHome(); else showFriends();
+    try { if (typeof vibrate === "function") vibrate("light"); } catch (er) {}
   };
 
   // ---------- раздел «Друзья» ----------
@@ -142,7 +142,8 @@
     try { r = await api("/profile", h ? { handle: h } : {}); } catch (e) { box.querySelector(".fr-note").textContent = "Нет связи с сервером"; return; }
     if (r.error) { box.querySelector(".fr-note").textContent = r.error; return; }
     const p = r.profile, others = (p.nicks || []).filter(n => n !== p.handle);
-    const since = p.created ? new Date(p.created * 1000).toLocaleDateString("ru-RU", { month: "long", year: "numeric" }) : "";
+    const MG = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+    const cd = p.created ? new Date(p.created * 1000) : null, since = cd ? MG[cd.getMonth()] + " " + cd.getFullYear() : "";
     const medals = Object.values(p.medals || {});
     box.innerHTML = `<div class="fr-page">
       <button class="fr-back" id="frBack">‹ Назад</button>

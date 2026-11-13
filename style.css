@@ -973,3 +973,5 @@ body.theme-dark .fr-find { background: #1c2430; border-color: #2c3a4c; } body.th
 .fr-grid div { text-align: left; background: var(--soft); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; }
 .fr-grid b { font-size: 20px; } .fr-grid span { font-size: 13px; color: var(--hint); }
 .fr-medals { display: flex; gap: 8px; font-size: 32px; }
+
+.ob-rule { margin-top: 2px; }

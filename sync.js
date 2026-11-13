@@ -116,7 +116,8 @@
       ${me ? `<div class="sy-nicks">${nicks.map(n => `<span class="sy-chip ${n === me.handle ? "main" : ""}" data-n="${esc(n)}">@${esc(n)}${n === me.handle ? " ⭐" : ""}</span>`).join("")}</div>
       <div class="set-note">⭐ — основной ник, его видят друзья. Ников: ${nicks.length} из ${unl ? "∞" : lim}. Нажми на ник, чтобы сделать основным или удалить.</div>
       <div id="syNickAct"></div>
-      ${canAdd ? `<div class="set-test"><input id="syNickNew" maxlength="32" placeholder="ещё один ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickAdd">Добавить</button></div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
+      ${canAdd ? `<div class="set-test"><input id="syNickNew" maxlength="32" placeholder="ещё один ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickAdd">Добавить</button></div>
+        <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
       <div class="set-note">${status}${!ok ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
       ${me && me.admin ? `<div class="set-title">👑 Режим админа</div>
         ${adminMode()
@@ -145,6 +146,8 @@
         nickCall("/nicks/remove", n, "Ник @" + n + " удалён");
       };
     });
+    const ni = box.querySelector("#syNickNew");
+    if (ni) ni.oninput = () => { ni.value = ni.value.toLowerCase().replace(/[^a-z0-9_]/g, ""); };
     const add = box.querySelector("#syNickAdd");
     if (add) add.onclick = () => nickCall("/nicks/add", box.querySelector("#syNickNew").value, "Ник добавлен");
     const c = box.querySelector("#syConsentOpen"); if (c) c.onclick = (ev) => { ev.preventDefault(); askConsent(); };
