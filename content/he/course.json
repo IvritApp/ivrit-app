@@ -3,6 +3,7 @@
     {
       "id": "A1",
       "title": "Глава A1",
+      "hero": { "m": "david", "f": "tzila" },
       "levels": [
         {
           "id": "a1-1",

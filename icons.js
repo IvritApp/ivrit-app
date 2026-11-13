@@ -32,24 +32,42 @@
   const png = (name) => `<img src="assets/${name}.png" alt="" style="width:100%;height:100%;object-fit:contain">`;
 
 
-  // --- Давид по пояс: все жесты показывает он (руки простые, без пальцев — так чище) ---
-  const DAV = { hair: "#3b2a20", shirt: "#4ea2e8", shirtD: "#3a8ad6" };
+  // --- Герой главы по пояс: все жесты показывает он. Герой меняется по главе и полу игрока ---
+  // Глава 1: парню — Давид, девушке — Циля. Новый герой = новая запись в HEROES (+ "hero" у главы в course.json).
+  const HEROES = {
+    david: { shirt: "#1f7fd6", shirtD: "#1766b3", eye: "#5a3214", brow: "#2b2130", ears: true,
+      back: "",
+      hair: () => [[16, 12, 4.2], [20, 8, 4.6], [25, 6.5, 4.8], [30, 8.5, 4.4], [33, 13, 3.8], [15, 17, 3.2], [33.5, 18, 3], [22.5, 10, 3.6], [28, 10.5, 3.4]]
+        .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#2b2130"/>`).join("") +
+        [[18, 9], [25, 6], [31, 10]].map(([x, y]) => `<path d="M${x - 1.6},${y + .6} q.6,-2 2.2,-1.4" stroke="#463949" stroke-width=".7" fill="none" stroke-linecap="round"/>`).join("") },
+    tzila: { shirt: "#ef9a62", shirtD: "#dc8550", eye: "#5f7d3e", brow: "#633a22", ears: false,
+      back: `<path d="M14,17 Q13,5 24,5 Q35,5 34,17 L36.5,34 Q31,37.5 24,36.5 Q17,37.5 11.5,34Z" fill="#7a4a2e"/><path d="M13.5,26 Q12.5,31 14.5,34 M34.5,26 Q35.5,31 33.5,34" stroke="#633a22" stroke-width=".8" fill="none" opacity=".6"/>`,
+      hair: () => `<path d="M14.6,20 Q13.5,6.5 24,6.3 Q34.5,6.5 33.4,20 Q32.5,13 29,11 Q25.5,14.5 19,14.5 Q16,15.5 14.6,20Z" fill="#7a4a2e"/>
+        <path d="M18,10.5 Q23,7.8 29,9 M20,12.6 Q24.5,10.5 29.5,11.2" stroke="#93603f" stroke-width=".7" fill="none" stroke-linecap="round" opacity=".9"/>
+        <rect x="28.6" y="8.2" width="3.6" height="3.6" rx=".9" fill="#e8874a" transform="rotate(14 30.4 10)"/>
+        ${[[21.2, 19.6], [22.3, 20.4], [20.4, 20.6], [26.8, 19.6], [25.7, 20.4], [27.6, 20.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".32" fill="#c98b6a"/>`).join("")}` }
+  };
+  let H = HEROES.david;
+  const heroId = () => {
+    if (window.iconHero && HEROES[window.iconHero]) return window.iconHero;
+    try { if (typeof profile !== "undefined" && profile && profile.gender === "f") return "tzila"; } catch (e) {}
+    return "david";
+  };
   const arm = (pts) => {               // pts: [плечо, локоть, кисть]
     const [a, b, c] = pts;
     const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    return `<path d="M${a[0]},${a[1]} L${mid[0]},${mid[1]}" stroke="${DAV.shirtD}" stroke-width="6.5" stroke-linecap="round"/>
+    return `<path d="M${a[0]},${a[1]} L${mid[0]},${mid[1]}" stroke="${H.shirtD}" stroke-width="6.5" stroke-linecap="round"/>
       <path d="M${mid[0]},${mid[1]} L${b[0]},${b[1]} L${c[0]},${c[1]}" stroke="${C.skin}" stroke-width="4.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       <circle cx="${c[0]}" cy="${c[1]}" r="3.3" fill="${C.skin}"/>`;
   };
-  const curls = [[16, 12, 4.2], [20, 8, 4.6], [25, 6.5, 4.8], [30, 8.5, 4.4], [33, 13, 3.8], [15, 17, 3.2], [33.5, 18, 3]];
-  const davHead = (mouth, eyes) => `<circle cx="24" cy="17" r="9" fill="${C.skin}"/>${curls.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${DAV.hair}"/>`).join("")}
-    <circle cx="14.6" cy="18.5" r="2" fill="${C.skin}"/><circle cx="33.4" cy="18.5" r="2" fill="${C.skin}"/>
-    ${eyes || `<circle cx="20.8" cy="17.5" r="1.25" fill="${C.ink}"/><circle cx="27.2" cy="17.5" r="1.25" fill="${C.ink}"/>`}
-    <path d="M19.5,15 Q21,14 22.3,14.6 M25.7,14.6 Q27,14 28.5,15" stroke="${DAV.hair}" stroke-width=".9" fill="none" stroke-linecap="round"/>
+  const davHead = (mouth, eyes) => `${H.ears ? `<circle cx="14.6" cy="18.5" r="2" fill="${C.skin}"/><circle cx="33.4" cy="18.5" r="2" fill="${C.skin}"/>` : ""}<circle cx="24" cy="17" r="9" fill="${C.skin}"/>${H.hair()}
+    ${eyes || `<circle cx="20.8" cy="17.5" r="1.45" fill="${H.eye}"/><circle cx="27.2" cy="17.5" r="1.45" fill="${H.eye}"/><circle cx="20.8" cy="17.6" r=".75" fill="${C.ink}"/><circle cx="27.2" cy="17.6" r=".75" fill="${C.ink}"/><circle cx="21.3" cy="17" r=".4" fill="#fff"/><circle cx="27.7" cy="17" r=".4" fill="#fff"/>`}
+    <path d="M19.5,15 Q21,14 22.3,14.6 M25.7,14.6 Q27,14 28.5,15" stroke="${H.brow}" stroke-width=".9" fill="none" stroke-linecap="round"/>
     ${mouth || `<path d="M21,21.6 Q24,24 27,21.6" stroke="${C.ink}" stroke-width="1.2" fill="none" stroke-linecap="round"/>`}
     <circle cx="19" cy="20.6" r="1.4" fill="#f4a3a3" opacity=".5"/><circle cx="29" cy="20.6" r="1.4" fill="#f4a3a3" opacity=".5"/>`;
-  const davBody = `<path d="M13,48 L13,35 Q13,28 20,27 L28,27 Q35,28 35,35 L35,48Z" fill="${DAV.shirt}"/><path d="M20,27 Q24,31 28,27" stroke="${DAV.shirtD}" stroke-width="1.4" fill="none"/>`;
-  const david = (arms, mouth, extraBack, extraFront, eyes) => svg(`<clipPath id="dvc"><rect x="-6" y="-6" width="60" height="54" rx="2"/></clipPath><g clip-path="url(#dvc)">${extraBack || ""}${davBody}${arms.map(arm).join("")}${davHead(mouth, eyes)}${extraFront || ""}</g>`);
+  const davBody = () => `<path d="M13,48 L13,35 Q13,28 20,27 L28,27 Q35,28 35,35 L35,48Z" fill="${H.shirt}"/><path d="M20,27 Q24,31 28,27" stroke="${H.shirtD}" stroke-width="1.4" fill="none"/>`;
+  const david = (arms, mouth, extraBack, extraFront, eyes) => { H = HEROES[heroId()];
+    return svg(`<clipPath id="dvc"><rect x="-6" y="-6" width="60" height="54" rx="2"/></clipPath><g clip-path="url(#dvc)">${extraBack || ""}${H.back}${davBody()}${arms.map(arm).join("")}${davHead(mouth, eyes)}${extraFront || ""}</g>`); };
   const L0 = [15, 31], R0 = [33, 31];          // плечи
   const giftBox = (x, y, w) => `<rect x="${x}" y="${y}" width="${w}" height="${w * .8}" rx="1.5" fill="${C.orange}"/><rect x="${x - 1}" y="${y - 2.4}" width="${w + 2}" height="4" rx="1" fill="#ff9f5a"/><rect x="${x + w / 2 - 1.2}" y="${y - 2.4}" width="2.4" height="${w * .8 + 2.4}" fill="${C.yellow}"/>
     <path d="M${x + w / 2},${y - 2.4} q-5,-5 -6,-1 q0,2 6,1 q5,-5 6,-1 q0,2 -6,1" fill="${C.yellow}"/>`;
@@ -123,9 +141,11 @@
       <path d="M7,27 Q8,18 18,17 Q24,14 30,17 Q40,18 41,27 Q24,21 7,27Z" fill="#d89a52"/>
       ${[13, 21, 29, 36].map(x => `<path d="M${x - 3},30 Q${x},21 ${x + 3},19" stroke="#f0c98a" stroke-width="2.6" fill="none" stroke-linecap="round"/>`).join("")}
       ${HL(16, 19, 6, 1.6, .35)}<path d="M8,36 L40,36" stroke="#9c6026" stroke-width="1.4" opacity=".5"/>`),
-    tomatoes: () => prod("tomatoes"), cucumbers: () => prod("cucumbers"), apples: () => prod("apples"), bananas: () => svg(`${SH(24, 44, 16)}
-      ${[[-18, "#f5c542"], [0, "#ffd65e"], [18, "#f5c542"]].map(([r, c]) => `<g transform="rotate(${r} 24 10)"><path d="M22,10 Q12,22 18,38 Q21,43 24,40 Q19,26 26,12Z" fill="${c}"/><path d="M22,10 Q15,22 19,36" stroke="#e0a92a" stroke-width="1" fill="none"/><path d="M18,38 Q20,42 24,40" stroke="#6b4a2b" stroke-width="2.2" stroke-linecap="round" fill="none"/></g>`).join("")}
-      <rect x="21.5" y="4" width="5" height="8" rx="2" fill="#6b8a3a"/><rect x="21.5" y="4" width="5" height="3" rx="1.5" fill="#4f6b2a"/>`),
+    tomatoes: () => prod("tomatoes"), cucumbers: () => prod("cucumbers"), apples: () => prod("apples"), bananas: () => svg(`<defs><linearGradient id="bnG" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9cc4a"/><stop offset=".35" stop-color="#f7d84a"/><stop offset="1" stop-color="#ffd23a"/></linearGradient></defs>${SH(24, 44, 17)}
+      ${[[38, 8, 6, 31, 16, 40, 22, 30], [38, 8, 10, 38, 22, 44, 25, 33], [38, 8, 19, 42, 30, 44, 30, 34]].map(([sx, sy, tx, ty, ox, oy, ix, iy]) => `<path d="M${sx},${sy} Q${ox - 18},${oy - 14} ${tx},${ty} Q${tx + 1.5},${ty + 2.5} ${tx + 4},${ty + 1} Q${ix},${iy} ${sx + 1.5},${sy + 1.5}Z" fill="url(#bnG)" stroke="#d9a520" stroke-width=".9" stroke-linejoin="round"/>
+        <circle cx="${tx + 1.6}" cy="${ty + 1.2}" r="1.3" fill="#5b3f22"/>`).join("")}
+      <path d="M36,9.5 L40.5,4.5" stroke="#6f8f2c" stroke-width="4" stroke-linecap="round"/><path d="M39.6,5.4 L41.4,3.6" stroke="#4f6b20" stroke-width="4" stroke-linecap="round"/>
+      ${HL(17, 30, 4, 1.4, .45)}`),
     potatoes: () => svg(`${SH(24, 44, 17)}
       ${[[15, 31, 10, 7.5, -10, "#c99a62"], [32, 32, 10, 7, 12, "#bd8d55"], [24, 21, 10, 7.5, 4, "#d4a86f"]].map(([x, y, rx, ry, r, c]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${c}" transform="rotate(${r} ${x} ${y})"/>${HL(x - 3, y - 3, 3, 1.4, .3)}`).join("")}
       ${[[10, 29], [13, 34], [18, 30], [20, 34], [28, 30], [31, 35], [36, 30], [37, 34], [19, 19], [24, 23], [28, 19], [22, 17], [27, 24]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#8d6538"/>`).join("")}`),

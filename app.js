@@ -362,6 +362,13 @@ if (tg && tg.BackButton) tg.BackButton.onClick(() => {
 // УРОК
 // =====================================================
 
+// Человечек на картинках к словам = герой главы (глава 1: Давид / Циля). Пишется в course.json: "hero": {"m": "...", "f": "..."}
+function setIconHero(lessonId) {
+  const ch = course && course.chapters.find(c => c.levels.some(l => (l.lessons || []).includes(lessonId)));
+  const hero = ch && ch.hero;
+  window.iconHero = hero ? hero[profile && profile.gender === "f" ? "f" : "m"] : null;
+}
+
 // --- 1. Загружаем урок из файла и начинаем ---
 function startLesson(id) {
   stopHomeBird();
@@ -372,6 +379,7 @@ function startLesson(id) {
   bar.style.width = "0%";
   updateCombo(false);
   screen.textContent = "Загрузка…";
+  setIconHero(id);
 
   fetch(`content/${COURSE_LANG}/lessons/${id}.json`)
     .then(response => response.json())
