@@ -874,3 +874,20 @@ body > div [dir="rtl"], #settings [dir="rtl"], .hs-st-bubble [dir="rtl"] {
 #options.pic-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 #options.pic-options .option { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; margin: 0; }
 .q-pic { display: flex; justify-content: center; margin: 4px 0 0; }
+
+/* ---------- Аккаунт на сервере, управление игроками (sync.js) ---------- */
+.sy-wrap { position: fixed; inset: 0; z-index: 90; background: rgba(20,30,50,.35); display: none; align-items: flex-end; justify-content: center; }
+.sy-wrap.show { display: flex; animation: fadeIn .25s ease; }
+.sy-wrap .set-sheet { max-height: 88vh; overflow-y: auto; }
+.sy-ban { z-index: 200; background: rgba(20,30,50,.85); }
+.sy-p { font-size: 15px; line-height: 1.45; margin: 8px 2px; }
+.sy-wide { width: 100%; margin: 8px 0 4px; }
+.sy-card { margin-top: 10px; }
+.sy-h { font-size: 20px; font-weight: 800; margin: 6px 0 8px; }
+.sy-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
+.sy-grid span { color: var(--hint); }
+.sy-f { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 15px; }
+.sy-f span { flex: 1; }
+.sy-f input { width: 110px; padding: 9px 10px; border: 2px solid #d9e6f2; border-radius: 12px; font: inherit; font-size: 16px; background: #fff; color: #222; }
+body.theme-dark .sy-f input { background: #1c2430; color: var(--text); border-color: #2c3a4c; }
+.sy-card .btn.confirm { color: #e5484d; border-color: #e5484d; }

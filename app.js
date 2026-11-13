@@ -194,8 +194,12 @@ function showOnboarding() {
 updateToday();
 document.getElementById("reset-profile").onclick = showOnboarding;
 // «Начать сначала»: стереть весь прогресс (с подтверждением).
-function resetAll() {
-  try { Object.keys(localStorage).filter(k => k.startsWith("hirbis_")).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+async function resetAll() {
+  // прогресс хранится и на сервере — стираем и там (согласие и ник остаются)
+  const ver = window.hirbisSync ? await hirbisSync.reset() : null;
+  const keep = ["hirbis_sync_ok", "hirbis_sync_me"].concat(ver ? [] : ["hirbis_sync_ver"]);
+  try { Object.keys(localStorage).filter(k => k.startsWith("hirbis_") && !keep.includes(k)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  if (ver) try { localStorage.setItem("hirbis_sync_ver", JSON.stringify(ver)); } catch (e) {}
   // перезапуск с «чистого листа» (адрес с меткой времени, чтобы ничего не взялось из кэша)
   location.replace(location.pathname + "?reset=" + Date.now() + location.hash);
 }
@@ -996,6 +1000,7 @@ function openSettings() {
       ${seg("translit", [["false", "Без неё ⭐"], ["true", "Показывать"]])}
       <div class="set-note">⭐ Советуем учить без транскрипции — так слова запоминаются лучше. Но выбор за тобой.</div>
       <div class="set-title">Вибрация</div>${seg("vibro", [["true", "Вкл"], ["false", "Выкл"]])}
+      ${window.hirbisSync ? hirbisSync.settingsHTML() : ""}
       <div class="set-title">Режим тестировщика</div>
       ${store.get("testmode", false)
         ? `<div class="set-test"><span>🔓 Включён: все уроки и уровни открыты</span><button class="btn ghost" id="testOff">Выключить</button></div>`
@@ -1004,6 +1009,7 @@ function openSettings() {
   box.className = "show";
   box.onclick = (e) => { if (e.target === box) closeSettings(); };
   document.getElementById("setClose").onclick = closeSettings;
+  if (window.hirbisSync) hirbisSync.settingsBind(box);
   box.querySelectorAll(".set-seg button").forEach(b => b.onclick = () => {
     const v = b.dataset.v; settings[b.dataset.k] = v === "true" ? true : v === "false" ? false : v;
     saveSettings(); playSound("pop"); openSettings();

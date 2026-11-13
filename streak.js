@@ -91,7 +91,7 @@
       <div class="sk-big">${count}<small>${daysWord(count)} подряд</small></div>
       <div class="sk-week">${week}</div>
       <p class="sk-note">${todayDone ? "Сегодня уже засчитано ✓ Возвращайся завтра!" : "Пройди сегодня один урок или квест — и серия продолжится."}</p>
-      <div class="sk-row"><span>❄️ Заморозки</span><b>${"❄️".repeat(freezes) || "нет"} <small>(${freezes} из ${MAX_FREEZES})</small></b></div>
+      <div class="sk-row"><span>❄️ Заморозки</span><b>${"❄️".repeat(freezes) || "нет"} <small>(${freezes} из ${Math.max(MAX_FREEZES, freezes)})</small></b></div>
       <p class="sk-note">Пропустил день — заморозка потратится сама, и серия не сгорит. Новая заморозка — за каждые ${FREEZE_EVERY} дней серии.</p>
       <div class="sk-row"><span>🏆 Лучшая серия</span><b>${best} ${daysWord(best)}</b></div>
     </div>`;
