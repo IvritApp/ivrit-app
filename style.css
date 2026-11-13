@@ -891,3 +891,15 @@ body > div [dir="rtl"], #settings [dir="rtl"], .hs-st-bubble [dir="rtl"] {
 .sy-f input { width: 110px; padding: 9px 10px; border: 2px solid #d9e6f2; border-radius: 12px; font: inherit; font-size: 16px; background: #fff; color: #222; }
 body.theme-dark .sy-f input { background: #1c2430; color: var(--text); border-color: #2c3a4c; }
 .sy-card .btn.confirm { color: #e5484d; border-color: #e5484d; }
+
+/* ---------- Знакомство: ник ---------- */
+.btn.ob-tg { background: #2aabee; color: #fff; border-bottom: 4px solid #1a8bc7; font-size: 19px; font-weight: 800; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px; }
+.btn.ob-tg small { font-size: 14px; font-weight: 600; opacity: .9; }
+.ob-or { text-align: center; color: var(--hint); font-size: 14px; margin: 10px 0 6px; }
+.ob-nick { display: flex; align-items: center; gap: 4px; border: 2px solid #d9e6f2; border-radius: 16px; padding: 0 14px; background: #fff; }
+.ob-nick span { font-size: 20px; font-weight: 800; color: #3a8ad6; }
+.ob-nick input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 14px 0; font: inherit; font-size: 19px; background: transparent; color: #222; }
+body.theme-dark .ob-nick { background: #1c2430; border-color: #2c3a4c; }
+body.theme-dark .ob-nick input { color: var(--text); }
+.ob-nick-st { min-height: 20px; font-size: 14px; margin: 6px 4px; color: var(--hint); }
+.ob-nick-st.ok { color: #2e9d50; font-weight: 700; } .ob-nick-st.bad { color: #e5484d; }

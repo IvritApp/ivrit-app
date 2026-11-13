@@ -30,7 +30,7 @@ ORIGINS = {"https://ivritapp.github.io", "http://localhost:8765"}
 MSK = timezone(timedelta(hours=3))
 INITDATA_MAX_AGE = 7 * 86400          # initData старше недели не принимаем
 LOCK = threading.Lock()
-HANDLE_RE = re.compile(r"^[a-z0-9_]{3,16}$")
+HANDLE_RE = re.compile(r"^[a-z0-9_]{3,32}$")
 
 
 def db():
@@ -166,6 +166,12 @@ class Handler(BaseHTTPRequestHandler):
     def route(self, c, route, user, p):
         uid = int(user["id"])
         now = time.time()
+        if route == "/hapi/check":                                 # свободен ли ник (аккаунт не создаём)
+            h = str(p.get("handle", "")).strip().lstrip("@").lower()
+            if not HANDLE_RE.match(h):
+                return 200, {"ok": False, "error": "3–32 символа: латиница, цифры и _"}
+            other = c.execute("SELECT tg_id FROM players WHERE handle=?", (h,)).fetchone()
+            return 200, {"ok": not other or other["tg_id"] == uid, "error": "" if not other or other["tg_id"] == uid else "Этот ник уже занят"}
         name = " ".join(x for x in [user.get("first_name"), user.get("last_name")] if x)[:60]
         r = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
         if not r:
@@ -198,7 +204,7 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/hapi/handle":
             h = str(p.get("handle", "")).strip().lstrip("@").lower()
             if not HANDLE_RE.match(h):
-                return 200, dict(me, error="Ник: 3–16 символов, латиница, цифры и _")
+                return 200, dict(me, error="Ник: 3–32 символа, латиница, цифры и _")
             other = c.execute("SELECT tg_id FROM players WHERE handle=?", (h,)).fetchone()
             if other and other["tg_id"] != uid:
                 return 200, dict(me, error="Этот ник уже занят")

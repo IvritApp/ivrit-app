@@ -140,7 +140,20 @@ function showOnboarding() {
         <button class="g-card ${draft.gender === "f" ? "on" : ""}" data-g="f"><span>🙋‍♀️</span>Я девушка</button>
       </div>
       <button class="btn blue" data-next id="ob-go" ${draft.gender && draft.name ? "" : "disabled"}>Дальше</button>`,
-    // 3. Завязка истории
+    // 3. Ник (юз) — как @юзернейм в Telegram. Только внутри Telegram (нужен сервер)
+    () => {
+      const tgNick = user && user.username ? user.username : "";
+      return `
+      <h1 class="ob-title">Придумай ник</h1>
+      <p class="ob-text small">По нику тебя найдут друзья — как @юзернейм в Telegram.</p>
+      ${tgNick ? `<button class="btn ob-tg" id="ob-tgnick">✈️ Перенести из Telegram<small>@${tgNick}</small></button>
+      <div class="ob-or">или придумай свой</div>` : ""}
+      <label class="ob-nick"><span>@</span><input id="ob-nick" maxlength="32" placeholder="твой_ник" autocomplete="off" autocapitalize="off" spellcheck="false" value="${draft.nick || ""}"></label>
+      <div class="ob-nick-st" id="ob-nick-st"></div>
+      <p class="ob-text small">Нажимая «Дальше», ты соглашаешься, что твой прогресс хранится на нашем сервере в России — чтобы он не потерялся при смене телефона и перешёл в приложение Hirbis.</p>
+      <button class="btn blue" data-next id="ob-go2" disabled>Дальше</button>`;
+    },
+    // 4. Завязка истории
     () => {
       const st = STORY[draft.gender];
       return `
@@ -165,16 +178,39 @@ function showOnboarding() {
       obStep.querySelectorAll(".g-card").forEach(x => x.classList.toggle("on", x === c));
       vibrate("success"); check();
     });
+    // шаг «ник»: проверяем на сервере, свободен ли
+    const nick = document.getElementById("ob-nick");
+    if (nick) {
+      const st = document.getElementById("ob-nick-st"), go2 = document.getElementById("ob-go2");
+      let tmr = null, seq = 0;
+      const test = async () => {
+        const v = nick.value.trim().replace(/^@/, "").toLowerCase(); draft.nick = v; draft.nickOk = false; go2.disabled = true;
+        if (!v) { st.textContent = ""; st.className = "ob-nick-st"; return; }
+        if (!/^[a-z0-9_]{3,32}$/.test(v)) { st.textContent = "3–32 символа: латинские буквы, цифры и _"; st.className = "ob-nick-st bad"; return; }
+        st.textContent = "Проверяю…"; st.className = "ob-nick-st";
+        const my = ++seq, r = await hirbisSync.checkHandle(v); if (my !== seq) return;
+        if (r.ok) { st.textContent = r.offline ? "Проверим, когда появится связь" : `✓ @${v} свободен`; st.className = "ob-nick-st ok"; draft.nickOk = true; go2.disabled = false; }
+        else { st.textContent = "✗ " + (r.error || "Ник занят"); st.className = "ob-nick-st bad"; }
+      };
+      nick.oninput = () => { nick.value = nick.value.replace(/[^A-Za-z0-9_@]/g, ""); clearTimeout(tmr); tmr = setTimeout(test, 400); };
+      const tgb = document.getElementById("ob-tgnick");
+      if (tgb) tgb.onclick = () => { nick.value = user.username; vibrate("success"); test(); };
+      if (nick.value) test();
+    }
     const next = obStep.querySelector("[data-next]");
     next.onclick = () => {
-      if (i === 2 && "speechSynthesis" in window) speak(STORY[draft.gender].ready.he);
+      const S_NICK = 2, S_STORY = 3;
+      if (i === S_STORY && "speechSynthesis" in window) speak(STORY[draft.gender].ready.he);
+      if (i === S_NICK) { if (!draft.nickOk) return; hirbisSync.chooseHandle(draft.nick); i = S_STORY; render(); return; }
       if (i === 1) {                                   // после имени и пола — создаём героя
         const base = draft.avatar && draft.avatarGender === draft.gender ? draft.avatar : HirbisAvatar.defaults(draft.gender);
         stopHomeBird();
         HirbisAvatar.openEditor(base, cfg => {
           draft.avatar = cfg; draft.avatarGender = draft.gender;
           onboardView.hidden = false; startHomeBird();
-          i = 2; render();
+          // ник спрашиваем только в Telegram и только у тех, кто ещё не выбрал
+          const needNick = window.hirbisSync && hirbisSync.active && !store.get("sync_ok", false);
+          i = needNick ? 2 : 3; render();
         });
         return;
       }

@@ -8,7 +8,7 @@
 // =====================================================
 (function () {
   const API = "https://89-23-99-107.sslip.io/hapi";
-  const NOSYNC = ["testmode", "combo", "nolisten_until", "sync_ver", "sync_hash", "sync_ok", "sync_me"];
+  const NOSYNC = ["testmode", "combo", "nolisten_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want"];
   const P = "hirbis_";
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;
@@ -54,6 +54,11 @@
       const res = await api("/sync", { ver, state: changed ? snap : null, consent: true }, keepalive);
       online = true; gotMe(res);
       if (res.banned) return;
+      const want = lsGet("sync_want", null);                 // ник, выбранный при знакомстве
+      if (want) {
+        try { const r2 = await api("/handle", { handle: want }); if (!r2.error) gotMe(r2); else if (typeof showToast === "function") showToast(r2.error + " — ник: @" + me.handle); } catch (e) {}
+        try { localStorage.removeItem(P + "sync_want"); } catch (e) {}
+      }
       if (res.state) {                              // на сервере новее — берём оттуда
         const same = hash(res.state) === h;
         applyState(res.state, res.ver);
@@ -113,7 +118,7 @@
     const e = box.querySelector("#syNickEdit");
     if (e) e.onclick = () => {
       const row = box.querySelector("#syNickRow");
-      row.innerHTML = `<input id="syNick" value="${esc(me.handle)}" maxlength="16" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickSave">Сохранить</button>`;
+      row.innerHTML = `<input id="syNick" value="${esc(me.handle)}" maxlength="32" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickSave">Сохранить</button>`;
       const inp = row.querySelector("#syNick"); inp.focus();
       row.querySelector("#syNickSave").onclick = async () => {
         try {
@@ -210,6 +215,16 @@
     try { const r = await api("/reset", {}); return r.ver; } catch (e) { return null; }
   }
 
-  window.hirbisSync = { sync, reset, settingsHTML, settingsBind, openAdmin, me: () => me };
-  if (initData) { if (lsGet("sync_ok", false)) sync(); else setTimeout(askConsent, 800); }
+  // --- для знакомства: проверить ник и запомнить выбор (согласие даётся кнопкой «Дальше») ---
+  async function checkHandle(h) {
+    try { return await api("/check", { handle: h }); } catch (e) { return { ok: true, offline: true }; }
+  }
+  function chooseHandle(h) { if (h) lsSet("sync_want", String(h).replace(/^@/, "").toLowerCase()); lsSet("sync_ok", true); sync(); }
+
+  window.hirbisSync = { sync, reset, settingsHTML, settingsBind, openAdmin, checkHandle, chooseHandle, active: !!initData, me: () => me };
+  // окно согласия — только тем, кто уже играл (новички соглашаются на шаге «ник»)
+  if (initData) {
+    if (lsGet("sync_ok", false)) sync();
+    else setTimeout(() => { if (typeof profile !== "undefined" && profile && !lsGet("sync_ok", false)) askConsent(); }, 800);
+  }
 })();
