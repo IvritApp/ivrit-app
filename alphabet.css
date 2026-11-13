@@ -104,3 +104,20 @@ body.theme-dark .ab-note { background: #3a2a14; color: #ffd29c; }
 
 .ab-bounce { animation: abBounce .3s ease; }
 @keyframes abBounce { 40% { transform: scale(.92); } }
+
+/* ===== 13.11: огласовки красным и крупнее, подсказка под своим столбцом, картинки к словам ===== */
+.ab-nk { position: relative; display: inline-block; }
+.ab-nk-m { color: #e5484d; }
+.ab-nk-c { position: absolute; left: 0; top: 0; right: 0; color: var(--text); pointer-events: none; }
+.ab-syl { padding: 8px 0 6px; }
+.ab-syl-he { font-size: 48px; line-height: 1.4; font-weight: 700; }
+.ab-syl-tr { font-size: 15px; font-weight: 700; color: #3a8ad6; }
+.ab-form-he { font-size: 64px; }
+.ab-legend { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 2px 0 6px; }
+.ab-vw { display: flex; flex-direction: column; align-items: center; gap: 0; font-size: 13px; color: var(--hint); }
+.ab-vw-he { font-size: 30px; line-height: 1.35; }
+.ab-vw-tr { font-size: 16px; font-weight: 700; color: #e5484d; }
+.ab-vw-name { font-size: 10px; text-align: center; line-height: 1.15; }
+.ab-word { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ab-word-pic { flex: none; }
+.ab-word-he { font-size: 30px; line-height: 1.35; }

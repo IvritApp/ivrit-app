@@ -13,6 +13,10 @@
   let data = null;        // содержимое letters.json
   let current = -1;       // номер открытой буквы, -1 = таблица
 
+  // Огласовки красным: два слоя — снизу весь текст красным, сверху те же буквы без огласовок чёрным
+  const MARKS = /[\u0591-\u05C7]/g;
+  const nk = he => `<span class="ab-nk"><span class="ab-nk-m">${he}</span><span class="ab-nk-c" aria-hidden="true">${String(he).replace(MARKS, "")}</span></span>`;
+  const pic = (w, size) => (typeof wordIcon === "function" ? wordIcon({ ru: w.ru, img: w.img }, size) : "");
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const say = (text, audio) => { if (typeof speak === "function") speak(text, audio ? { audio } : undefined); };
   const pop = () => { if (typeof playSound === "function") playSound("pop"); };
@@ -81,7 +85,7 @@
 
     const forms = L.forms.map(f => `
       <button class="ab-form" data-say="${esc(f.ch)}">
-        <span class="ab-form-he" dir="rtl">${f.ch}</span>
+        <span class="ab-form-he" dir="rtl">${nk(f.ch)}</span>
         <span class="ab-form-sound">${f.tr ? "«" + esc(f.sound) + "»" : esc(f.sound)}</span>
         ${f.label ? `<span class="ab-form-label">${esc(f.label)}</span>` : ""}
       </button>`).join("");
@@ -90,17 +94,19 @@
       <div class="ab-syl-row" dir="rtl">
         ${syllables(f).map(s => `
           <button class="ab-syl" data-say="${esc(s.he)}">
-            <span class="ab-syl-he">${s.he}</span>
+            <span class="ab-syl-he">${nk(s.he)}</span>
             <span class="ab-syl-tr" dir="ltr">${esc(s.tr)}</span>
           </button>`).join("")}
       </div>`).join("");
 
+    // подсказка под слогами: те же 5 столбцов и тот же порядок (справа налево), что и слоги
     const legend = data.vowels.map(v =>
-      `<span class="ab-vw"><bdi class="ab-vw-he" dir="rtl">◌${v.mark}${v.alt ? "\u2009◌" + v.alt : ""}</bdi> = ${v.tr}</span>`).join("");
+      `<span class="ab-vw"><bdi class="ab-vw-he" dir="rtl">${nk("◌" + v.mark)}${v.alt ? " " + nk("◌" + v.alt) : ""}</bdi><span class="ab-vw-tr">${v.tr}</span><span class="ab-vw-name">${esc(v.name)}</span></span>`).join("");
 
     const words = L.words.map((w, k) => `
       <button class="ab-word" data-k="${k}">
-        <span class="ab-word-he" dir="rtl">${w.he}</span>
+        ${pic(w, 46) ? `<span class="ab-word-pic">${pic(w, 46)}</span>` : ""}
+        <span class="ab-word-he" dir="rtl">${nk(w.he)}</span>
         <span class="ab-word-ans"><span class="ab-word-tr">${esc(w.tr)}</span> — ${esc(w.ru)}</span>
         <span class="ab-word-hint">нажми, чтобы проверить</span>
       </button>`).join("");
@@ -123,7 +129,7 @@
 
         ${rows ? `<h3 class="ab-h">С огласовками</h3>
         ${rows}
-        <div class="ab-legend">${legend}</div>` : ""}
+        <div class="ab-legend" dir="rtl">${legend}</div>` : ""}
 
         <h3 class="ab-h">Прочитай сам</h3>
         <p class="ab-sub">Попробуй прочитать слово, потом нажми на него</p>
