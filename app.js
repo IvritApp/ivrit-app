@@ -339,6 +339,7 @@ if (!profile) showOnboarding(); else startHomeBird();
 document.getElementById("go-learn").onclick = () => showPath();
 
 // Алфавит — отдельный раздел (alphabet.js задаёт window.openAlphabet)
+document.getElementById("home-settings").onclick = () => openSettings();
 document.getElementById("go-alphabet").onclick = () => {
   if (typeof window.openAlphabet !== "function") { showToast("Алфавит загружается… попробуй ещё раз"); return; }
   stopHomeBird();

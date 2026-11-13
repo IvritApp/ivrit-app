@@ -8,7 +8,7 @@
 // =====================================================
 (function () {
   const API = "https://89-23-99-107.sslip.io/hapi";
-  const NOSYNC = ["testmode", "combo", "nolisten_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want"];
+  const NOSYNC = ["testmode", "combo", "nolisten_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode"];
   const P = "hirbis_";
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;
@@ -39,7 +39,7 @@
   }
 
   function gotMe(res) {
-    if (res.handle) { me = { handle: res.handle, admin: !!res.admin, tg_id: res.tg_id }; lsSet("sync_me", me); }
+    if (res.handle) { me = { handle: res.handle, nicks: res.nicks || [res.handle], nick_limit: res.nick_limit == null ? 3 : res.nick_limit, admin: !!res.admin, tg_id: res.tg_id }; lsSet("sync_me", me); }
     if (res.banned) showBan(res.banned);
   }
 
@@ -102,111 +102,199 @@
     box.classList.add("sy-ban");
   }
 
-  // --- блок «Аккаунт» в настройках ---
+  // --- блок «Аккаунт» в настройках: ники; «Режим админа» — только для админов ---
+  const adminMode = () => !!(me && me.admin && lsGet("adminmode", false));
   function settingsHTML() {
     if (!initData) return "";
-    const tm = typeof testMode === "function" && testMode();
-    const status = !lsGet("sync_ok", false) ? "Прогресс пока хранится только на этом телефоне"
+    const ok = lsGet("sync_ok", false);
+    const status = !ok ? "Прогресс пока хранится только на этом телефоне"
       : online === false ? "⚠️ Нет связи с сервером — сохраним, когда появится" : "☁️ Прогресс сохраняется на сервере";
+    const nicks = (me && me.nicks) || (me ? [me.handle] : []);
+    const lim = me ? me.nick_limit : 3, unl = lim === -1;
+    const canAdd = me && (unl || nicks.length < lim);
     return `<div class="set-title">Аккаунт</div>
-      <div class="set-test" id="syNickRow"><span>Твой ник: <b>${me ? "@" + esc(me.handle) : "…"}</b></span>${me ? `<button class="btn ghost" id="syNickEdit">Изменить</button>` : ""}</div>
-      <div class="set-note">${status}${!lsGet("sync_ok", false) ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
-      ${tm ? (me && me.admin ? `<button class="btn blue sy-wide" id="syAdmin">🛠 Управление игроками</button>`
-        : `<div class="set-note">🛠 Управление игроками доступно админам. Твой ID: ${me ? me.tg_id : "—"}</div>`) : ""}`;
+      ${me ? `<div class="sy-nicks">${nicks.map(n => `<span class="sy-chip ${n === me.handle ? "main" : ""}" data-n="${esc(n)}">@${esc(n)}${n === me.handle ? " ⭐" : ""}</span>`).join("")}</div>
+      <div class="set-note">⭐ — основной ник, его видят друзья. Ников: ${nicks.length} из ${unl ? "∞" : lim}. Нажми на ник, чтобы сделать основным или удалить.</div>
+      <div id="syNickAct"></div>
+      ${canAdd ? `<div class="set-test"><input id="syNickNew" maxlength="32" placeholder="ещё один ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickAdd">Добавить</button></div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
+      <div class="set-note">${status}${!ok ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
+      ${me && me.admin ? `<div class="set-title">👑 Режим админа</div>
+        ${adminMode()
+          ? `<div class="set-test"><span>👑 Включён: полный доступ к любому аккаунту</span><button class="btn ghost" id="syAdmOff">Выключить</button></div>
+             <button class="btn blue sy-wide" id="syAdmin">👑 Админ-панель</button>`
+          : `<div class="set-test"><span>Только для владельца</span><button class="btn blue" id="syAdmOn">Включить</button></div>`}` : ""}`;
+  }
+  async function nickCall(path, handle, okText) {
+    try {
+      const res = await api(path, { handle });
+      if (res.error) { showToast(res.error); return; }
+      gotMe(res); if (okText) showToast(okText); openSettings();
+    } catch (e) { showToast("Нет связи с сервером"); }
   }
   function settingsBind(box) {
-    const e = box.querySelector("#syNickEdit");
-    if (e) e.onclick = () => {
-      const row = box.querySelector("#syNickRow");
-      row.innerHTML = `<input id="syNick" value="${esc(me.handle)}" maxlength="32" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickSave">Сохранить</button>`;
-      const inp = row.querySelector("#syNick"); inp.focus();
-      row.querySelector("#syNickSave").onclick = async () => {
-        try {
-          const res = await api("/handle", { handle: inp.value });
-          if (res.error) { showToast(res.error); return; }
-          gotMe(res); showToast("Ник сохранён: @" + res.handle); openSettings();
-        } catch (er) { showToast("Нет связи с сервером"); }
+    box.querySelectorAll(".sy-chip").forEach(ch => ch.onclick = () => {
+      const n = ch.dataset.n, act = box.querySelector("#syNickAct");
+      box.querySelectorAll(".sy-chip").forEach(x => x.classList.toggle("sel", x === ch));
+      act.innerHTML = `<div class="set-test"><span>@${esc(n)}</span>
+        ${n !== me.handle ? `<button class="btn blue" id="syMain">⭐ Основной</button>` : ""}
+        ${(me.nicks || []).length > 1 ? `<button class="btn ghost" id="syDel">Удалить</button>` : ""}</div>`;
+      const m = act.querySelector("#syMain"); if (m) m.onclick = () => nickCall("/nicks/main", n, "Основной ник: @" + n);
+      const d = act.querySelector("#syDel");
+      if (d) d.onclick = () => {
+        if (!d.classList.contains("confirm")) { d.classList.add("confirm"); d.textContent = "Точно? Ник освободится"; return; }
+        nickCall("/nicks/remove", n, "Ник @" + n + " удалён");
       };
-    };
+    });
+    const add = box.querySelector("#syNickAdd");
+    if (add) add.onclick = () => nickCall("/nicks/add", box.querySelector("#syNickNew").value, "Ник добавлен");
     const c = box.querySelector("#syConsentOpen"); if (c) c.onclick = (ev) => { ev.preventDefault(); askConsent(); };
-    const a = box.querySelector("#syAdmin"); if (a) a.onclick = openAdmin;
+    const on = box.querySelector("#syAdmOn"); if (on) on.onclick = () => { lsSet("adminmode", true); showToast("👑 Режим админа включён"); openSettings(); };
+    const off = box.querySelector("#syAdmOff"); if (off) off.onclick = () => { lsSet("adminmode", false); showToast("Режим админа выключен"); openSettings(); };
+    const a = box.querySelector("#syAdmin"); if (a) a.onclick = () => openAdmin();
   }
 
-  // --- 🛠 Управление игроками (режим тестировщика + права админа) ---
+  // --- 👑 АДМИН-ПАНЕЛЬ: любой аккаунт, все функции ---
+  const dt = t => t ? new Date(t * 1000).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
   function openAdmin(handle) {
-    const box = sheet("syAdminSheet", `<div class="set-head"><b>🛠 Игроки</b><button class="set-x" id="syAx">✕</button></div>
-      <div class="set-test"><input id="syFind" placeholder="ник игрока, например david_k" autocomplete="off" autocapitalize="off" value="${esc(typeof handle === "string" ? handle : "")}"><button class="btn blue" id="syGo">Найти</button></div>
+    const box = sheet("syAdminSheet", `<div class="set-head"><b>👑 Админ-панель</b><button class="set-x" id="syAx">✕</button></div>
+      <div class="set-seg" id="syTabs"><button data-t="find" class="on">Игроки</button><button data-t="log">Журнал</button></div>
+      <div class="set-test"><input id="syFind" placeholder="ник, имя или ID" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syGo">Найти</button></div>
       <div id="syCard"></div>`, true);
     box.querySelector("#syAx").onclick = () => box.classList.remove("show");
-    const find = async () => {
-      const h = box.querySelector("#syFind").value.trim().replace(/^@/, "");
-      if (!h) return;
-      box.querySelector("#syCard").innerHTML = `<p class="sy-p">Ищу…</p>`;
-      try { const res = await api("/admin/get", { handle: h }); renderCard(box, res); }
-      catch (e) { box.querySelector("#syCard").innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; }
+    const card = box.querySelector("#syCard"), inp = box.querySelector("#syFind");
+    const list = async () => {
+      card.innerHTML = `<p class="sy-p">Ищу…</p>`;
+      try {
+        const res = await api("/admin/list", { q: inp.value.trim().replace(/^@/, "") });
+        if (res.error) { card.innerHTML = `<p class="sy-p">${esc(res.error)}</p>`; return; }
+        card.innerHTML = `<div class="set-note">Всего игроков: ${res.total}${inp.value ? ` · найдено: ${res.players.length}` : " · последние по активности"}</div>` +
+          res.players.map(x => `<button class="sy-row" data-h="${esc(x.handle)}"><b>@${esc(x.handle)}</b>${x.admin ? " 👑" : ""}${x.banned ? " ⛔" : ""}<span>${esc(x.name || "")}${x.tg_username ? " · tg @" + esc(x.tg_username) : ""} · ${dt(x.last_seen)}</span></button>`).join("");
+        card.querySelectorAll(".sy-row").forEach(b => b.onclick = () => openPlayer(b.dataset.h));
+      } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; }
     };
-    box.querySelector("#syGo").onclick = find;
-    box.querySelector("#syFind").onkeydown = (e) => { if (e.key === "Enter") find(); };
-    if (typeof handle === "string" && handle) find();
+    const openPlayer = async (h) => {
+      card.innerHTML = `<p class="sy-p">Открываю @${esc(h)}…</p>`;
+      try { renderCard(box, await api("/admin/get", { handle: h }), list); } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; }
+    };
+    const log = async () => {
+      card.innerHTML = `<p class="sy-p">Загружаю…</p>`;
+      try {
+        const res = await api("/admin/log", {});
+        card.innerHTML = (res.log || []).map(x => `<div class="sy-log"><b>${dt(x.at)}</b> @${esc(x.admin)} → @${esc(x.target)}<span>${esc(x.what)}</span></div>`).join("") || `<p class="sy-p">Пока пусто</p>`;
+      } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; }
+    };
+    box.querySelector("#syTabs").onclick = (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      box.querySelectorAll("#syTabs button").forEach(x => x.classList.toggle("on", x === b));
+      b.dataset.t === "log" ? log() : list();
+    };
+    box.querySelector("#syGo").onclick = list;
+    inp.onkeydown = (e) => { if (e.key === "Enter") list(); };
+    if (typeof handle === "string" && handle) openPlayer(handle); else list();
   }
-  function renderCard(box, res) {
+  function renderCard(box, res, back) {
     const card = box.querySelector("#syCard");
-    if (res.error) { card.innerHTML = `<p class="sy-p">${esc(res.error)}</p>`; return; }
-    const p = res.player, s = p.streak, now = Date.now() / 1000;
-    const dt = t => t ? new Date(t * 1000).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
-    const banned = p.banned_until > now;
-    const prof = p.profile || {};
+    if (res.error && !res.player) { card.innerHTML = `<p class="sy-p">${esc(res.error)}</p>`; return; }
+    if (res.error) showToast(res.error);
+    const p = res.player, s = p.streak, now = Date.now() / 1000, prof = p.profile || {};
+    const banned = p.banned_until > now, isMe = me && p.tg_id === me.tg_id;
+    const lim = p.nick_limit_raw === -1 ? "inf" : String(p.nick_limit_raw == null ? 3 : p.nick_limit_raw);
     card.innerHTML = `<div class="sy-card">
-      <div class="sy-h">@${esc(p.handle)}${p.admin ? " · админ" : ""}</div>
+      <button class="btn ghost" id="syBack">‹ Все игроки</button>
+      <div class="sy-h">@${esc(p.handle)}${p.admin ? " 👑" : ""}${isMe ? " (это ты)" : ""}</div>
       <div class="sy-grid">
         <span>В игре</span><b>${esc(prof.name || "—")} ${prof.gender === "f" ? "♀" : prof.gender === "m" ? "♂" : ""}</b>
         <span>Telegram</span><b>${esc(p.name || "")} ${p.tg_username ? "@" + esc(p.tg_username) : ""}</b>
         <span>ID</span><b>${p.tg_id}</b>
         <span>С нами с</span><b>${dt(p.created)}</b>
         <span>Был(а)</span><b>${dt(p.last_seen)}</b>
-        <span>Уроков</span><b>${p.done} (⭐ ${p.perfect})</b>
+        <span>Согласие</span><b>${p.consent ? "✓ " + dt(p.consent) : "—"}</b>
+        <span>Уроков</span><b>${p.done} (⭐ ${p.perfect}) · квестов ${p.quests}</b>
         <span>Медали</span><b>${Object.values(p.medals || {}).join(" ") || "—"}</b>
         <span>Очки</span><b>${p.points_total} (сегодня ${p.points_today})</b>
+        <span>Серия</span><b>🔥 ${s.count} · лучшая ${s.best} · ❄️ ${s.freezes}</b>
         <span>Статус</span><b>${banned ? "⛔ заблокирован " + (p.banned_until > 4.1e9 ? "навсегда" : "до " + dt(p.banned_until)) + (p.ban_reason ? " — " + esc(p.ban_reason) : "") : "✅ активен"}</b>
       </div>
-      <div class="set-title">Изменить</div>
+
+      <div class="set-title">Прогресс</div>
       <label class="sy-f"><span>🔥 Серия, дней</span><input type="number" min="0" id="syCount" value="${s.count}"></label>
       <label class="sy-f"><span>🏆 Лучшая серия</span><input type="number" min="0" id="syBest" value="${s.best}"></label>
       <label class="sy-f"><span>❄️ Заморозки</span><input type="number" min="0" id="syFr" value="${s.freezes}"></label>
       <label class="sy-f"><span>➕ Добавить очков</span><input type="number" id="syPts" value="0"></label>
+      <label class="sy-f"><span>Имя в игре</span><input id="syName" value="${esc(prof.name || "")}" maxlength="20"></label>
+      <div class="set-seg" id="syGender"><button data-g="m" class="${prof.gender === "m" ? "on" : ""}">Парень</button><button data-g="f" class="${prof.gender === "f" ? "on" : ""}">Девушка</button></div>
       <button class="btn blue sy-wide" id="sySave">Сохранить</button>
+
+      <div class="set-title">Ники</div>
+      <div class="sy-nicks">${p.nicks.map(n => `<span class="sy-chip ${n === p.handle ? "main" : ""}" data-n="${esc(n)}">@${esc(n)}${n === p.handle ? " ⭐" : ""}</span>`).join("")}</div>
+      <div id="syANickAct"></div>
+      <div class="set-test"><input id="syANick" maxlength="32" placeholder="дать ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syANickAdd">Дать</button></div>
+      <div class="set-note" id="syANickNote"></div>
+      <label class="sy-f"><span>Лимит ников</span><select id="syLim">${["1", "2", "3", "5", "10", "inf"].map(v => `<option value="${v}" ${v === lim ? "selected" : ""}>${v === "inf" ? "∞ без ограничений" : v}</option>`).join("")}${["1", "2", "3", "5", "10", "inf"].includes(lim) ? "" : `<option selected value="${lim}">${lim}</option>`}</select></label>
+
       <div class="set-title">Блокировка</div>
       ${banned ? `<button class="btn ghost sy-wide" id="syUnban">Разблокировать</button>`
+        : isMe ? `<div class="set-note">Себя заблокировать нельзя</div>`
         : `<div class="set-seg" id="syDays"><button data-d="1">1 день</button><button data-d="7" class="on">7 дней</button><button data-d="30">30 дней</button><button data-d="0">Навсегда</button></div>
         <div class="set-test"><input id="syReason" placeholder="Причина" maxlength="200"><button class="btn ghost" id="syBanGo">⛔ Заблок.</button></div>`}
+
+      <div class="set-title">Права</div>
+      ${isMe ? `<div class="set-note">Ты владелец 👑</div>` : `<button class="btn ghost sy-wide" id="syAdm">${p.admin ? "Снять права админа" : "👑 Сделать админом"}</button>`}
+
       <div class="set-title">Опасно</div>
       <button class="btn ghost sy-wide" id="syReset">Стереть прогресс игрока</button>
     </div>`;
     const set = async (body, okText) => {
-      try { const r = await api("/admin/set", Object.assign({ handle: p.handle }, body)); renderCard(box, r); if (!r.error) showToast(okText); }
+      try { const r = await api("/admin/set", Object.assign({ handle: p.handle }, body)); renderCard(box, r, back); if (!r.error) showToast(okText); return r; }
       catch (e) { showToast("Нет связи с сервером"); }
     };
+    const confirm2 = (btn, text, fn) => () => { if (!btn.classList.contains("confirm")) { btn.classList.add("confirm"); btn.textContent = text; return; } fn(); };
+    card.querySelector("#syBack").onclick = back;
+    const gsel = card.querySelector("#syGender");
+    gsel.onclick = (e) => { const b = e.target.closest("button"); if (b) gsel.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); };
     card.querySelector("#sySave").onclick = () => {
       const n = id => card.querySelector(id).value === "" ? null : +card.querySelector(id).value;
       const body = { streak: {} };
       if (n("#syCount") !== s.count) body.streak.count = n("#syCount");
       if (n("#syBest") !== s.best) body.streak.best = n("#syBest");
       if (n("#syFr") !== s.freezes) body.streak.freezes = n("#syFr");
-      if (n("#syPts")) body.addPoints = n("#syPts");
       if (!Object.keys(body.streak).length) delete body.streak;
-      if (Object.keys(body).length === 0) { showToast("Ничего не изменено"); return; }
+      if (n("#syPts")) body.addPoints = n("#syPts");
+      const nm = card.querySelector("#syName").value.trim(), g = (gsel.querySelector(".on") || {}).dataset;
+      const prf = {};
+      if (nm && nm !== prof.name) prf.name = nm;
+      if (g && g.g && g.g !== prof.gender) prf.gender = g.g;
+      if (Object.keys(prf).length) body.profile = prf;
+      if (!Object.keys(body).length) { showToast("Ничего не изменено"); return; }
       set(body, "Сохранено ✓ Игрок увидит при следующем открытии");
     };
+    // ники
+    card.querySelectorAll(".sy-chip").forEach(ch => ch.onclick = () => {
+      const n = ch.dataset.n, act = card.querySelector("#syANickAct");
+      act.innerHTML = `<div class="set-test"><span>@${esc(n)}</span>${n !== p.handle ? `<button class="btn blue" id="syAMain">⭐ Основной</button>` : ""}<button class="btn ghost" id="syADel">Забрать</button></div>`;
+      const m = act.querySelector("#syAMain"); if (m) m.onclick = () => set({ nick: { action: "main", handle: n } }, "Основной ник: @" + n);
+      const d = act.querySelector("#syADel"); d.onclick = confirm2(d, "Точно забрать?", () => set({ nick: { action: "remove", handle: n } }, "Ник @" + n + " забран"));
+    });
+    card.querySelector("#syANickAdd").onclick = async () => {
+      const h = card.querySelector("#syANick").value;
+      const r = await set({ nick: { action: "add", handle: h } }, "Ник выдан");
+      if (r && r.error && /уже у другого/.test(r.error)) {
+        const note = box.querySelector("#syANickNote");
+        note.innerHTML = `${esc(r.error)} <button class="btn ghost" id="syForce">Забрать и отдать</button>`;
+        note.querySelector("#syForce").onclick = () => set({ nick: { action: "add", handle: h, force: true } }, "Ник передан");
+      }
+    };
+    card.querySelector("#syLim").onchange = (e) => set({ nickLimit: e.target.value === "inf" ? "inf" : +e.target.value }, "Лимит ников изменён");
+    // бан, права, сброс
     const days = card.querySelector("#syDays");
     if (days) days.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; days.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); };
     const bg = card.querySelector("#syBanGo");
     if (bg) bg.onclick = () => set({ ban: { days: +days.querySelector(".on").dataset.d, reason: card.querySelector("#syReason").value } }, "Игрок заблокирован");
     const ub = card.querySelector("#syUnban"); if (ub) ub.onclick = () => set({ ban: null }, "Игрок разблокирован");
+    const ad = card.querySelector("#syAdm");
+    if (ad) ad.onclick = confirm2(ad, p.admin ? "Точно снять?" : "Точно дать полный доступ?", () => set({ admin: !p.admin }, p.admin ? "Права сняты" : "Теперь админ 👑"));
     const rs = card.querySelector("#syReset");
-    rs.onclick = () => {
-      if (!rs.classList.contains("confirm")) { rs.classList.add("confirm"); rs.textContent = "Точно стереть? Нажми ещё раз"; return; }
-      set({ resetProgress: true }, "Прогресс игрока стёрт");
-    };
+    rs.onclick = confirm2(rs, "Точно стереть? Нажми ещё раз", () => set({ resetProgress: true }, "Прогресс игрока стёрт"));
   }
 
   // --- «Начать сначала»: стираем и на сервере ---

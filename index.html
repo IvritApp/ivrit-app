@@ -7,9 +7,9 @@
   <!-- Библиотека Telegram -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Оформление -->
-  <link rel="stylesheet" href="style.css?v=20261114b">
-  <link rel="stylesheet" href="avatar.css?v=20261114b">
-  <link rel="stylesheet" href="scene.css?v=20261114b">
+  <link rel="stylesheet" href="style.css?v=20261114d">
+  <link rel="stylesheet" href="avatar.css?v=20261114d">
+  <link rel="stylesheet" href="scene.css?v=20261114d">
 </head>
 <body>
   <!-- ===== ГЛАВНЫЙ ЭКРАН ===== -->
@@ -32,6 +32,7 @@
   </section>
 
   <section id="home">
+    <button class="p-settings home-gear" id="home-settings" aria-label="Настройки">⚙️</button>
     <!-- Удод из двух слоёв: тело и крыло отдельно, чтобы крыло могло махать -->
     <div class="bird-wrap" id="homeBird">
       <div class="bubble" id="bubble"></div>
@@ -117,6 +118,13 @@
   <!-- ===== КВЕСТ / СЦЕНА ===== -->
   <section id="quest" hidden></section>
 
+  <!-- Друзья (friends.js) и нижнее меню -->
+  <section id="friends" hidden></section>
+  <nav id="tabbar" hidden>
+    <button data-tab="learn" class="on"><span>📚</span>Обучение</button>
+    <button data-tab="friends"><span>👥</span>Друзья<i class="tb-badge" hidden></i></button>
+  </nav>
+
   <!-- Красная вспышка по краям экрана при ошибке -->
   <div id="flash"></div>
   <!-- Панель с результатом, выезжает снизу -->
@@ -127,15 +135,16 @@
   <div id="milestone"></div>
 
   <!-- Логика приложения -->
-  <script src="avatar.js?v=20261114b"></script>
-  <script src="scene.js?v=20261114b"></script>
-  <script src="store.js?v=20261114b"></script>
-  <script src="icons.js?v=20261114b"></script>
-  <script src="streak.js?v=20261114b"></script>
-  <script src="app.js?v=20261114b"></script>
-  <script src="quest.js?v=20261114b"></script>
-  <script src="path.js?v=20261114b"></script>
-  <script src="sync.js?v=20261114b"></script>
+  <script src="avatar.js?v=20261114d"></script>
+  <script src="scene.js?v=20261114d"></script>
+  <script src="store.js?v=20261114d"></script>
+  <script src="icons.js?v=20261114d"></script>
+  <script src="streak.js?v=20261114d"></script>
+  <script src="app.js?v=20261114d"></script>
+  <script src="quest.js?v=20261114d"></script>
+  <script src="path.js?v=20261114d"></script>
+  <script src="sync.js?v=20261114d"></script>
+  <script src="friends.js?v=20261114d"></script>
   <!-- Алфавит грузится всегда свежим (метка времени), чтобы его обновления не зависели от метки v= выше -->
   <script>
     (function () {
