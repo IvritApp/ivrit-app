@@ -150,7 +150,7 @@ function showOnboarding() {
       <div class="ob-or">или придумай свой</div>` : ""}
       <label class="ob-nick"><span>@</span><input id="ob-nick" maxlength="32" placeholder="твой_ник" autocomplete="off" autocapitalize="off" spellcheck="false" value="${draft.nick || ""}"></label>
       <div class="ob-nick-st" id="ob-nick-st"></div>
-      <p class="ob-text small ob-rule">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя.</p>
+      <p class="ob-text small ob-rule">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</p>
       <p class="ob-text small">Нажимая «Дальше», ты соглашаешься, что твой прогресс хранится на нашем сервере в России — чтобы он не потерялся при смене телефона и перешёл в приложение Hirbis.</p>
       <button class="btn blue" data-next id="ob-go2" disabled>Дальше</button>`;
     },
@@ -1046,7 +1046,9 @@ function openSettings() {
       ${window.hirbisSync ? hirbisSync.settingsHTML() : ""}
       <div class="set-title">Режим тестировщика</div>
       ${store.get("testmode", false)
-        ? `<div class="set-test"><span>🔓 Включён: все уроки и уровни открыты</span><button class="btn ghost" id="testOff">Выключить</button></div>`
+        ? `<div class="set-test"><span>🔓 Включён: все уроки и уровни открыты</span><button class="btn ghost" id="testOff">Выключить</button></div>
+           <div class="set-test"><span>🇷🇺 Всё на русском — иврит в квестах и диалогах показан переводом (проверить сюжет)</span>
+             <button class="btn ${store.get("allru", false) ? "ghost" : "blue"}" id="allRu">${store.get("allru", false) ? "Выключить" : "Включить"}</button></div>`
         : `<div class="set-test"><input type="password" inputmode="numeric" id="testPass" placeholder="Пароль" autocomplete="off"><button class="btn blue" id="testOn">Включить</button></div>`}
     </div>`;
   box.className = "show";
@@ -1068,12 +1070,16 @@ function openSettings() {
     else { showToast("Неверный пароль"); vibrate("error"); }
   };
   if (tOff) tOff.onclick = () => { store.set("testmode", false); showToast("Режим тестировщика выключен"); afterTestToggle(); };
+  const aRu = document.getElementById("allRu");
+  if (aRu) aRu.onclick = () => { const on = !store.get("allru", false); store.set("allru", on); showToast(on ? "🇷🇺 Всё на русском — включено" : "Иврит снова на месте"); openSettings(); };
   box.querySelectorAll("input[type=range]").forEach(r => {
     r.oninput = () => { settings[r.dataset.k] = +r.value; r.nextElementSibling.textContent = r.value; };
     r.onchange = () => { saveSettings(); if (r.dataset.k === "sfx") playSound("right"); if (r.dataset.k === "voice") speak("שָׁלוֹם"); };
   });
 }
 const TEST_HASH = 9530;
+// «Всё на русском» (только в режиме тестировщика): квесты и диалоги показывают перевод вместо иврита
+function ruMode() { return store.get("testmode", false) === true && store.get("allru", false) === true; }
 function testHash(t) { let h = 7; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) % 1000003; return h; }
 function afterTestToggle() {
   openSettings();

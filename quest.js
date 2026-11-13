@@ -166,6 +166,7 @@ function startQuest(id) {
 function sellerHTML(s) {
   const he = g(s.he), tr = g(s.tr);
   const id = "ru" + Math.floor(Math.random() * 1e6);
+  if (typeof ruMode === "function" && ruMode()) return `${nameTag((stage && stage.hostName) || "Продавец")}<div class="ru-only">${g(s.ru)}</div>`;
   return `${nameTag((stage && stage.hostName) || "Продавец")}<div class="he" dir="rtl">${he}</div>
     <div class="tr">${tr}</div>
     <div class="q-tools">
@@ -193,7 +194,8 @@ function addQuestOptions(st, opts) {
   shuffle([...st.options]).forEach(o => {
     const b = document.createElement("button");
     b.className = "option q-opt";
-    b.innerHTML = `<span class="he" dir="rtl">${g(o.he)}</span><span class="tr">${g(o.tr)}</span>`;
+    b.innerHTML = ruMode() ? `<span class="ru-only">${g(o.ru)}</span><span class="he" hidden>${g(o.he)}</span>`
+      : `<span class="he" dir="rtl">${g(o.he)}</span><span class="tr">${g(o.tr)}</span>`;
     b.onclick = () => chooseOption(b, o, st);
     opts.appendChild(b);
   });
@@ -213,7 +215,7 @@ function chooseOption(btn, o, st) {
     qPoints += FIRE[lvl].points;
     updateQuestFire(true);
     if (lvl > before) setTimeout(() => showMilestone(lvl), 400);
-    meSays(`<div class="he" dir="rtl">${g(o.he)}</div><div class="tr2"><span class="tr">${g(o.tr)} — </span>${g(o.ru)}</div>`);
+    meSays(ruMode() ? `<div class="ru-only">${g(o.ru)}</div>` : `<div class="he" dir="rtl">${g(o.he)}</div><div class="tr2"><span class="tr">${g(o.tr)} — </span>${g(o.ru)}</div>`);
     speak(g(o.he), { audio: o.audio });
     if (o.add) addToTray([].concat(o.add));
     qStep++;
@@ -244,7 +246,7 @@ function startShopping(st) {
   friendSays(g(sh.intro));
   const opts = document.getElementById("qOpts");
   opts.innerHTML = `
-    <div class="mk-list">${sh.list.map(x => `<button class="mk-chip" data-item="${x.item}"><span class="he" dir="rtl">${g(x.he)}</span><span class="tr">${g(x.tr)}</span></button>`).join("")}</div>
+    <div class="mk-list">${sh.list.map(x => `<button class="mk-chip" data-item="${x.item}">${ruMode() ? `<span class="ru-only">${g(x.ru)}</span>` : `<span class="he" dir="rtl">${g(x.he)}</span><span class="tr">${g(x.tr)}</span>`}</button>`).join("")}</div>
     <div class="mk-where" id="mkWhere">${(stage.viewNames || VIEW_NAMES)[stage.current()]}</div>
     <div class="mk-nav"><button class="btn ghost" id="mkL">◀ Налево</button><button class="btn ghost" id="mkR">Направо ▶</button></div>`;
   opts.querySelectorAll(".mk-chip").forEach(c => c.onclick = () => {

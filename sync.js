@@ -8,7 +8,7 @@
 // =====================================================
 (function () {
   const API = "https://89-23-99-107.sslip.io/hapi";
-  const NOSYNC = ["testmode", "combo", "nolisten_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode"];
+  const NOSYNC = ["testmode", "combo", "nolisten_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru"];
   const P = "hirbis_";
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;
@@ -129,16 +129,17 @@
       ${canAdd ? `<div class="set-test"><input id="syNickNew" maxlength="32" placeholder="ещё один ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickAdd">Добавить</button></div>
         <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
       <div class="set-note">${status}${!ok ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
+      ${!(me && me.admin) ? `<div class="set-note sy-lost"><a href="#" id="syLost">Потерял старый Telegram? Войти в свой аккаунт</a></div><div id="syLostBox"></div>` : ""}
       ${me && me.admin ? `<div class="set-title">👑 Режим админа</div>
         ${!me.pin_set
-          ? `<div class="set-note">Придумай пароль админа — ровно 6 символов. Без него админ-панель не откроется, даже с твоего телефона.</div>
-             <div class="set-test"><input type="password" id="syPin1" maxlength="6" placeholder="пароль" autocomplete="new-password"></div>
-             <div class="set-test"><input type="password" id="syPin2" maxlength="6" placeholder="ещё раз" autocomplete="new-password"><button class="btn blue" id="syPinSet">Сохранить</button></div>`
+          ? `<div class="set-note">Придумай пароль админа (любой длины). Без него админ-панель не откроется, даже с твоего телефона.</div>
+             <div class="set-test"><input type="password" id="syPin1" placeholder="пароль" autocomplete="new-password"></div>
+             <div class="set-test"><input type="password" id="syPin2" placeholder="ещё раз" autocomplete="new-password"><button class="btn blue" id="syPinSet">Сохранить</button></div>`
           : adminMode()
           ? `<div class="set-test"><span>👑 Включён: полный доступ к любому аккаунту</span><button class="btn ghost" id="syAdmOff">Выйти</button></div>
              <button class="btn blue sy-wide" id="syAdmin">👑 Админ-панель</button>
-             <div class="set-note"><a href="#" id="syPinChange">Сменить пароль</a></div><div id="syPinBox"></div>`
-          : `<div class="set-test"><input type="password" id="syPin" maxlength="6" placeholder="пароль админа" autocomplete="current-password"><button class="btn blue" id="syAdmOn">Войти</button></div>`}` : ""}`;
+             <div class="set-note"><a href="#" id="syPinChange">Сменить пароль</a> · <a href="#" id="syRecSetup">🛟 Восстановление аккаунта</a></div><div id="syPinBox"></div>`
+          : `<div class="set-test"><input type="password" id="syPin" placeholder="пароль админа" autocomplete="current-password"><button class="btn blue" id="syAdmOn">Войти</button></div>`}` : ""}`;
   }
   async function nickCall(path, handle, okText) {
     try {
@@ -171,7 +172,7 @@
     const ps = box.querySelector("#syPinSet");
     if (ps) ps.onclick = async () => {
       const a = box.querySelector("#syPin1").value, b = box.querySelector("#syPin2").value;
-      if (a.length !== 6) { showToast("Пароль — ровно 6 символов"); return; }
+      if (!a) { showToast("Введи пароль"); return; }
       if (a !== b) { showToast("Пароли не совпадают"); return; }
       const r = await call("/admin/pin/set", { pin: a }); if (!r) return;
       if (r.error) { showToast(r.error); return; }
@@ -188,15 +189,56 @@
     const pinIn = box.querySelector("#syPin"); if (pinIn) pinIn.onkeydown = (e) => { if (e.key === "Enter") on.click(); };
     const off = box.querySelector("#syAdmOff");
     if (off) off.onclick = async () => { await call("/admin/logout", { session: admSess() }); lsSet("adminmode", null); showToast("Режим админа выключен"); openSettings(); };
+    // 🛟 Настройка восстановления (только админ, после входа по паролю)
+    const rs = box.querySelector("#syRecSetup");
+    if (rs) rs.onclick = async (ev) => {
+      ev.preventDefault();
+      const pb = box.querySelector("#syPinBox");
+      const cur = await call("/admin/recovery/get", {});
+      pb.innerHTML = `<div class="set-note">${cur && cur.set ? `✅ Восстановление настроено (юз @${esc(cur.user)}). Можно задать заново:` : "Если потеряешь Telegram — войдёшь в этот аккаунт с нового Telegram по этим трём данным. Запомни их!"}</div>
+        <div class="set-test"><input id="syRecPhone" type="tel" placeholder="номер телефона, +7…" autocomplete="off"></div>
+        <div class="set-test"><input id="syRecUser" placeholder="твой юз в Telegram (без @)" autocomplete="off" autocapitalize="off" value="${esc((cur && cur.user) || "")}"></div>
+        <div class="set-test"><input id="syRecPass" type="password" placeholder="пароль восстановления" autocomplete="new-password"></div>
+        <div class="set-test"><input id="syRecPass2" type="password" placeholder="пароль ещё раз" autocomplete="new-password"><button class="btn blue" id="syRecSave">Сохранить</button></div>`;
+      pb.querySelector("#syRecSave").onclick = async () => {
+        const pw = pb.querySelector("#syRecPass").value;
+        if (pw !== pb.querySelector("#syRecPass2").value) { showToast("Пароли не совпадают"); return; }
+        const r = await call("/admin/recovery/set", { phone: pb.querySelector("#syRecPhone").value, tg: pb.querySelector("#syRecUser").value, password: pw });
+        if (!r) return;
+        if (r.error) { showToast(r.error); return; }
+        showToast("🛟 Восстановление настроено"); pb.innerHTML = `<div class="set-note">✅ Восстановление настроено (юз @${esc(r.user)}).</div>`;
+      };
+    };
+    // Потерял Telegram: вход в свой аккаунт
+    const lost = box.querySelector("#syLost");
+    if (lost) lost.onclick = (ev) => {
+      ev.preventDefault();
+      const lb = box.querySelector("#syLostBox");
+      lb.innerHTML = `<div class="set-note">Если ты заранее настроил восстановление — введи те же данные. Весь прогресс перейдёт на этот Telegram.</div>
+        <div class="set-test"><input id="syLPhone" type="tel" placeholder="номер телефона" autocomplete="off"></div>
+        <div class="set-test"><input id="syLUser" placeholder="старый юз в Telegram" autocomplete="off" autocapitalize="off"></div>
+        <div class="set-test"><input id="syLPass" type="password" placeholder="пароль восстановления" autocomplete="current-password"><button class="btn blue" id="syLGo">Войти</button></div>`;
+      lb.querySelector("#syLGo").onclick = async () => {
+        let r;
+        try { r = await api("/recover", { phone: lb.querySelector("#syLPhone").value, tg: lb.querySelector("#syLUser").value, password: lb.querySelector("#syLPass").value }); }
+        catch (e) { showToast("Нет связи с сервером"); return; }
+        if (r.error) { showToast(r.error); vibrate("error"); return; }
+        // аккаунт перенесён: забираем прогресс с сервера заново
+        lsSet("sync_ver", 0); lsSet("sync_hash", ""); lsSet("sync_ok", true); lsSet("adminmode", null);
+        showToast("С возвращением, @" + r.handle + "! Загружаю прогресс…"); vibrate("success");
+        syncKeys().forEach(k => localStorage.removeItem(k));
+        setTimeout(() => location.reload(), 1200);
+      };
+    };
     const pc = box.querySelector("#syPinChange");
     if (pc) pc.onclick = (ev) => {
       ev.preventDefault();
       const pb = box.querySelector("#syPinBox");
-      pb.innerHTML = `<div class="set-test"><input type="password" id="syPinOld" maxlength="6" placeholder="старый"></div>
-        <div class="set-test"><input type="password" id="syPinNew" maxlength="6" placeholder="новый (6 символов)"><button class="btn blue" id="syPinSave">Сменить</button></div>`;
+      pb.innerHTML = `<div class="set-test"><input type="password" id="syPinOld" placeholder="старый"></div>
+        <div class="set-test"><input type="password" id="syPinNew" placeholder="новый пароль"><button class="btn blue" id="syPinSave">Сменить</button></div>`;
       pb.querySelector("#syPinSave").onclick = async () => {
         const nw = pb.querySelector("#syPinNew").value;
-        if (nw.length !== 6) { showToast("Пароль — ровно 6 символов"); return; }
+        if (!nw) { showToast("Введи новый пароль"); return; }
         const r = await call("/admin/pin/set", { pin: nw, old: pb.querySelector("#syPinOld").value }); if (!r) return;
         if (r.error) { showToast(r.error); return; }
         const l = await call("/admin/login", { pin: nw });

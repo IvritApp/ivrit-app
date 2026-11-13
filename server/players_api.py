@@ -45,10 +45,13 @@ def db():
     c.execute("CREATE TABLE IF NOT EXISTS handles (handle TEXT PRIMARY KEY, tg_id INTEGER, created REAL)")
     c.execute("CREATE TABLE IF NOT EXISTS friends (a INTEGER, b INTEGER, status TEXT, at REAL, PRIMARY KEY (a, b))")  # a → b: pending / ok
     cols = [r[1] for r in c.execute("PRAGMA table_info(players)")]
-    for col, typ in (("admin_pin", "TEXT DEFAULT ''"), ("pin_fail", "INTEGER DEFAULT 0"), ("pin_lock", "REAL DEFAULT 0")):
+    for col, typ in (("admin_pin", "TEXT DEFAULT ''"), ("pin_fail", "INTEGER DEFAULT 0"), ("pin_lock", "REAL DEFAULT 0"),
+                     ("rec_phone", "TEXT DEFAULT ''"), ("rec_user", "TEXT DEFAULT ''"), ("rec_pass", "TEXT DEFAULT ''"),
+                     ("rec_fail", "INTEGER DEFAULT 0"), ("rec_lock", "REAL DEFAULT 0")):
         if col not in cols:
             c.execute(f"ALTER TABLE players ADD COLUMN {col} {typ}")
     c.execute("CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, tg_id INTEGER, until REAL)")
+    c.execute("CREATE TABLE IF NOT EXISTS rec_tries2 (tg_id INTEGER PRIMARY KEY, fails INTEGER, lock REAL, at REAL)")   # кто пытается восстановить
     if "nick_limit" not in cols:
         c.execute(f"ALTER TABLE players ADD COLUMN nick_limit INTEGER DEFAULT {DEFAULT_NICKS}")
     # перенос старых данных: основной ник каждого игрока → в таблицу ников
@@ -167,9 +170,9 @@ def bad_nick_msg(uid, nick):
     return msg
 
 
-# ---------- ПАРОЛЬ АДМИНА (6 символов) ----------
-# Храним не сам пароль, а «отпечаток» (pbkdf2 + соль). 5 ошибок → вход закрыт на 15 минут. Сессия — 12 часов.
-PIN_LEN, PIN_FAILS, PIN_LOCK_SEC, SESSION_SEC = 6, 5, 15 * 60, 12 * 3600
+# ---------- ПАРОЛЬ АДМИНА (любой длины) ----------
+# Храним не сам пароль, а «отпечаток» (pbkdf2 + соль). 5 ошибок → вход закрыт на 48 часов. Сессия — 12 часов.
+PIN_FAILS, PIN_LOCK_SEC, SESSION_SEC = 5, 48 * 3600, 12 * 3600
 
 
 def pin_hash(pin, salt=None):
@@ -183,6 +186,19 @@ def pin_ok(pin, stored):
         return hmac.compare_digest(pin_hash(pin, salt), stored)
     except Exception:
         return False
+
+
+def left_text(sec):
+    mins = int(-(-sec // 60))                 # округляем вверх до минуты
+    h, m = divmod(mins, 60)
+    return (f"{h} ч" + (f" {m} мин" if m else "")) if h else f"{m} мин"
+
+
+def norm_phone(x):
+    d = re.sub(r"\D", "", str(x or ""))
+    if len(d) == 11 and d[0] == "8":
+        d = "7" + d[1:]                     # 8 900… → 7 900…
+    return d
 
 
 def session_ok(c, uid, token):
@@ -361,6 +377,8 @@ class Handler(BaseHTTPRequestHandler):
     def route(self, c, route, user, p):
         uid = int(user["id"])
         now = time.time()
+        if route == "/hapi/recover":                               # потерял Telegram: вход в свой аккаунт
+            return self.recover(c, uid, user, p, now)
         if route == "/hapi/check":                                 # свободен ли ник (аккаунт не создаём)
             h = norm(p.get("handle"))
             if not HANDLE_RE.match(h):
@@ -493,8 +511,8 @@ class Handler(BaseHTTPRequestHandler):
                 return 403, {"error": "нет прав"}
             pin = str(p.get("pin") or "")
             if route == "/hapi/admin/pin/set":                         # задать / сменить пароль
-                if len(pin) != PIN_LEN:
-                    return 200, {"error": f"Пароль — ровно {PIN_LEN} символов"}
+                if not pin or len(pin) > 200:
+                    return 200, {"error": "Введи пароль"}
                 if r["admin_pin"] and not pin_ok(str(p.get("old") or ""), r["admin_pin"]):
                     return 200, {"error": "Старый пароль неверный"}
                 c.execute("UPDATE players SET admin_pin=?, pin_fail=0, pin_lock=0 WHERE tg_id=?", (pin_hash(pin), uid))
@@ -504,17 +522,34 @@ class Handler(BaseHTTPRequestHandler):
                 if not r["admin_pin"]:
                     return 200, {"error": "Сначала задай пароль"}
                 if (r["pin_lock"] or 0) > now:
-                    return 200, {"error": f"Слишком много ошибок. Попробуй через {int((r['pin_lock'] - now) // 60) + 1} мин."}
+                    return 200, {"error": "Слишком много ошибок. Вход закрыт ещё " + left_text(r["pin_lock"] - now)}
                 if not pin_ok(pin, r["admin_pin"]):
                     fails = (r["pin_fail"] or 0) + 1
                     lock = now + PIN_LOCK_SEC if fails >= PIN_FAILS else 0
                     c.execute("UPDATE players SET pin_fail=?, pin_lock=? WHERE tg_id=?", (0 if lock else fails, lock, uid))
-                    return 200, {"error": "Неверный пароль" + (f". Осталось попыток: {PIN_FAILS - fails}" if not lock else ". Вход закрыт на 15 минут")}
+                    return 200, {"error": "Неверный пароль" + (f". Осталось попыток: {PIN_FAILS - fails}" if not lock else ". Вход закрыт на 48 часов")}
                 tok = os.urandom(24).hex()
                 c.execute("UPDATE players SET pin_fail=0, pin_lock=0 WHERE tg_id=?", (uid,))
                 c.execute("DELETE FROM admin_sessions WHERE until < ?", (now,))
                 c.execute("INSERT INTO admin_sessions VALUES (?,?,?)", (tok, uid, now + SESSION_SEC))
                 return 200, {"session": tok, "until": now + SESSION_SEC}
+            if route == "/hapi/admin/recovery/get":
+                if not session_ok(c, uid, p.get("session")):
+                    return 200, {"error": "need_pin"}
+                return 200, {"set": bool(r["rec_pass"]), "user": r["rec_user"], "phone_tail": ""}
+            if route == "/hapi/admin/recovery/set":
+                if not session_ok(c, uid, p.get("session")):
+                    return 200, {"error": "need_pin"}
+                ph, us, pw = norm_phone(p.get("phone")), norm(p.get("tg")), str(p.get("password") or "")
+                if len(ph) < 10:
+                    return 200, {"error": "Номер телефона: минимум 10 цифр"}
+                if not us:
+                    return 200, {"error": "Укажи свой юз в Telegram"}
+                if len(pw) < 4:
+                    return 200, {"error": "Пароль восстановления — хотя бы 4 символа"}
+                c.execute("UPDATE players SET rec_phone=?, rec_user=?, rec_pass=?, rec_fail=0, rec_lock=0 WHERE tg_id=?",
+                          (pin_hash(ph), us, pin_hash(pw), uid))
+                return 200, {"ok": True, "set": True, "user": us}
             if route == "/hapi/admin/logout":
                 c.execute("DELETE FROM admin_sessions WHERE token=?", (str(p.get("session") or ""),))
                 return 200, {"ok": True}
@@ -549,6 +584,51 @@ class Handler(BaseHTTPRequestHandler):
                 t = c.execute("SELECT * FROM players WHERE tg_id=?", (t["tg_id"],)).fetchone()
                 return 200, {"player": player_public(c, t), "done": what, "error": err}
         return 404, {"error": "not found"}
+
+    def recover(self, c, uid, user, p, now):
+        """Перенос аккаунта (с восстановлением) на новый Telegram: телефон + старый юз + пароль. 5 ошибок с одного Telegram → он закрыт на 48 часов."""
+        ph, us, pw = norm_phone(p.get("phone")), norm(p.get("tg")), str(p.get("password") or "")
+        if not ph or not us or not pw:
+            return 200, {"error": "Заполни все три поля"}
+        # Блокируем только ТОГО, кто вводит неверные данные (его Telegram), а не владельца аккаунта.
+        # Плюс общий предел на всех: не больше 30 ошибок в сутки (защита от перебора с кучи аккаунтов).
+        t = c.execute("SELECT * FROM rec_tries2 WHERE tg_id=?", (uid,)).fetchone()
+        if t and (t["lock"] or 0) > now:
+            return 200, {"error": "Слишком много ошибок с этого Telegram. Попробуй через " + left_text(t["lock"] - now)}
+        day_fails = c.execute("SELECT COALESCE(SUM(fails),0) FROM rec_tries2 WHERE at > ?", (now - 86400,)).fetchone()[0]
+        if day_fails >= 30:
+            return 200, {"error": "Восстановление временно недоступно. Попробуй завтра."}
+        cands = c.execute("SELECT * FROM players WHERE rec_pass != ''").fetchall()
+        hit = None
+        for x in cands:
+            if x["rec_user"] == us and pin_ok(ph, x["rec_phone"]) and pin_ok(pw, x["rec_pass"]):
+                hit = x
+                break
+        if not hit:
+            prev = (t["fails"] or 0) if t and (t["at"] or 0) > now - 86400 and not ((t["lock"] or 0) and t["lock"] <= now) else 0
+            fails = prev + 1
+            lock = now + PIN_LOCK_SEC if fails >= PIN_FAILS else 0
+            c.execute("INSERT OR REPLACE INTO rec_tries2 VALUES (?,?,?,?)", (uid, fails, lock, now))
+            return 200, {"error": "Данные не подходят" + (f". Осталось попыток: {PIN_FAILS - fails}" if not lock else ". С этого Telegram вход закрыт на 48 часов")}
+        c.execute("DELETE FROM rec_tries2 WHERE tg_id=?", (uid,))
+        old_id = hit["tg_id"]
+        if old_id == uid:
+            return 200, {"error": "Ты и так в своём аккаунте 🙂"}
+        # новый (пустой) аккаунт этого Telegram удаляем, старый переносим на новый Telegram ID
+        for h in nicks_of(c, uid):
+            c.execute("DELETE FROM handles WHERE handle=?", (h,))
+        c.execute("DELETE FROM friends WHERE a=? OR b=?", (uid, uid))
+        c.execute("DELETE FROM players WHERE tg_id=?", (uid,))
+        c.execute("DELETE FROM admin_sessions WHERE tg_id=?", (old_id,))
+        name = " ".join(x for x in [user.get("first_name"), user.get("last_name")] if x)[:60]
+        c.execute("UPDATE players SET tg_id=?, name=?, tg_username=?, last_seen=?, rec_fail=0, rec_lock=0, banned_until=0 WHERE tg_id=?",
+                  (uid, name, user.get("username") or "", now, old_id))
+        c.execute("UPDATE handles SET tg_id=? WHERE tg_id=?", (uid, old_id))
+        c.execute("UPDATE friends SET a=? WHERE a=?", (uid, old_id))
+        c.execute("UPDATE friends SET b=? WHERE b=?", (uid, old_id))
+        c.execute("INSERT INTO admin_log VALUES (?,?,?,?)", (now, hit["handle"], hit["handle"], json.dumps({"recover": {"from_tg": old_id, "to_tg": uid}})))
+        r = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
+        return 200, {"ok": True, "handle": r["handle"], "ver": r["ver"]}
 
     def save(self, c, uid, state, ver):
         clean = {str(k)[:60]: str(v)[:50_000] for k, v in list(state.items())[:500]}

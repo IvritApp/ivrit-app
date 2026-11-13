@@ -87,7 +87,7 @@
       <rect x="20" y="-18" width="40" height="18" rx="4" fill="#5b6470"/><rect x="16" y="-20" width="48" height="5" rx="2" fill="#7b8592"/>` },
     sink: { vb: [90, 60], svg: () => `<rect x="0" y="18" width="90" height="42" rx="3" fill="#cfd8e0"/><rect x="10" y="22" width="70" height="20" rx="8" fill="#aeb9c4"/>
       <path d="M45,20 L45,2 Q45,-6 54,-6 L60,-6" stroke="#8d969f" stroke-width="5" fill="none" stroke-linecap="round"/><rect x="34" y="12" width="22" height="6" rx="3" fill="#8d969f"/>` },
-    chair: { vb: [60, 100], svg: () => `${SHD(30, 98, 26, 3)}<rect x="8" y="0" width="44" height="52" rx="6" fill="#c99a63"/><rect x="14" y="6" width="32" height="40" rx="4" fill="#d6ab76"/>
+    kchair: { vb: [60, 100], svg: () => `${SHD(30, 98, 26, 3)}<rect x="8" y="0" width="44" height="52" rx="6" fill="#c99a63"/><rect x="14" y="6" width="32" height="40" rx="4" fill="#d6ab76"/>
       <rect x="0" y="50" width="60" height="12" rx="3" fill="#b98a58"/><rect x="4" y="62" width="7" height="36" fill="#8a5a36"/><rect x="49" y="62" width="7" height="36" fill="#8a5a36"/>` },
     plant: { vb: [60, 110], svg: () => `${SHD(30, 108, 24, 3)}<path d="M14,70 L46,70 L42,106 L18,106Z" fill="#c96f39"/><rect x="12" y="66" width="36" height="8" rx="2" fill="#dc8550"/>
       <path d="M30,68 Q6,40 12,18 Q24,40 30,68 Q34,30 48,8 Q46,44 30,68 Q52,52 58,34 Q54,60 30,68" fill="#4f9d5d"/>` },
@@ -152,7 +152,7 @@
         { kind: "stove", view: 2, x: 806, y: 182, w: 64, h: 74 },
         { kind: "sink", view: 2, x: 742, y: 196, w: 60, h: 40 },
         { kind: "table", view: 2, x: 772, y: 316, w: 140, h: 75 },
-        { kind: "chair", view: 2, x: 742, y: 314, w: 44, h: 74 },
+        { kind: "kchair", view: 2, x: 742, y: 314, w: 44, h: 74 },
         { kind: "fridge", view: 2, x: 966, y: 160, w: 92, h: 230 },
       ],
       // вход: подъезд и дверь квартиры
@@ -170,6 +170,8 @@
     },
   };
   window.PLACES = PLACES;
+  // для файла с остальными местами (places-a1.js): туда же добавляются предметы, подарки и места
+  window.PLACE_KIT = { ART, GIFTS, PLACES, HL, SHD, planks, doorway, W, ink };
 
   // ---------- Значок предмета (для «Моего заказа», полёта и т. п.) ----------
   function icon(kind, size) {
@@ -363,7 +365,8 @@
       root.remove();
     }
     return Object.assign(api, { say, hide, destroy, fit, root, food, wrap, look, pick, shake, introMs,
-      current: () => cur, views: NV, viewNames: P.viewNames, hostName: P.hostName, itemIcon: icon });
+      current: () => cur, views: NV, viewNames: P.viewNames, itemIcon: icon,
+      hostName: typeof P.hostName === "function" ? P.hostName(opts.gender) : P.hostName });
   }
   window.createPlace = createPlace;
 })();

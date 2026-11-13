@@ -1000,3 +1000,5 @@ body.no-scroll { position: fixed; left: 0; right: 0; width: 100%; }
 .pl-board .pl-good { position: static; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
 .pl-board.pl-board-out { transform: translateX(110px) scale(.3); opacity: 0; }
 .pl-gift { width: 100px !important; height: 100px !important; z-index: 6; filter: drop-shadow(0 6px 10px rgba(0,0,0,.2)); }
+.sy-lost { margin-top: 10px; font-size: 12px; opacity: .8; }
+.ru-only { font-size: 17px; font-weight: 700; line-height: 1.35; }
