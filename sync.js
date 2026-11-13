@@ -117,7 +117,7 @@
       <div class="set-note">⭐ — основной ник, его видят друзья. Ников: ${nicks.length} из ${unl ? "∞" : lim}. Нажми на ник, чтобы сделать основным или удалить.</div>
       <div id="syNickAct"></div>
       ${canAdd ? `<div class="set-test"><input id="syNickNew" maxlength="32" placeholder="ещё один ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickAdd">Добавить</button></div>
-        <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
+        <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
       <div class="set-note">${status}${!ok ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
       ${me && me.admin ? `<div class="set-title">👑 Режим админа</div>
         ${adminMode()
@@ -170,8 +170,9 @@
       try {
         const res = await api("/admin/list", { q: inp.value.trim().replace(/^@/, "") });
         if (res.error) { card.innerHTML = `<p class="sy-p">${esc(res.error)}</p>`; return; }
-        card.innerHTML = `<div class="set-note">Всего игроков: ${res.total}${inp.value ? ` · найдено: ${res.players.length}` : " · последние по активности"}</div>` +
-          res.players.map(x => `<button class="sy-row" data-h="${esc(x.handle)}"><b>@${esc(x.handle)}</b>${x.admin ? " 👑" : ""}${x.banned ? " ⛔" : ""}<span>${esc(x.name || "")}${x.tg_username ? " · tg @" + esc(x.tg_username) : ""} · ${dt(x.last_seen)}</span></button>`).join("");
+        card.innerHTML = `<div class="set-note">Всего игроков: <b>${res.total}</b>${inp.value ? ` · найдено: ${res.players.length}` : " · все, сверху — кто заходил недавно"}</div>` +
+          res.players.map((x, i) => `<button class="sy-row" data-h="${esc(x.handle)}"><b>${inp.value ? "" : (i + 1) + ". "}${esc(x.game_name || x.name || "без имени")}</b> @${esc(x.handle)}${x.admin ? " 👑" : ""}${x.banned ? " ⛔" : ""}
+            <span>${x.tg_username ? "tg @" + esc(x.tg_username) + " · " : ""}был(а) ${dt(x.last_seen)} · 🔥 ${x.streak} · 📚 ${x.done} · ⭐ ${x.points}</span></button>`).join("");
         card.querySelectorAll(".sy-row").forEach(b => b.onclick = () => openPlayer(b.dataset.h));
       } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; }
     };

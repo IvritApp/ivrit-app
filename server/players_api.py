@@ -379,10 +379,14 @@ class Handler(BaseHTTPRequestHandler):
                 q = "%" + norm(p.get("q")).replace("%", "") + "%"
                 rows = c.execute("""SELECT DISTINCT p.* FROM players p LEFT JOIN handles h ON h.tg_id = p.tg_id
                     WHERE h.handle LIKE ? OR lower(p.name) LIKE ? OR lower(p.tg_username) LIKE ? OR CAST(p.tg_id AS TEXT) LIKE ?
-                    ORDER BY p.last_seen DESC LIMIT 100""", (q, q, q, q)).fetchall()
+                    ORDER BY p.last_seen DESC LIMIT 5000""", (q, q, q, q)).fetchall()
                 total = c.execute("SELECT COUNT(*) FROM players").fetchone()[0]
-                return 200, {"total": total, "players": [{"handle": x["handle"], "name": x["name"], "tg_username": x["tg_username"],
-                             "last_seen": x["last_seen"], "admin": bool(x["admin"]), "banned": (x["banned_until"] or 0) > now} for x in rows]}
+                def brief(x):
+                    pc = profile_card(c, x, full=True)
+                    return {"handle": x["handle"], "name": x["name"], "game_name": pc["name"], "tg_username": x["tg_username"],
+                            "created": x["created"], "last_seen": x["last_seen"], "admin": bool(x["admin"]),
+                            "banned": (x["banned_until"] or 0) > now, "streak": pc["streak"], "done": pc["done"], "points": pc["points"]}
+                return 200, {"total": total, "players": [brief(x) for x in rows]}
             if route == "/hapi/admin/log":
                 rows = c.execute("SELECT * FROM admin_log ORDER BY at DESC LIMIT 100").fetchall()
                 return 200, {"log": [dict(x) for x in rows]}

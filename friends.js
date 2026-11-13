@@ -60,6 +60,7 @@
     sec.innerHTML = `<h1 class="fr-title">Друзья</h1><div id="frBody"><p class="fr-note">Загружаю…</p></div>`;
     const body = sec.querySelector("#frBody");
     if (!initData) { body.innerHTML = `<p class="fr-note">Друзья работают внутри Telegram — открой Hirbis в боте.</p>`; return; }
+    if (!agreed()) { body.innerHTML = `<p class="fr-note">Чтобы добавлять друзей, разреши сохранять прогресс на сервере: ⚙️ → «Аккаунт» → «включить».</p>`; return; }
     let d;
     try { d = await api("/friends/list"); }
     catch (e) { body.innerHTML = `<p class="fr-note">Нет связи с сервером. Попробуй чуть позже.</p>`; return; }
@@ -175,7 +176,9 @@
   }
 
   // число заявок — один раз при запуске (для значка на «Друзьях»)
-  if (initData) setTimeout(async () => { try { const d = await api("/friends/list"); incomingCount = (d.incoming || []).length; updateBar(); } catch (e) {} }, 2500);
+  // только после согласия на хранение данных (иначе аккаунт создавать нельзя)
+  const agreed = () => { try { return JSON.parse(localStorage.getItem("hirbis_sync_ok") || "false"); } catch (e) { return false; } };
+  if (initData) setTimeout(async () => { if (!agreed()) return; try { const d = await api("/friends/list"); incomingCount = (d.incoming || []).length; updateBar(); } catch (e) {} }, 2500);
   updateBar();
   window.showFriends = showFriends;
   window.openProfile = openProfile;
