@@ -31,15 +31,25 @@
     lsSet("sync_ver", ver); lsSet("sync_hash", hash(snapshot()));
   }
 
+  // сессия админа (после входа по паролю), живёт 12 часов
+  const admSess = () => { const a = lsGet("adminmode", null); return a && a.t && a.until * 1000 > Date.now() ? a.t : null; };
   async function api(path, body, keepalive) {
+    const extra = path.startsWith("/admin/") ? { session: admSess() } : {};
     const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "text/plain" }, keepalive: !!keepalive,
-      body: JSON.stringify(Object.assign({ initData }, body)) });
+      body: JSON.stringify(Object.assign({ initData }, extra, body)) });
     if (!r.ok) throw new Error("http " + r.status);
-    return r.json();
+    const res = await r.json();
+    if (res && res.error === "need_pin") {                  // сессия кончилась — просим пароль заново
+      lsSet("adminmode", null);
+      const sh = document.getElementById("syAdminSheet"); if (sh) sh.classList.remove("show");
+      if (typeof showToast === "function") showToast("🔒 Введи пароль админа заново (⚙️)");
+      throw new Error("need_pin");
+    }
+    return res;
   }
 
   function gotMe(res) {
-    if (res.handle) { me = { handle: res.handle, nicks: res.nicks || [res.handle], nick_limit: res.nick_limit == null ? 3 : res.nick_limit, admin: !!res.admin, tg_id: res.tg_id }; lsSet("sync_me", me); }
+    if (res.handle) { me = { handle: res.handle, nicks: res.nicks || [res.handle], nick_limit: res.nick_limit == null ? 3 : res.nick_limit, admin: !!res.admin, pin_set: !!res.pin_set, tg_id: res.tg_id }; lsSet("sync_me", me); }
     if (res.banned) showBan(res.banned);
   }
 
@@ -103,7 +113,7 @@
   }
 
   // --- блок «Аккаунт» в настройках: ники; «Режим админа» — только для админов ---
-  const adminMode = () => !!(me && me.admin && lsGet("adminmode", false));
+  const adminMode = () => !!(me && me.admin && admSess());
   function settingsHTML() {
     if (!initData) return "";
     const ok = lsGet("sync_ok", false);
@@ -120,10 +130,15 @@
         <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
       <div class="set-note">${status}${!ok ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
       ${me && me.admin ? `<div class="set-title">👑 Режим админа</div>
-        ${adminMode()
-          ? `<div class="set-test"><span>👑 Включён: полный доступ к любому аккаунту</span><button class="btn ghost" id="syAdmOff">Выключить</button></div>
-             <button class="btn blue sy-wide" id="syAdmin">👑 Админ-панель</button>`
-          : `<div class="set-test"><span>Только для владельца</span><button class="btn blue" id="syAdmOn">Включить</button></div>`}` : ""}`;
+        ${!me.pin_set
+          ? `<div class="set-note">Придумай пароль админа — ровно 6 символов. Без него админ-панель не откроется, даже с твоего телефона.</div>
+             <div class="set-test"><input type="password" id="syPin1" maxlength="6" placeholder="пароль" autocomplete="new-password"></div>
+             <div class="set-test"><input type="password" id="syPin2" maxlength="6" placeholder="ещё раз" autocomplete="new-password"><button class="btn blue" id="syPinSet">Сохранить</button></div>`
+          : adminMode()
+          ? `<div class="set-test"><span>👑 Включён: полный доступ к любому аккаунту</span><button class="btn ghost" id="syAdmOff">Выйти</button></div>
+             <button class="btn blue sy-wide" id="syAdmin">👑 Админ-панель</button>
+             <div class="set-note"><a href="#" id="syPinChange">Сменить пароль</a></div><div id="syPinBox"></div>`
+          : `<div class="set-test"><input type="password" id="syPin" maxlength="6" placeholder="пароль админа" autocomplete="current-password"><button class="btn blue" id="syAdmOn">Войти</button></div>`}` : ""}`;
   }
   async function nickCall(path, handle, okText) {
     try {
@@ -151,8 +166,44 @@
     const add = box.querySelector("#syNickAdd");
     if (add) add.onclick = () => nickCall("/nicks/add", box.querySelector("#syNickNew").value, "Ник добавлен");
     const c = box.querySelector("#syConsentOpen"); if (c) c.onclick = (ev) => { ev.preventDefault(); askConsent(); };
-    const on = box.querySelector("#syAdmOn"); if (on) on.onclick = () => { lsSet("adminmode", true); showToast("👑 Режим админа включён"); openSettings(); };
-    const off = box.querySelector("#syAdmOff"); if (off) off.onclick = () => { lsSet("adminmode", false); showToast("Режим админа выключен"); openSettings(); };
+    // пароль админа: задать / войти / выйти / сменить
+    const call = async (path, body) => { try { return await api(path, body); } catch (e) { if (e.message !== "need_pin") showToast("Нет связи с сервером"); return null; } };
+    const ps = box.querySelector("#syPinSet");
+    if (ps) ps.onclick = async () => {
+      const a = box.querySelector("#syPin1").value, b = box.querySelector("#syPin2").value;
+      if (a.length !== 6) { showToast("Пароль — ровно 6 символов"); return; }
+      if (a !== b) { showToast("Пароли не совпадают"); return; }
+      const r = await call("/admin/pin/set", { pin: a }); if (!r) return;
+      if (r.error) { showToast(r.error); return; }
+      gotMe(r); const l = await call("/admin/login", { pin: a });
+      if (l && l.session) lsSet("adminmode", { t: l.session, until: l.until });
+      showToast("Пароль сохранён 🔐"); openSettings();
+    };
+    const on = box.querySelector("#syAdmOn");
+    if (on) on.onclick = async () => {
+      const r = await call("/admin/login", { pin: box.querySelector("#syPin").value }); if (!r) return;
+      if (r.error) { showToast(r.error); vibrate("error"); return; }
+      lsSet("adminmode", { t: r.session, until: r.until }); showToast("👑 Режим админа включён"); vibrate("success"); openSettings();
+    };
+    const pinIn = box.querySelector("#syPin"); if (pinIn) pinIn.onkeydown = (e) => { if (e.key === "Enter") on.click(); };
+    const off = box.querySelector("#syAdmOff");
+    if (off) off.onclick = async () => { await call("/admin/logout", { session: admSess() }); lsSet("adminmode", null); showToast("Режим админа выключен"); openSettings(); };
+    const pc = box.querySelector("#syPinChange");
+    if (pc) pc.onclick = (ev) => {
+      ev.preventDefault();
+      const pb = box.querySelector("#syPinBox");
+      pb.innerHTML = `<div class="set-test"><input type="password" id="syPinOld" maxlength="6" placeholder="старый"></div>
+        <div class="set-test"><input type="password" id="syPinNew" maxlength="6" placeholder="новый (6 символов)"><button class="btn blue" id="syPinSave">Сменить</button></div>`;
+      pb.querySelector("#syPinSave").onclick = async () => {
+        const nw = pb.querySelector("#syPinNew").value;
+        if (nw.length !== 6) { showToast("Пароль — ровно 6 символов"); return; }
+        const r = await call("/admin/pin/set", { pin: nw, old: pb.querySelector("#syPinOld").value }); if (!r) return;
+        if (r.error) { showToast(r.error); return; }
+        const l = await call("/admin/login", { pin: nw });
+        lsSet("adminmode", l && l.session ? { t: l.session, until: l.until } : null);
+        showToast("Пароль изменён 🔐"); openSettings();
+      };
+    };
     const a = box.querySelector("#syAdmin"); if (a) a.onclick = () => openAdmin();
   }
 

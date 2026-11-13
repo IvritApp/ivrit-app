@@ -976,3 +976,8 @@ body.theme-dark .fr-find { background: #1c2430; border-color: #2c3a4c; } body.th
 
 .ob-rule { margin-top: 2px; }
 #syAdminSheet .set-sheet { min-height: 85vh; }
+
+/* ---------- Открыто окно — страница под ним не прокручивается ---------- */
+.set-sheet, #frProfile { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+html.no-scroll, body.no-scroll { overflow: hidden !important; }
+body.no-scroll { position: fixed; left: 0; right: 0; width: 100%; }

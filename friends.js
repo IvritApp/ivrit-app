@@ -180,6 +180,24 @@
   const agreed = () => { try { return JSON.parse(localStorage.getItem("hirbis_sync_ok") || "false"); } catch (e) { return false; } };
   if (initData) setTimeout(async () => { if (!agreed()) return; try { const d = await api("/friends/list"); incomingCount = (d.incoming || []).length; updateBar(); } catch (e) {} }, 2500);
   updateBar();
+
+  // ---------- открыто окно (настройки, серия, админка, профиль) → страница под ним стоит на месте ----------
+  const OVL = "#settings, #streakSheet, .sy-wrap, #frProfile";
+  let locked = false, savedY = 0;
+  function lockScroll() {
+    const open = [...document.querySelectorAll(OVL)].some(e => e.classList.contains("show"));
+    if (open && !locked) {
+      savedY = window.scrollY; locked = true;
+      document.body.style.top = -savedY + "px";
+      document.documentElement.classList.add("no-scroll"); document.body.classList.add("no-scroll");
+    } else if (!open && locked) {
+      locked = false;
+      document.documentElement.classList.remove("no-scroll"); document.body.classList.remove("no-scroll");
+      document.body.style.top = ""; window.scrollTo(0, savedY);
+    }
+  }
+  new MutationObserver(lockScroll).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+
   window.showFriends = showFriends;
   window.openProfile = openProfile;
 })();

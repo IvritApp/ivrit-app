@@ -45,6 +45,10 @@ def db():
     c.execute("CREATE TABLE IF NOT EXISTS handles (handle TEXT PRIMARY KEY, tg_id INTEGER, created REAL)")
     c.execute("CREATE TABLE IF NOT EXISTS friends (a INTEGER, b INTEGER, status TEXT, at REAL, PRIMARY KEY (a, b))")  # a → b: pending / ok
     cols = [r[1] for r in c.execute("PRAGMA table_info(players)")]
+    for col, typ in (("admin_pin", "TEXT DEFAULT ''"), ("pin_fail", "INTEGER DEFAULT 0"), ("pin_lock", "REAL DEFAULT 0")):
+        if col not in cols:
+            c.execute(f"ALTER TABLE players ADD COLUMN {col} {typ}")
+    c.execute("CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, tg_id INTEGER, until REAL)")
     if "nick_limit" not in cols:
         c.execute(f"ALTER TABLE players ADD COLUMN nick_limit INTEGER DEFAULT {DEFAULT_NICKS}")
     # перенос старых данных: основной ник каждого игрока → в таблицу ников
@@ -131,10 +135,10 @@ def nick_is_bad(h):
     return False
 
 
+BAD_NICK_FIRST = "Хибри всё видел 👀 Давай без неприличных слов."
 BAD_NICK_JOKES = [
     "Ай-яй-яй, поганец 😏 Такой ник нельзя. Придумай другой!",
     "Плохой мальчик, да? 😼 Нет, такой ник не пройдёт.",
-    "Хибри всё видел 👀 Давай без неприличных слов.",
     "Ого, смелый ник! Но нет 🙅 Придумай другой.",
     "Хибри покраснел 🙈 Такой ник нельзя.",
     "Мама бы не одобрила 😅 Попробуй другой ник.",
@@ -142,8 +146,50 @@ BAD_NICK_JOKES = [
     "Хорошая попытка 😉 Но фильтр не обманешь.",
     "Цифрами не спрячешь 🕵️ Придумай нормальный ник.",
 ]
-def bad_nick_msg():
-    return random.choice(BAD_NICK_JOKES)
+BAD_TRIES = {}   # tg_id → {"last": ник, "msg": текст, "bag": [ещё не показанные], "n": попыток}
+
+
+def bad_nick_msg(uid, nick):
+    """1-я попытка — «Хибри всё видел», дальше шутки в случайном порядке без повторов, пока не покажем все.
+    Тот же ник (проверка на лету при печати) — тот же ответ."""
+    st = BAD_TRIES.setdefault(uid, {"last": None, "msg": None, "bag": [], "n": 0})
+    if nick == st["last"] and st["msg"]:
+        return st["msg"]
+    if st["n"] == 0:
+        msg = BAD_NICK_FIRST
+    else:
+        if not st["bag"]:
+            st["bag"] = random.sample(BAD_NICK_JOKES, len(BAD_NICK_JOKES))
+        msg = st["bag"].pop()
+    st.update(last=nick, msg=msg, n=st["n"] + 1)
+    if len(BAD_TRIES) > 10000:
+        BAD_TRIES.clear()
+    return msg
+
+
+# ---------- ПАРОЛЬ АДМИНА (6 символов) ----------
+# Храним не сам пароль, а «отпечаток» (pbkdf2 + соль). 5 ошибок → вход закрыт на 15 минут. Сессия — 12 часов.
+PIN_LEN, PIN_FAILS, PIN_LOCK_SEC, SESSION_SEC = 6, 5, 15 * 60, 12 * 3600
+
+
+def pin_hash(pin, salt=None):
+    salt = salt or os.urandom(16).hex()
+    return salt + "$" + hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200_000).hex()
+
+
+def pin_ok(pin, stored):
+    try:
+        salt, _ = stored.split("$", 1)
+        return hmac.compare_digest(pin_hash(pin, salt), stored)
+    except Exception:
+        return False
+
+
+def session_ok(c, uid, token):
+    if not token:
+        return False
+    r = c.execute("SELECT until FROM admin_sessions WHERE token=? AND tg_id=?", (str(token)[:80], uid)).fetchone()
+    return bool(r and r["until"] > time.time())
 
 
 def norm(h):
@@ -320,7 +366,7 @@ class Handler(BaseHTTPRequestHandler):
             if not HANDLE_RE.match(h):
                 return 200, {"ok": False, "error": BAD_NICK}
             if nick_is_bad(h):
-                return 200, {"ok": False, "error": bad_nick_msg()}
+                return 200, {"ok": False, "error": bad_nick_msg(uid, h)}
             o = owner_of(c, h)
             return 200, {"ok": o is None or o == uid, "error": "" if o is None or o == uid else "Этот ник уже занят"}
 
@@ -338,7 +384,7 @@ class Handler(BaseHTTPRequestHandler):
         def me(**extra):
             rr = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
             return dict({"handle": rr["handle"], "nicks": nicks_of(c, uid), "nick_limit": limit_of(rr),
-                         "admin": bool(rr["admin"]), "tg_id": uid}, **extra)
+                         "admin": bool(rr["admin"]), "pin_set": bool(rr["admin"] and rr["admin_pin"]), "tg_id": uid}, **extra)
 
         if r["banned_until"] and r["banned_until"] > now and not r["admin"]:
             return 200, me(banned={"until": r["banned_until"], "reason": r["ban_reason"]})
@@ -365,7 +411,7 @@ class Handler(BaseHTTPRequestHandler):
             if not HANDLE_RE.match(h):
                 return 200, me(error=BAD_NICK)
             if nick_is_bad(h) and route != "/hapi/nicks/remove":
-                return 200, me(error=bad_nick_msg())
+                return 200, me(error=bad_nick_msg(uid, h))
             o = owner_of(c, h)
             mine = nicks_of(c, uid)
             if route == "/hapi/handle":                            # сменить основной ник
@@ -445,6 +491,35 @@ class Handler(BaseHTTPRequestHandler):
         if route.startswith("/hapi/admin/"):
             if not r["admin"]:
                 return 403, {"error": "нет прав"}
+            pin = str(p.get("pin") or "")
+            if route == "/hapi/admin/pin/set":                         # задать / сменить пароль
+                if len(pin) != PIN_LEN:
+                    return 200, {"error": f"Пароль — ровно {PIN_LEN} символов"}
+                if r["admin_pin"] and not pin_ok(str(p.get("old") or ""), r["admin_pin"]):
+                    return 200, {"error": "Старый пароль неверный"}
+                c.execute("UPDATE players SET admin_pin=?, pin_fail=0, pin_lock=0 WHERE tg_id=?", (pin_hash(pin), uid))
+                c.execute("DELETE FROM admin_sessions WHERE tg_id=?", (uid,))
+                return 200, me(ok=True)
+            if route == "/hapi/admin/login":                            # вход по паролю → сессия на 12 часов
+                if not r["admin_pin"]:
+                    return 200, {"error": "Сначала задай пароль"}
+                if (r["pin_lock"] or 0) > now:
+                    return 200, {"error": f"Слишком много ошибок. Попробуй через {int((r['pin_lock'] - now) // 60) + 1} мин."}
+                if not pin_ok(pin, r["admin_pin"]):
+                    fails = (r["pin_fail"] or 0) + 1
+                    lock = now + PIN_LOCK_SEC if fails >= PIN_FAILS else 0
+                    c.execute("UPDATE players SET pin_fail=?, pin_lock=? WHERE tg_id=?", (0 if lock else fails, lock, uid))
+                    return 200, {"error": "Неверный пароль" + (f". Осталось попыток: {PIN_FAILS - fails}" if not lock else ". Вход закрыт на 15 минут")}
+                tok = os.urandom(24).hex()
+                c.execute("UPDATE players SET pin_fail=0, pin_lock=0 WHERE tg_id=?", (uid,))
+                c.execute("DELETE FROM admin_sessions WHERE until < ?", (now,))
+                c.execute("INSERT INTO admin_sessions VALUES (?,?,?)", (tok, uid, now + SESSION_SEC))
+                return 200, {"session": tok, "until": now + SESSION_SEC}
+            if route == "/hapi/admin/logout":
+                c.execute("DELETE FROM admin_sessions WHERE token=?", (str(p.get("session") or ""),))
+                return 200, {"ok": True}
+            if not session_ok(c, uid, p.get("session")):              # всё остальное — только после входа по паролю
+                return 200, {"error": "need_pin"}
             if route == "/hapi/admin/list":
                 q = "%" + norm(p.get("q")).replace("%", "") + "%"
                 rows = c.execute("""SELECT DISTINCT p.* FROM players p LEFT JOIN handles h ON h.tg_id = p.tg_id
@@ -587,6 +662,14 @@ def cli():
     elif cmd == "bad-nicks":                         # показать уже занятые неприличные ники
         rows = [r for r in c.execute("SELECT h.handle, p.name FROM handles h JOIN players p ON p.tg_id = h.tg_id") if nick_is_bad(r["handle"])]
         print("\n".join(f"@{r['handle']}  ({r['name']})" for r in rows) or "Неприличных ников нет 👍")
+    elif cmd == "reset-pin" and len(sys.argv) > 2:      # забыл пароль админа
+        o = owner_of(c, norm(sys.argv[2]))
+        if o is None:
+            print("Игрок не найден")
+        else:
+            c.execute("UPDATE players SET admin_pin='', pin_fail=0, pin_lock=0 WHERE tg_id=?", (o,))
+            c.execute("DELETE FROM admin_sessions WHERE tg_id=?", (o,)); c.commit()
+            print("Пароль админа сброшен — задай новый в приложении")
     elif cmd == "list":
         for r in c.execute("SELECT * FROM players ORDER BY last_seen DESC"):
             print(f"@{r['handle']:16} {r['name'] or '':20} tg:@{r['tg_username'] or '-':16} ники:{','.join(nicks_of(c, r['tg_id']))} {'АДМИН' if r['admin'] else ''} {datetime.fromtimestamp(r['last_seen'], MSK):%d.%m %H:%M}")
