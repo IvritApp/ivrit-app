@@ -50,11 +50,20 @@
   };
 
   // ---------- Таблица всех букв ----------
+  // тёмный ли сейчас фон приложения (своя тема, тема Telegram или телефона) — у раздела свои цвета под него
+  function isDark() {
+    const b = document.body;
+    if (b.classList.contains("theme-dark")) return true;
+    if (b.classList.contains("theme-light")) return false;
+    try { const m = getComputedStyle(b).backgroundColor.match(/\d+(\.\d+)?/g); if (m && m.length >= 3) return (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]) < 128; } catch (e) {}
+    return !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+  }
   const PAL = 8;   // 8 цветов, буквы идут по кругу
   const col = (i) => ` ab-c${i % PAL}`;
   const gear = `<button class="ab-gear" id="abGear" aria-label="Настройки">⚙️</button>`;
   function showGrid() {
     current = -1;
+    root.classList.toggle("ab-dark", isDark());
     const s = seen();
     const tiles = data.letters.map((L, i) => `
       <button class="ab-tile${col(i)}${s.includes(L.id) ? " ab-seen" : ""}" data-i="${i}">
@@ -88,6 +97,7 @@
 
   function showLetter(i) {
     current = i;
+    root.classList.toggle("ab-dark", isDark());
     const L = data.letters[i];
     markSeen(L.id);
 

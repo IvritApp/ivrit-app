@@ -14,7 +14,7 @@
 }
 
 #alphabet { --ab-line: #dfe6ee; --ab-seen: #e6f6dc; --ab-seen-b: #8fd16a; }
-body.theme-dark #alphabet { --ab-line: #2c3747; --ab-seen: #1f3a26; --ab-seen-b: #4c9a3a; }
+#alphabet.ab-dark { --ab-line: #2c3747; --ab-seen: #1f3a26; --ab-seen-b: #4c9a3a; }
 
 .ab-wrap { max-width: 440px; margin: 0 auto; }
 .ab-in { animation: abIn .3s cubic-bezier(.2,.8,.2,1); }
@@ -71,7 +71,7 @@ body.theme-dark #alphabet { --ab-line: #2c3747; --ab-seen: #1f3a26; --ab-seen-b:
 .ab-form-sound { font-size: 18px; font-weight: 700; color: #3a8ad6; }
 .ab-form-label { font-size: 12px; color: var(--hint); }
 .ab-note { background: #fff4e6; color: #8a4b00; border-radius: 12px; padding: 10px 12px; font-size: 15px; text-align: left; margin: 12px 0 0; }
-body.theme-dark .ab-note { background: #3a2a14; color: #ffd29c; }
+#alphabet.ab-dark .ab-note { background: #3a2a14; color: #ffd29c; }
 
 .ab-syl-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
 .ab-syl {
@@ -128,9 +128,9 @@ body.theme-dark .ab-note { background: #3a2a14; color: #ffd29c; }
 #alphabet .ab-c2 { --c: #e3a400; --cb: #fff7d6; } #alphabet .ab-c3 { --c: #3cae5c; --cb: #e4f7e9; }
 #alphabet .ab-c4 { --c: #14a3a3; --cb: #dff6f5; } #alphabet .ab-c5 { --c: #3a8ad6; --cb: #e3f0fc; }
 #alphabet .ab-c6 { --c: #7a5ce0; --cb: #efe9ff; } #alphabet .ab-c7 { --c: #d4459c; --cb: #fde8f4; }
-body.theme-dark #alphabet .ab-c0 { --cb: #3a1d1f; } body.theme-dark #alphabet .ab-c1 { --cb: #3a2615; } body.theme-dark #alphabet .ab-c2 { --cb: #352d10; }
-body.theme-dark #alphabet .ab-c3 { --cb: #173325; } body.theme-dark #alphabet .ab-c4 { --cb: #12302f; } body.theme-dark #alphabet .ab-c5 { --cb: #172b42; }
-body.theme-dark #alphabet .ab-c6 { --cb: #261f45; } body.theme-dark #alphabet .ab-c7 { --cb: #3a1830; }
+#alphabet.ab-dark .ab-c0 { --cb: #3a1d1f; } #alphabet.ab-dark .ab-c1 { --cb: #3a2615; } #alphabet.ab-dark .ab-c2 { --cb: #352d10; }
+#alphabet.ab-dark .ab-c3 { --cb: #173325; } #alphabet.ab-dark .ab-c4 { --cb: #12302f; } #alphabet.ab-dark .ab-c5 { --cb: #172b42; }
+#alphabet.ab-dark .ab-c6 { --cb: #261f45; } #alphabet.ab-dark .ab-c7 { --cb: #3a1830; }
 
 .ab-hero { position: relative; margin: 0 -4px 14px; padding: 18px 16px 14px; border-radius: 24px; color: #fff;
   background: linear-gradient(135deg, #ff8a35 0%, #e5484d 35%, #7a5ce0 70%, #3a8ad6 100%); box-shadow: 0 8px 22px rgba(122,92,224,.28); overflow: hidden; }
@@ -163,8 +163,22 @@ body.theme-dark #alphabet .ab-c6 { --cb: #261f45; } body.theme-dark #alphabet .a
 .ab-syl-row .ab-syl:nth-child(1) { background: #ffe9e9; border-color: #ffc7c9; } .ab-syl-row .ab-syl:nth-child(2) { background: #fff0e2; border-color: #ffd2ad; }
 .ab-syl-row .ab-syl:nth-child(3) { background: #fff7d6; border-color: #f5e08a; } .ab-syl-row .ab-syl:nth-child(4) { background: #e4f7e9; border-color: #a9e2b8; }
 .ab-syl-row .ab-syl:nth-child(5) { background: #e3f0fc; border-color: #aed0f2; }
-body.theme-dark .ab-syl-row .ab-syl { background: var(--soft) !important; border-color: var(--ab-line) !important; }
+#alphabet.ab-dark .ab-syl-row .ab-syl { background: var(--soft) !important; border-color: var(--ab-line) !important; }
 .ab-letter .ab-word { background: var(--cb); border-color: color-mix(in srgb, var(--c) 30%, transparent); border-bottom-color: var(--c); }
 .ab-letter .ab-word.ab-open { border-color: #3cae5c; background: #e4f7e9; }
-body.theme-dark .ab-letter .ab-word.ab-open { background: #173325; }
+#alphabet.ab-dark .ab-letter .ab-word.ab-open { background: #173325; }
 .ab-letter .ab-word-hint { color: var(--c); font-weight: 600; }
+
+/* ===== 14.11: свои цвета раздела — читается и в светлой, и в тёмной теме (и в теме Telegram) ===== */
+#alphabet { --text: #1f2433; --bg: #ffffff; --soft: #eef3fb; --hint: #667186; color: var(--text); }
+#alphabet::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(120% 60% at 0% 0%, #fff1e6 0%, transparent 60%), radial-gradient(120% 60% at 100% 30%, #efe9ff 0%, transparent 60%), linear-gradient(#f7f9ff, #fdf7fb); }
+#alphabet.ab-dark { --text: #eef2f8; --bg: #1a2232; --soft: #243047; --hint: #9aa8bc; --ab-line: #2f3b50; }
+#alphabet.ab-dark::before { background: radial-gradient(120% 60% at 0% 0%, #2a1d2f 0%, transparent 60%), radial-gradient(120% 60% at 100% 30%, #1d2547 0%, transparent 60%), linear-gradient(#111827, #161226); }
+#alphabet .ab-back { color: #3a8ad6; } #alphabet.ab-dark .ab-back { color: #78b2ee; }
+#alphabet.ab-dark .ab-hero { box-shadow: 0 8px 22px rgba(0,0,0,.4); }
+#alphabet.ab-dark .ab-letter .ab-big { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 35%, #1a2232) 0%, var(--cb) 60%); }
+#alphabet .ab-note { background: #fff4e6; color: #8a4b00; } #alphabet.ab-dark .ab-note { background: #3a2a14; color: #ffd29c; }
+#alphabet .ab-syl, #alphabet .ab-syl-tr { color: #1f2433; } #alphabet .ab-syl-tr { color: #2a6db3; }
+#alphabet.ab-dark .ab-syl { color: var(--text); } #alphabet.ab-dark .ab-syl-tr { color: #78b2ee; }
+#alphabet .ab-word.ab-open { color: var(--text); }
