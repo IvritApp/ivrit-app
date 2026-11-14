@@ -208,8 +208,13 @@
       <rect x="20" y="29" width="8" height="12" rx="1.5" fill="${C.brown}"/><rect x="14" y="25" width="5" height="5" fill="${C.sky}"/><rect x="29" y="25" width="5" height="5" fill="${C.sky}"/>${HL(18, 23, 3, 1)}`),
     glass: () => svg(`${SH(24, 44, 9)}<path d="M15,9 L33,9 L30,41 L18,41Z" fill="#dff1ff" stroke="#9cc6ee" stroke-width="1.6"/><path d="M16.5,22 L31.5,22 L30,40 L18,40Z" fill="${C.sky}" opacity=".7"/>${HL(20, 16, 1.4, 5, .7)}`),
     plate: () => svg(`${SH(24, 42, 17)}<ellipse cx="24" cy="30" rx="19" ry="10" fill="#fff" stroke="#d6dde6" stroke-width="1.5"/><ellipse cx="24" cy="29" rx="12" ry="6" fill="#f3f6f9" stroke="#e3e8ee"/>${HL(16, 25, 4, 1.2)}`),
-    knife: () => svg(`${SH(24, 44, 14)}<path d="M8,38 L28,14 Q33,8 38,9 Q37,15 31,19 L13,41Z" fill="#dfe5eb" stroke="#aeb6be" stroke-width="1.2"/><rect x="5" y="35" width="10" height="5" rx="2" transform="rotate(-50 10 37)" fill="${C.ink}"/>`),
-    fork: () => svg(`${SH(24, 44, 12)}<path d="M24,22 L24,42" stroke="#aeb6be" stroke-width="3.6" stroke-linecap="round"/><path d="M17,6 L17,17 Q17,23 24,23 Q31,23 31,17 L31,6 M24,6 L24,17" stroke="#aeb6be" stroke-width="2.6" fill="none" stroke-linecap="round"/>`),
+    knife: () => svg(`<defs><linearGradient id="icKn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f7fa"/><stop offset=".5" stop-color="#c3ccd5"/><stop offset="1" stop-color="#8d98a4"/></linearGradient></defs>${SH(24, 45, 15)}
+      <g transform="rotate(-38 24 24)"><path d="M6,21 L32,21 L32,27 L10,27 Q5,26 6,21Z" fill="url(#icKn)" stroke="#8d98a4" stroke-width=".6"/><path d="M8,22 L31,22" stroke="#fff" stroke-width=".8" opacity=".8"/>
+      <rect x="31" y="20" width="3" height="8" rx="1" fill="#aeb6be"/><rect x="34" y="20.5" width="12" height="7" rx="2.5" fill="#2b2f3a"/><circle cx="37.5" cy="24" r=".9" fill="#c7ced8"/><circle cx="42.5" cy="24" r=".9" fill="#c7ced8"/></g>`),
+    fork: () => svg(`<defs><linearGradient id="icFk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8d98a4"/><stop offset=".45" stop-color="#f4f7fa"/><stop offset="1" stop-color="#9aa4ae"/></linearGradient></defs>${SH(24, 45, 10)}
+      <g transform="rotate(-18 24 24)"><path d="M22.4,23 L21.6,43 Q24,45 26.4,43 L25.6,23Z" fill="url(#icFk)"/>
+      <path d="M17,5 L17.6,16 Q18,22 24,23 Q30,22 30.4,16 L31,5 L29.6,5 L29.2,15 L27.6,15 L27.4,5 L26,5 L25.6,15 L22.4,15 L22,5 L20.6,5 L20.4,15 L18.8,15 L18.4,5Z" fill="url(#icFk)" stroke="#8d98a4" stroke-width=".5"/>
+      <path d="M19,17 Q24,20 29,17" stroke="#fff" stroke-width=".7" fill="none" opacity=".8"/></g>`),
     elevator: () => svg(`${SH(24, 44, 14)}<rect x="10" y="6" width="28" height="35" rx="3" fill="#cfd6de"/><rect x="13" y="12" width="10.5" height="29" fill="#aeb6be"/><rect x="24.5" y="12" width="10.5" height="29" fill="#aeb6be"/>
       <path d="M20,8.5 L22.5,5.5 L25,8.5 M27,6 L29.5,9 L32,6" stroke="${C.blue}" stroke-width="1.6" fill="none"/>`),
     stairs: () => svg(`${SH(24, 44, 17)}<path d="M6,41 L6,34 L14,34 L14,27 L22,27 L22,20 L30,20 L30,13 L38,13 L38,6 L42,6 L42,41Z" fill="#c99a63"/><path d="M6,34 L14,34 M14,27 L22,27 M22,20 L30,20 M30,13 L38,13" stroke="#fff" stroke-width="1.5" opacity=".6"/>`),
@@ -264,8 +269,9 @@
     "свечи": "candles", "вино": "wine", "хала": "challah", "суп": "soup", "торт, пирог": "cake", "капучино (досл. «перевёрнутый»)": "cappuccino",
     "сок": "juice", "апельсины": "oranges", "сэндвич": "sandwich", "круассан": "croissant", "шакшука": "shakshuka", "омлет": "omelet", "мороженое": "icecream",
     "виноград": "grapes", "арбуз": "watermelon", "клубника": "strawberries", "лимон": "lemons", "гранат": "pomegranate", "морковь": "carrot", "перец": "pepper",
-    // части тела и соль в живых местах подписаны на иврите — в уроке это подсказка, поэтому их нарисуем отдельно
-    "рецепт": "prescription",
+    "рецепт": "prescription", "соль": "salt",
+    // части тела: в квесте карточки подписаны на иврите — в уроке надпись убираем (иначе это подсказка)
+    "голова": "head", "рука": "hand", "нога": "leg", "живот": "belly", "спина": "back", "глаз": "eye", "ухо": "ear", "горло": "throat",
     "телефон": "phone", "компьютер": "computer", "принтер": "printer", "офис": "desk", "паспорт": "passport", "кредитная карта": "card", "марка": "stamp",
     "конверт": "envelope", "посылка": "parcel", "бланк, анкета": "form", "ручка": "pen", "почта": "mailbox", "часы работы": "clock"
   };
@@ -279,7 +285,11 @@
     const id = typeof idOrWord === "string" ? idOrWord : window.wordIconId(idOrWord);
     if (!id || !I[id]) {
       const art = typeof idOrWord === "object" && idOrWord ? ART_BY_RU[norm(idOrWord.ru)] : null;
-      if (art && window.placeItemIcon) { const s2 = size || 64; return `<span class="w-ico" style="width:${s2}px;height:${s2}px">${window.placeItemIcon(art, s2)}</span>`; }
+      if (art && window.placeItemIcon) {
+        const s2 = size || 64;
+        const pic = window.placeItemIcon(art, s2).replace(/<text[\s\S]*?<\/text>/g, "");   // без подписей на иврите
+        return `<span class="w-ico" style="width:${s2}px;height:${s2}px">${pic}</span>`;
+      }
       return "";
     }
     const s = size || 64; curSize = s;
