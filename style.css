@@ -1011,7 +1011,7 @@ body.no-scroll { position: fixed; left: 0; right: 0; width: 100%; }
 /* ---------- Поездка в автобусе (places.js startRide): вид из окна ---------- */
 .pl-ride { position: absolute; left: 0; top: 0; width: 360px; height: 440px; transform-origin: 0 0; z-index: 20; box-shadow: 0 0 0 2000px #dfe6ee; animation: fadeIn .4s ease; }
 .pl-pano-win { position: absolute; left: 18px; top: 50px; width: 324px; height: 260px; overflow: hidden; background: #bfe3f7; }
-.pl-pano { display: flex; width: 1800px; animation: plRide 26s linear infinite; }
+.pl-pano { display: flex; width: 1800px; animation: plRide 13s linear infinite; }
 .pl-pano > svg { display: block; flex: none; }
 .pl-pano.pl-stop { animation-play-state: paused; }
 @keyframes plRide { to { transform: translateX(-900px); } }
@@ -1060,3 +1060,15 @@ body.no-scroll { position: fixed; left: 0; right: 0; width: 100%; }
 .q-fam-ask { text-align: center; font-size: 15px; padding: 10px 6px; line-height: 1.5; }
 .q-fam-ask .he { font-size: 24px; font-weight: 800; }
 .hs-st-bubble.fam::after { display: none; }
+.p-lvl-list-title { margin: 22px 4px 4px; font-weight: 800; font-size: 15px; color: #7c8a99; }
+button.p-lvl-go.sel { background: var(--blue, #3a8ad6); color: #fff; box-shadow: 0 3px 0 #2a6cab; }
+button.p-lvl-go.sel span { background: rgba(255,255,255,.25); padding: 3px 8px; border-radius: 999px; }
+body.theme-dark button.p-lvl-go.sel { background: #3a8ad6; color: #fff; }
+/* автобус: идёшь к двери джойстиком, нажимаешь — двери разъезжаются, заходишь */
+.pl-gdoor { cursor: pointer; }
+.pl-gdoor .pl-gd-l, .pl-gdoor .pl-gd-r { transition: transform .7s ease; transform-box: fill-box; }
+.pl-gdoor.open .pl-gd-l { transform: translateX(-90%); }
+.pl-gdoor.open .pl-gd-r { transform: translateX(90%); }
+.pl-gdoor.pl-near .pl-gd-hit { stroke: #ffd23a; stroke-width: 5; stroke-dasharray: 10 6; animation: plDash 1s linear infinite; }
+@keyframes plDash { to { stroke-dashoffset: -32; } }
+.pl-me.pl-enter { transition: opacity .8s ease, transform .8s ease !important; opacity: 0; transform: scale(.85) translateY(-10px); }

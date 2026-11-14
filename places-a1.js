@@ -213,16 +213,24 @@
     // ---------- 4. Автобус и город ----------
     bus: {
       viewNames: ["Улица", "Остановка", "Парк"], sky: "#bfe3f7", basket: "🔎", hostName: "Водитель",
-      host: { view: 1, x: 378, y: 148, cfg: M({ hair: "short", hairColor: 0, top: "shirt", topColor: 0, bottomColor: 2, beard: "stubble", skin: 2 }) },
+      // водитель — не на улице, а в кабине; ты сам идёшь к автобусу джойстиком
+      host: { view: 0, x: 378, y: 148, hidden: true, cfg: M({ hair: "short", hairColor: 0, top: "shirt", topColor: 0, bottomColor: 2, beard: "stubble", skin: 2 }) },
       goodsAt: [520, 40],
-      bg: () => `${street("#9fd3f5", "#e6f4fc")}<circle cx="980" cy="60" r="28" fill="#ffd54f"/>`,
+      walk: { start: 150, goto: { x1: 600, x2: 720, door: [626, 240, 64, 142], label: "🚪 Войти в автобус" } },
+      bg: () => `${street("#9fd3f5", "#e6f4fc")}<circle cx="980" cy="60" r="28" fill="#ffd54f"/>
+        ${rr(470, 150, 8, 240, 2, "#5b6470")}${rr(440, 120, 68, 44, 6, "#3cae5c")}${txt(474, 140, "תחנה", 13, "#fff")}${txt(474, 157, "5 · 18", 11, "#ffd23a")}
+        ${rr(380, 300, 80, 10, 3, "#8a5a36")}${rr(384, 310, 6, 30, 2, "#5b6470")}${rr(450, 310, 6, 30, 2, "#5b6470")}${rr(370, 230, 4, 110, 2, "#9aa4ae")}${rr(370, 228, 140, 6, 2, "#9aa4ae")}
+        <ellipse cx="790" cy="396" rx="200" ry="10" fill="#000" opacity=".15"/>
+        ${rr(590, 196, 400, 194, 22, "#3cae5c")}${rr(590, 196, 400, 26, 16, "#2e9d50")}${rr(596, 216, 30, 110, 8, "#bfe0f5")}
+        ${[0, 1, 2, 3, 4].map(i => rr(712 + i * 54, 234, 46, 64, 6, "#dff1ff")).join("")}
+        ${rr(640, 202, 110, 16, 4, "#2b2f3a")}${txt(695, 214, "5 מרכז", 12, "#ffd23a")}
+        ${rr(700, 326, 290, 6, 3, "#fff", 'opacity=".55"')}<circle cx="602" cy="360" r="9" fill="#fff4b0"/>
+        ${[668, 900].map(x => `<circle cx="${x}" cy="392" r="26" fill="#2b2f3a"/><circle cx="${x}" cy="392" r="11" fill="#9aa4ae"/>`).join("")}`,
       spots: [
         { kind: "light", view: 0, x: 44, y: 150, w: 40, h: 216 },
         { kind: "shop", view: 0, x: 104, y: 150, w: 160, h: 196 },
         { kind: "streetlamp", view: 0, x: 280, y: 130, w: 30, h: 220 },
         { kind: "car", view: 0, x: 150, y: 360, w: 120, h: 62 },
-        { kind: "stop", view: 1, x: 498, y: 160, w: 28, h: 210 },
-        { kind: "bus", view: 1, x: 530, y: 270, w: 150, h: 112 },
         { kind: "park", view: 2, x: 752, y: 150, w: 150, h: 232 },
         { kind: "bench", view: 2, x: 912, y: 300, w: 100, h: 56 },
         { kind: "taxi", view: 2, x: 892, y: 352, w: 140, h: 76 },
@@ -247,7 +255,23 @@
         npc: { name: "Пассажирка", x: 214, y: 196, cfg: F({ hair: "bob", hairColor: 5, top: "blouse", topColor: 4, bottom: "longskirt", bottomColor: 1, skin: 1 }) },
         front: () => `${rr(214, 380, 146, 60, 16, "#3a8ad6")}${rr(222, 388, 130, 16, 8, "#5aa9f0")}`,
       },
-      facade: () => facadeBase("#bfe3f7", `${rr(0, 380, 360, 60, 0, "#7b8592")}${rr(30, 40, 300, 360, 30, "#3cae5c")}${rr(54, 64, 252, 120, 12, "#dff1ff")}${rr(110, 46, 140, 14, 4, "#2b2f3a")}${txt(180, 57, "5 מרכז", 11, "#ffd23a")}
+      // кабина: водитель за рулём, ты стоишь у валидатора
+      cabin: {
+        members: [{ id: "driver", name: "Водитель", host: true, pose: "sit", x: 14, y: 84, w: 140, h: 280,
+                    cfg: M({ hair: "short", hairColor: 0, top: "shirt", topColor: 0, bottomColor: 2, beard: "stubble", skin: 2 }) }],
+        bg: () => `${rr(0, 0, 360, 440, 0, "#e3e9ef")}${rr(0, 0, 360, 168, 0, "#bfe3f7")}
+          ${rr(0, 108, 360, 60, 0, "#7b8592")}${[0, 1, 2, 3].map(i => rr(20 + i * 100, 136, 50, 5, 2, "#fff")).join("")}
+          ${rr(200, 40, 70, 70, 4, "#e9dcc6")}${rr(280, 20, 80, 90, 4, "#dccbb0")}${rr(0, 50, 90, 60, 4, "#f2e6d0")}<circle cx="140" cy="70" r="22" fill="#4f9d5d"/>${rr(137, 80, 6, 30, 2, "#8a5a36")}
+          ${rr(0, 0, 360, 14, 0, "#5b6470")}${rr(0, 160, 360, 14, 0, "#5b6470")}${rr(176, 0, 8, 170, 0, "#5b6470")}
+          ${rr(14, 18, 150, 22, 5, "#2b2f3a")}${txt(89, 34, "5 מרכז", 14, "#ffd23a")}
+          ${rr(0, 300, 360, 140, 0, "#9aa4ae")}${rr(0, 296, 360, 8, 0, "#c8d0d8")}`,
+        front: () => `${rr(0, 268, 214, 130, 12, "#3b4352")}${rr(10, 276, 194, 14, 7, "#4d5666")}${rr(24, 300, 60, 26, 4, "#2b2f3a")}${txt(54, 318, "5", 14, "#7bf28a")}${rr(100, 304, 22, 18, 3, "#e8413a")}${rr(130, 304, 22, 18, 3, "#3cae5c")}
+          <path d="M150,262 L150,290" stroke="#2b2f3a" stroke-width="10"/><circle cx="150" cy="240" r="44" fill="none" stroke="#2b2f3a" stroke-width="10" transform="rotate(-12 150 240)"/><circle cx="150" cy="240" r="10" fill="#2b2f3a"/>
+          ${rr(262, 196, 46, 64, 8, "#f2b632")}${rr(270, 206, 30, 22, 3, "#2b2f3a")}${txt(285, 222, "₪", 13, "#7bf28a")}${rr(270, 236, 30, 12, 3, "#fff")}${rr(281, 260, 8, 50, 2, "#5b6470")}
+          ${txt(285, 284, "רב־קו", 9, "#2b2f3a")}${rr(330, 0, 10, 440, 4, "#f2b632")}`,
+      },
+      facade: null,
+      _oldFacade: () => facadeBase("#bfe3f7", `${rr(0, 380, 360, 60, 0, "#7b8592")}${rr(30, 40, 300, 360, 30, "#3cae5c")}${rr(54, 64, 252, 120, 12, "#dff1ff")}${rr(110, 46, 140, 14, 4, "#2b2f3a")}${txt(180, 57, "5 מרכז", 11, "#ffd23a")}
         ${glassDoors(126, 200, 108, 180)}<circle cx="72" cy="330" r="14" fill="#fff4b0"/><circle cx="288" cy="330" r="14" fill="#fff4b0"/>${rr(60, 380, 50, 20, 6, "#2b2f3a")}${rr(250, 380, 50, 20, 6, "#2b2f3a")}`),
     },
 

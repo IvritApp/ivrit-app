@@ -124,10 +124,7 @@ function renderPath() {
         k === "gold" ? `все ${ch.levels.length} уровней золотые` : `${medalNeed(ch.levels.length, k)} из ${ch.levels.length} золотые (${Math.round(MEDAL_PCT[k] * 100)}%)`}</small></div>`).join("")}
       <div class="p-medal-note">Золотых уровней: <b>${goldLevels} из ${ch.levels.length}</b></div>
     </div>
-    ${ch.levels.map((l, i) => i !== lvlIdx
-      ? (l.soon ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
-        : `<button class="p-soon p-lvl-go${levelOpen(ch, i) ? "" : " locked"}" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${levelGold(l) ? "🏅" : levelDone(l) ? "✓" : levelOpen(ch, i) ? "›" : "🔒"}</span></button>`)
-      : `<div class="p-cur-level" id="p-cur-level">
+    <div id="p-cur-level">
     <div class="p-level">
       <div class="p-level-title">Уровень ${lvlIdx + 1} · ${lvl.title}${isGoldLvl ? ` <span class="p-lvl-gold">🏅 золотой</span>` : ""}</div>
       <div class="p-level-sub">${done.filter(id => lvl.lessons.includes(id)).length} из ${lvl.lessons.length} уроков${goldCount ? ` · <span class="p-gold">★ ${goldCount} золот${goldCount === 1 ? "ой" : "ых"}</span>` : ""}</div>
@@ -140,7 +137,10 @@ function renderPath() {
       ${questIcon(lvl.questImg)}
       <span><b>Квест: ${lvl.questTitle || lvl.title}</b><br>${allDone ? (questDone ? (questGold ? "Идеально 🏆 · можно ещё раз" : "Пройден ✓ · можно ещё раз") : "Открыт — вперёд!") : `Откроется после ${lvl.lessons.length} уроков 🔒`}</span>
     </button>
-    </div>`).join("")}
+    </div>
+    <div class="p-lvl-list-title">Все уровни</div>
+    ${ch.levels.map((l, i) => l.soon ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
+      : `<button class="p-soon p-lvl-go${i === lvlIdx ? " sel" : ""}${levelOpen(ch, i) ? "" : " locked"}" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${i === lvlIdx ? "сейчас" : levelGold(l) ? "🏅" : levelDone(l) ? "✓" : levelOpen(ch, i) ? "›" : "🔒"}</span></button>`).join("")}
     <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после ${ch.levels.length} уровней</span></div>
     <div class="p-soon next"><b>Дальше — глава ${ch.next}</b><span>🔒</span></div>`;
 
@@ -155,7 +155,7 @@ function renderPath() {
   if (tb) tb.onclick = () => showTaxi(() => showPath());
   pathView.querySelectorAll(".p-lvl-go").forEach(b => b.onclick = () => {
     if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий уровень — все уроки и квест"); vibrate("warning"); return; } store.set("level_" + ch.id, +b.dataset.lvl); renderPath();
-    const cl = document.getElementById("p-cur-level"); if (cl) cl.scrollIntoView({ behavior: "smooth", block: "start" }); });
+    pathView.scrollTo ? pathView.scrollTo({ top: 0, behavior: "smooth" }) : 0; window.scrollTo({ top: 0, behavior: "smooth" }); });
   document.getElementById("p-quest").onclick = () => {
     if (!allDone) { showToast(`Пройди все ${lvl.lessons.length} уроков — и квест откроется`); vibrate("warning"); return; }
     startQuest(lvl.quest);

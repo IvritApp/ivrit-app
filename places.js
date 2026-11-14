@@ -223,7 +223,12 @@
     root.innerHTML = `<div class="mk-world"></div><div class="mk-basket" hidden><span>${P.basket || "🧺"}</span><b>0</b></div>`;
     view.appendChild(root);
     const world = root.querySelector(".mk-world");
-    world.innerHTML = `<svg class="mk-world-svg" viewBox="0 0 ${W} 440" width="${W}" height="440">${P.bg()}${P.spots.map(spotHTML).join("")}</svg>`;
+    const GD = P.walk && P.walk.goto && P.walk.goto.door;
+    const gdoorHTML = GD ? `<g class="pl-gdoor"><rect x="${GD[0] - 6}" y="${GD[1] - 6}" width="${GD[2] + 12}" height="${GD[3] + 8}" rx="6" fill="#2b2f3a"/>
+      <rect class="pl-gd-l" x="${GD[0]}" y="${GD[1]}" width="${GD[2] / 2}" height="${GD[3]}" rx="3" fill="#a9d0ea" stroke="#5b6470" stroke-width="3"/>
+      <rect class="pl-gd-r" x="${GD[0] + GD[2] / 2}" y="${GD[1]}" width="${GD[2] / 2}" height="${GD[3]}" rx="3" fill="#a9d0ea" stroke="#5b6470" stroke-width="3"/>
+      <rect class="pl-gd-hit" x="${GD[0] - 10}" y="${GD[1] - 10}" width="${GD[2] + 20}" height="${GD[3] + 20}" fill="transparent"/></g>` : "";
+    world.innerHTML = `<svg class="mk-world-svg" viewBox="0 0 ${W} 440" width="${W}" height="440">${P.bg()}${gdoorHTML}${P.spots.map(spotHTML).join("")}</svg>`;
     // хозяин места
     const host = document.createElement("div");
     host.className = "mk-seller pl-host";
@@ -244,14 +249,19 @@
     let walk = null, fam = null;            // режим «хожу джойстиком» и «семья за столом»
 
     // Вход: двери открываются, шаг внутрь
+    // (если у места нет фасада — например, улица с остановкой — сразу оказываемся на месте)
     const intro = document.createElement("div");
-    intro.className = "mk-intro"; intro.innerHTML = P.facade();
-    root.appendChild(intro);
-    const introMs = 2300;
-    if (window.cutDoorHole) window.cutDoorHole(intro);        // в проёме дверей видно, что внутри
-    setTimeout(() => intro.classList.add("open"), 250);
-    setTimeout(() => intro.classList.add("walk"), 1000);
-    setTimeout(() => { intro.remove(); host.classList.add("wave"); setTimeout(() => host.classList.remove("wave"), 1800); }, introMs);
+    let introMs = 400;
+    if (P.facade) {
+      intro.className = "mk-intro"; intro.innerHTML = P.facade();
+      root.appendChild(intro);
+      introMs = 3500;
+      if (window.cutDoorHole) window.cutDoorHole(intro);        // в проёме дверей видно, что внутри
+      setTimeout(() => intro.classList.add("open"), 300);       // двери плавно разъезжаются (1,4 с)
+      setTimeout(() => intro.classList.add("walk"), 1500);      // шаг внутрь (1,9 с)
+      setTimeout(() => { intro.remove(); host.classList.add("wave"); setTimeout(() => host.classList.remove("wave"), 1800); }, introMs);
+    }
+    if (P.host.hidden) host.style.display = "none";           // хозяин появится позже (водитель — в кабине)
 
     let bubble = null, anchor = null, top = false, sc = 1;
     function fit() {
@@ -282,6 +292,12 @@
 
     const api = { onPick: null };
     world.addEventListener("click", (e) => {
+      if (walk && walk.goto) {                                // идём к двери (автобус): предметы не берём
+        if (dead || !e.target.closest(".pl-gdoor")) return;
+        e.stopPropagation();
+        if (inGoto()) goGo(); else if (window.showToast) showToast("Подойди к двери — джойстиком внизу 🕹️");
+        return;
+      }
       const g = e.target.closest(".mk-spot");
       if (!g || dead) return;
       e.stopPropagation();
@@ -393,6 +409,7 @@
       root.appendChild(b);
       bubble = b; anchor = who[speaker] || who.friend; top = speaker === "seller" || (speaker === "npc" && !!ride);
       if (speaker === "seller" && !walk && !fam) { if (cur !== P.host.view) look(P.host.view); host.classList.add("talk"); }
+      if (walk) top = true;                                   // пока ходишь — реплики сверху, джойстик внизу свободен
       if (who[speaker] && who[speaker].classList && who[speaker].classList.contains("pl-fam-m")) { who[speaker].classList.add("talk"); top = false; b.classList.add("fam"); }
       placeBubble();
       requestAnimationFrame(() => b.classList.add("show"));
@@ -402,8 +419,9 @@
     // ХОДЬБА ДЖОЙСТИКОМ: твой герой ходит по комнатам, берёт вещи и относит их на стол
     // P.walk = { start: x, table: { x1, x2, slots: { kind: [x, y, w, h] } } }
     // =====================================================
-    function startWalk() {
+    function startWalk(o) {
       if (!P.walk || walk) return;
+      o = o || {};
       const me = document.createElement("div");
       me.className = "pl-me";
       let sv = "";
@@ -421,7 +439,8 @@
       const act = document.createElement("button");
       act.className = "pl-act"; act.hidden = true;
       root.appendChild(act);
-      walk = { x: P.walk.start, vx: 0, me, pad, act, carry: null, placed: [], last: 0, raf: 0, onPlaced: null };
+      walk = { x: P.walk.start, vx: 0, me, pad, act, carry: null, placed: [], last: 0, raf: 0, onPlaced: null,
+               goto: P.walk.goto || null, onGo: o.onGo || null };
       me.style.left = (walk.x - 60) + "px";
       // джойстик: тянешь кружок влево/вправо — герой идёт; отпустил — стоит
       const knob = pad.querySelector(".pl-joy-knob");
@@ -433,7 +452,7 @@
       pad.addEventListener("pointerup", end); pad.addEventListener("pointercancel", end);
       walk.key = (e) => { if (e.key === "ArrowLeft") walk.vx = e.type === "keydown" ? -230 : 0; if (e.key === "ArrowRight") walk.vx = e.type === "keydown" ? 230 : 0; };
       window.addEventListener("keydown", walk.key); window.addEventListener("keyup", walk.key);
-      act.onclick = (e) => { e.stopPropagation(); const g = nearSpot(); if (g && api.onPick) api.onPick(g.dataset.kind, g); };
+      act.onclick = (e) => { e.stopPropagation(); if (walk.goto) { if (inGoto()) goGo(); return; } const g = nearSpot(); if (g && api.onPick) api.onPick(g.dataset.kind, g); };
       const step = (t) => {
         if (!walk || dead) return;
         const dt = walk.last ? Math.min(.05, (t - walk.last) / 1000) : 0; walk.last = t;
@@ -458,7 +477,29 @@
       world.querySelectorAll(".mk-spot:not(.pl-taken)").forEach(g => { if (isNear(g)) { const d = Math.abs(walk.x - spotCenter(g)); if (d < bd) { bd = d; best = g; } } });
       return best;
     }
+    // режим «дойди до двери»: P.walk.goto = { x1, x2, door: [x, y, w, h], label }
+    function inGoto() { return walk && walk.goto && walk.x > walk.goto.x1 && walk.x < walk.goto.x2; }
+    function goGo() {
+      if (!walk || walk.going) return;
+      walk.going = true;
+      const gd = world.querySelector(".pl-gdoor"); if (gd) gd.classList.add("open");
+      if (window.playSound) try { playSound("pop"); } catch (e) {}
+      const me = walk.me, cb = walk.onGo, G = walk.goto;
+      walk.vx = 0; walk.pad.remove(); walk.act.remove();
+      // шаг к двери и внутрь
+      walk.x = G.door[0] + G.door[2] / 2; me.classList.remove("left"); me.classList.add("walking");
+      me.style.transition = "left .5s ease"; me.style.left = (walk.x - 60) + "px";
+      setTimeout(() => { if (!dead) me.classList.add("pl-enter"); }, 550);
+      setTimeout(() => { if (dead) return; stopWalk(); if (cb) cb(); }, 1500);
+    }
     function updateNear() {
+      if (walk.goto) {
+        if (walk.going) return;
+        const ok = inGoto();
+        const gd = world.querySelector(".pl-gdoor"); if (gd) gd.classList.toggle("pl-near", ok);
+        walk.act.hidden = !ok; walk.act.textContent = walk.goto.label || "🚪 Войти";
+        return;
+      }
       const n = nearSpot();
       world.querySelectorAll(".mk-spot.pl-near").forEach(g => { if (g !== n) g.classList.remove("pl-near"); });
       if (n) n.classList.add("pl-near");
@@ -503,28 +544,31 @@
     // СЕМЬЯ ЗА СТОЛОМ: герои сидят за накрытым столом; по ним можно нажимать
     // members: [{id, name, cfg}], на столе — то, что поставили
     // =====================================================
-    function showFamily(members, onTap) {
+    function showFamily(members, onTap, sceneKey) {
       stopWalk();
+      const S = sceneKey ? P[sceneKey] : P.family;   // другая сцена (кабина автобуса) — тот же механизм
+      members = members || (S && S.members) || [];
       fam = document.createElement("div");
-      fam.className = "pl-fam";
+      fam.className = "pl-fam" + (sceneKey ? " pl-scene-" + sceneKey : "");
       const T = P.walk ? P.walk.table : null;
       const onTable = T ? Object.keys(T.slots) : [];
       const slotsX = [6, 76, 146, 216, 286];
-      fam.innerHTML = `<svg class="pl-fam-bg" viewBox="0 0 360 440" width="360" height="440">${P.family ? P.family.bg() : ""}</svg>`;
+      fam.innerHTML = `<svg class="pl-fam-bg" viewBox="0 0 360 440" width="360" height="440">${S ? S.bg() : ""}</svg>`;
       members.forEach((m, i) => {
         const el = document.createElement("div");
         el.className = "pl-fam-m"; el.dataset.id = m.id;
-        el.style.left = (slotsX[i] || 0) + "px"; el.style.top = (m.kid ? 150 : 128) + "px";
+        el.style.left = (m.x != null ? m.x : (slotsX[i] || 0)) + "px"; el.style.top = (m.y != null ? m.y : (m.kid ? 150 : 128)) + "px";
+        if (m.w) { el.style.width = m.w + "px"; el.style.height = (m.h || m.w * 2) + "px"; }
         let sv = "";
         const mc = m.cfg || (P.familyLooks && P.familyLooks[m.id]) || {};
-        try { sv = HirbisAvatar.svg(HirbisAvatar.sanitize(Object.assign(HirbisAvatar.defaults(mc.gender || "m"), mc)), { pose: "stand" }); } catch (e) {}
+        try { sv = HirbisAvatar.svg(HirbisAvatar.sanitize(Object.assign(HirbisAvatar.defaults(mc.gender || "m"), mc)), { pose: m.pose || "stand" }); } catch (e) {}
         el.innerHTML = `${sv}<span class="pl-fam-name">${m.name}</span>`;
         el.onclick = (e) => { e.stopPropagation(); if (onTap) onTap(m.id, el); };
         fam.appendChild(el);
         who[m.id] = el;
         if (m.host) who.seller = el;          // мама за столом — её реплики идут от неё
       });
-      fam.insertAdjacentHTML("beforeend", `<svg class="pl-fam-front" viewBox="0 0 360 440" width="360" height="440">${P.family ? P.family.front(onTable) : ""}</svg>`);
+      fam.insertAdjacentHTML("beforeend", `<svg class="pl-fam-front" viewBox="0 0 360 440" width="360" height="440">${S ? S.front(onTable) : ""}</svg>`);
       root.insertBefore(fam, basket);
       fit();
     }
@@ -535,6 +579,7 @@
     // P.ride = { pano: () => svg-полоса 900×260 (предметы с data-kind), interior: () => svg салона 360×440, npc: {cfg, name, x, y} }
     function startRide() {
       if (!P.ride || ride) return;
+      if (fam) { fam.remove(); fam = null; }                 // из кабины — на место у окна
       ride = document.createElement("div");
       ride.className = "pl-ride";
       const strip = P.ride.pano();

@@ -184,6 +184,7 @@ function showQuestStep() {
   if (st.shop) { startShopping(st); return; }
   if (st.ride) { startRide(st); return; }
   if (st.walk) { startWalkStep(st); return; }
+  if (st.go) { startGoStep(st); return; }
   if (st.family) { startFamily(st); return; }
   document.getElementById("qHint").hidden = true;
   if (st.seller) { stage.say("seller", sellerHTML(st.seller)); speak(g(st.seller.he), { audio: st.seller.audio }); }
@@ -379,6 +380,27 @@ function startWalkStep(st) {
       setTimeout(() => { if (token === stageToken) { stage.hide(); showQuestStep(); } }, 2400);
     }, 700);
   });
+}
+
+// =====================================================
+// ДОЙДИ ДЖОЙСТИКОМ (автобус): идёшь по улице к двери, нажимаешь — заходишь внутрь, там новая сцена
+// =====================================================
+function startGoStep(st) {
+  const token = stageToken, go = st.go;
+  stage.hide();
+  document.getElementById("qHint").hidden = true;
+  const opts = document.getElementById("qOpts");
+  opts.innerHTML = `<div class="mk-where">🕹️ ${g(go.how || "Иди джойстиком и нажми на дверь")}</div>`;
+  stage.startWalk({ onGo: () => {
+    if (token !== stageToken) return;
+    opts.innerHTML = "";
+    stage.hide();
+    if (go.scene) stage.showFamily(null, null, go.scene);
+    if (go.done) friendSays(g(go.done));
+    qStep++;
+    setTimeout(() => { if (token === stageToken) { stage.hide(); showQuestStep(); } }, go.done ? 2200 : 600);
+  } });
+  friendSays(g(go.intro));
 }
 
 // =====================================================
