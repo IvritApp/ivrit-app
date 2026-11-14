@@ -1129,3 +1129,27 @@ body.theme-dark .q-speak-field { background: #1c2430; border-color: #2c3a4c; }
 .p-rev b { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #ff8a35; color: #fff; display: flex; align-items: center; justify-content: center; }
 .p-rev.done b { background: #3cae5c; }
 body.theme-dark .p-review { background: #2a2118; } body.theme-dark .p-rev { background: #1c2430; color: var(--text); }
+/* автопилот тестировщика */
+.auto-box { position: absolute; z-index: 60; left: max(10px, env(safe-area-inset-left, 0px)); top: calc(54px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; gap: 6px; }
+.auto-box button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(43,47,58,.82); color: #fff; font-size: 20px; box-shadow: 0 3px 10px rgba(0,0,0,.25); cursor: pointer; }
+/* обучение «Как играть» */
+.tu { position: fixed; inset: 0; z-index: 200; background: rgba(20,30,45,.55); display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity .3s; }
+.tu.show { opacity: 1; }
+.tu-card { width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; background: var(--bg); color: var(--text); border-radius: 26px 26px 0 0; padding: 14px 20px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateY(30px); transition: transform .3s; }
+.tu.show .tu-card { transform: none; }
+.tu-top { display: flex; justify-content: space-between; align-items: center; }
+.tu-dots { display: flex; gap: 6px; }
+.tu-dots i { width: 8px; height: 8px; border-radius: 4px; background: #d9e6f2; transition: width .25s; }
+.tu-dots i.on { width: 22px; background: #3a8ad6; } .tu-dots i.was { background: #9cc6ee; }
+.tu-skip { border: 0; background: none; color: #8a96a6; font: 600 14px Arial, sans-serif; cursor: pointer; }
+.tu-body { text-align: center; padding: 8px 0 4px; }
+.tu-body h2 { margin: 6px 0 6px; font-size: 23px; }
+.tu-body p { margin: 0 auto 10px; max-width: 34ch; font-size: 16px; line-height: 1.45; }
+.tu-body ul { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; text-align: left; }
+.tu-body li { background: var(--soft, #eef5fd); border-radius: 12px; padding: 8px 12px; font-size: 15px; }
+.tu-bird { width: 120px; height: auto; }
+.tu-icons { display: flex; justify-content: center; gap: 10px; font-size: 44px; padding: 6px 0; }
+.tu-mic { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 4px 0 6px; }
+.tu-mic-res { font-size: 14px; min-height: 18px; max-width: 34ch; }
+.tu-nav { display: flex; gap: 10px; margin-top: 14px; }
+.tu-nav .btn { flex: 1; margin: 0; }

@@ -223,6 +223,7 @@ function showOnboarding() {
       setGreeting();
       updateHeroCard();
       showHome();
+      if (window.showTutorial && !store.get("tutorSeen", false)) setTimeout(() => showTutorial(), 400);   // обучение — сразу после знакомства
     };
   }
   render();
@@ -334,7 +335,11 @@ rig.onclick = () => {                                    // если нажат�
 };
 // Первый запуск — знакомство, иначе сразу главный экран
 setGreeting();
-if (!profile) showOnboarding(); else startHomeBird();
+if (!profile) showOnboarding(); else {
+  startHomeBird();
+  // тем, кто уже играл до появления обучения, — показать один раз
+  if (!store.get("tutorSeen", false)) setTimeout(() => { if (window.showTutorial && !document.getElementById("home").hidden) showTutorial(); }, 1200);
+}
 
 // «Основное обучение» → открыть урок
 document.getElementById("go-learn").onclick = () => showPath();
@@ -1047,11 +1052,15 @@ function openSettings() {
       <div class="set-note">⭐ Советуем учить без транскрипции — так слова запоминаются лучше. Но выбор за тобой.</div>
       <div class="set-title">Вибрация</div>${seg("vibro", [["true", "Вкл"], ["false", "Выкл"]])}
       ${window.hirbisSync ? hirbisSync.settingsHTML() : ""}
+      <div class="set-title">Помощь</div>
+      <div class="set-test"><span>📖 Как играть — короткое обучение и проверка микрофона</span><button class="btn blue" id="tuOpen">Открыть</button></div>
       <div class="set-title">Режим тестировщика</div>
       ${store.get("testmode", false)
         ? `<div class="set-test"><span>🔓 Включён: все уроки и уровни открыты</span><button class="btn ghost" id="testOff">Выключить</button></div>
            <div class="set-test"><span>🇷🇺 Всё на русском — иврит в квестах и диалогах показан переводом (проверить сюжет)</span>
-             <button class="btn ${store.get("allru", false) ? "ghost" : "blue"}" id="allRu">${store.get("allru", false) ? "Выключить" : "Включить"}</button></div>`
+             <button class="btn ${store.get("allru", false) ? "ghost" : "blue"}" id="allRu">${store.get("allru", false) ? "Выключить" : "Включить"}</button></div>
+           <div class="set-test"><span>🤖 Автопилот — в квестах не надо говорить: кнопка ⏩ делает шаг сама, ▶️ проходит квест целиком (смотреть анимации и движки)</span>
+             <button class="btn ${store.get("autoplay", false) ? "ghost" : "blue"}" id="autoPlay">${store.get("autoplay", false) ? "Выключить" : "Включить"}</button></div>`
         : `<div class="set-test"><input type="password" inputmode="numeric" id="testPass" placeholder="Пароль" autocomplete="off"><button class="btn blue" id="testOn">Включить</button></div>`}
     </div>`;
   box.className = "show";
@@ -1073,6 +1082,9 @@ function openSettings() {
     else { showToast("Неверный пароль"); vibrate("error"); }
   };
   if (tOff) tOff.onclick = () => { store.set("testmode", false); showToast("Режим тестировщика выключен"); afterTestToggle(); };
+  const tu = document.getElementById("tuOpen"); if (tu) tu.onclick = () => { closeSettings(); showTutorial(); };
+  const aP = document.getElementById("autoPlay");
+  if (aP) aP.onclick = () => { const on = !store.get("autoplay", false); store.set("autoplay", on); showToast(on ? "🤖 Автопилот включён — в квестах появятся ⏩ и ▶️" : "Автопилот выключен"); openSettings(); };
   const aRu = document.getElementById("allRu");
   if (aRu) aRu.onclick = () => { const on = !store.get("allru", false); store.set("allru", on); showToast(on ? "🇷🇺 Всё на русском — включено" : "Иврит снова на месте"); openSettings(); };
   box.querySelectorAll("input[type=range]").forEach(r => {
@@ -1082,6 +1094,7 @@ function openSettings() {
 }
 const TEST_HASH = 9530;
 // «Всё на русском» (только в режиме тестировщика): квесты и диалоги показывают перевод вместо иврита
+function autoMode() { return store.get("testmode", false) === true && store.get("autoplay", false) === true; }
 function ruMode() { return store.get("testmode", false) === true && store.get("allru", false) === true; }
 function testHash(t) { let h = 7; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) % 1000003; return h; }
 function afterTestToggle() {

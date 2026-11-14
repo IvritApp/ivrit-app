@@ -8,7 +8,7 @@
 // =====================================================
 (function () {
   const API = "https://89-23-99-107.sslip.io/hapi";
-  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru"];
+  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru", "autoplay"];
   const P = "hirbis_";
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;
@@ -37,7 +37,10 @@
     const extra = path.startsWith("/admin/") ? { session: admSess() } : {};
     const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "text/plain" }, keepalive: !!keepalive,
       body: JSON.stringify(Object.assign({ initData }, extra, body)) });
-    if (!r.ok) throw new Error("http " + r.status);
+    if (!r.ok) {                                           // покажем настоящую причину (например, «нет прав»), а не «нет связи»
+      let msg = "http " + r.status; try { const j = await r.json(); if (j && j.error) msg = j.error; } catch (e) {}
+      const er = new Error(msg); er.server = true; throw er;
+    }
     const res = await r.json();
     if (res && res.error === "need_pin") {                  // сессия кончилась — просим пароль заново
       lsSet("adminmode", null);
@@ -168,7 +171,7 @@
     if (add) add.onclick = () => nickCall("/nicks/add", box.querySelector("#syNickNew").value, "Ник добавлен");
     const c = box.querySelector("#syConsentOpen"); if (c) c.onclick = (ev) => { ev.preventDefault(); askConsent(); };
     // пароль админа: задать / войти / выйти / сменить
-    const call = async (path, body) => { try { return await api(path, body); } catch (e) { if (e.message !== "need_pin") showToast("Нет связи с сервером"); return null; } };
+    const call = async (path, body) => { try { return await api(path, body); } catch (e) { if (e.message !== "need_pin") showToast(e.server ? "Сервер: " + e.message : "Нет связи с сервером"); return null; } };
     const ps = box.querySelector("#syPinSet");
     if (ps) ps.onclick = async () => {
       const a = box.querySelector("#syPin1").value, b = box.querySelector("#syPin2").value;

@@ -178,6 +178,7 @@ function sellerHTML(s, who) {
 }
 
 function showQuestStep() {
+  if (window.autoUI) autoUI();
   if (qStep >= quest.steps.length) { finishQuest(); return; }
   const st = quest.steps[qStep];
   qHinted = false;
@@ -205,7 +206,7 @@ function showQuestStep() {
 // Работает там, где телефон умеет распознавать речь (Chrome, Safari…). Где не умеет — обычные кнопки.
 // =====================================================
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-function canSpeakNow() { return !!SR && !ruMode() && Date.now() >= store.get("nospeak_until", 0); }
+function canSpeakNow() { return !!SR && !ruMode() && !(window.autoMode && autoMode()) && Date.now() >= store.get("nospeak_until", 0); }
 function heNorm(t) {
   return String(t || "").replace(/[\u0591-\u05C7]/g, "").replace(/[־\-]/g, " ").replace(/[^\u05D0-\u05EA ]/g, "")
     .replace(/ך/g, "כ").replace(/ם/g, "מ").replace(/ן/g, "נ").replace(/ף/g, "פ").replace(/ץ/g, "צ").replace(/\s+/g, " ").trim();
