@@ -127,9 +127,19 @@
 
   // ---------- ЧАСТИ ТЕЛА (переделаны): рука, спина, ухо, горло ----------
   Object.assign(ART, {
-    hand: { vb: [110, 110], svg: () => frame(`<path d="M40,96 L38,64 Q30,58 22,50 Q18,44 23,41 Q28,39 34,46 L40,52 L40,22 Q40,16 45,16 Q50,16 50,22 L50,46 L51,14 Q51,8 56,8 Q61,8 61,14 L61,46 L63,18 Q63,12 68,12 Q73,12 73,18 L72,50 L75,28 Q76,22 81,23 Q85,24 84,30 L80,64 Q78,84 66,96Z" fill="${SK}" stroke="${SKD}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M50,46 L50,52 M61,46 L61,52 M72,50 L71,55" stroke="${SKD}" stroke-width="1.6" stroke-linecap="round"/><path d="M46,70 Q58,76 72,70" stroke="${SKD}" stroke-width="1.6" fill="none"/>
-      ${[[45, 18], [56, 10], [68, 14], [80, 25]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.4" ry="1.6" fill="${SKL}"/>`).join("")}${txt(55, 106, "יָד", 9, "#3a8ad6")}`) },
+    hand: { vb: [110, 110], svg: () => frame(`<defs><linearGradient id="a2hd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8d5b8"/><stop offset=".6" stop-color="#eebc95"/><stop offset="1" stop-color="#d9996f"/></linearGradient>
+        <radialGradient id="a2pl" cx=".5" cy=".45" r=".6"><stop offset="0" stop-color="#f6cfae"/><stop offset="1" stop-color="#e3a77e"/></radialGradient></defs>
+      <rect x="44" y="84" width="24" height="18" fill="url(#a2hd)"/>
+      <rect x="27.5" y="30" width="11" height="31" rx="5.5" fill="url(#a2hd)" stroke="#c98a60" stroke-width="1.1" transform="rotate(-12 33 45)"/>
+      <rect x="39" y="17" width="12.4" height="40" rx="6.2" fill="url(#a2hd)" stroke="#c98a60" stroke-width="1.1" transform="rotate(-4 45 37)"/>
+      <rect x="52.4" y="12" width="13" height="44" rx="6.5" fill="url(#a2hd)" stroke="#c98a60" stroke-width="1.1"/>
+      <rect x="66" y="17" width="12.4" height="40" rx="6.2" fill="url(#a2hd)" stroke="#c98a60" stroke-width="1.1" transform="rotate(5 72 37)"/>
+      <rect x="80" y="40" width="13" height="40" rx="6.5" fill="url(#a2hd)" stroke="#c98a60" stroke-width="1.1" transform="rotate(34 86 68)"/><path d="M93,46 Q96,44 97,47" stroke="#c98a60" stroke-width=".9" fill="none" opacity=".7"/>
+      <path d="M30,54 Q30,48 40,48 L78,49 Q84,50 84,58 Q85,72 78,82 Q72,92 56,92 Q40,92 34,82 Q28,70 30,54Z" fill="url(#a2pl)" stroke="#c98a60" stroke-width="1.1"/>
+      ${[[31.5, 37], [31, 44], [44.2, 26], [44.6, 35], [58.9, 21], [58.9, 31], [73.6, 26], [73, 35]].map(([x, y]) => `<path d="M${x - 3.4},${y} Q${x},${y + 1.6} ${x + 3.4},${y}" stroke="#c98a60" stroke-width=".9" fill="none" opacity=".75"/>`).join("")}
+      <path d="M36,60 Q52,58 70,62" stroke="#c98a60" stroke-width="1" fill="none" opacity=".7"/><path d="M40,68 Q54,64 64,70" stroke="#c98a60" stroke-width="1" fill="none" opacity=".6"/>
+      <path d="M70,58 Q60,72 64,90" stroke="#c98a60" stroke-width="1" fill="none" opacity=".6"/>
+      ${[[32, 34], [45, 22], [59, 17], [73, 22]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.6" ry="1.4" fill="#fff" opacity=".35"/>`).join("")}${txt(55, 106, "יָד", 9, "#3a8ad6")}`) },
     back: { vb: [110, 110], svg: () => frame(`<path d="M22,98 Q20,58 30,40 Q38,30 46,28 L46,20 Q46,14 55,14 Q64,14 64,20 L64,28 Q72,30 80,40 Q90,58 88,98Z" fill="${SK}" stroke="${SKD}" stroke-width="2"/>
       <path d="M46,22 Q55,26 64,22" stroke="${SKD}" stroke-width="1.6" fill="none"/><path d="M55,32 L55,94" stroke="${SKD}" stroke-width="2" stroke-dasharray="4 3"/>
       <path d="M36,46 Q42,60 50,58 M74,46 Q68,60 60,58" stroke="${SKD}" stroke-width="2" fill="none" stroke-linecap="round"/>
@@ -145,5 +155,20 @@
       <path d="M20,98 Q22,76 44,70 Q55,76 66,70 Q88,76 90,98Z" fill="#3a8ad6"/>
       <ellipse cx="55" cy="58" rx="8" ry="9" fill="#e5484d" opacity=".55"/><ellipse cx="55" cy="58" rx="4" ry="5" fill="#e5484d" opacity=".55"/>
       <path d="M70,54 L80,50 M70,60 L82,60 M70,66 L80,70" stroke="#e5484d" stroke-width="2" stroke-linecap="round"/>${txt(55, 106, "גָּרוֹן", 9, "#3a8ad6")}`) },
+    leg: { vb: [110, 110], svg: () => frame(`<defs><linearGradient id="a2lg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9996f"/><stop offset=".45" stop-color="#f6cfae"/><stop offset="1" stop-color="#e0a479"/></linearGradient></defs>
+      <path d="M38,6 L66,6 L66,16 L38,16Z" fill="#3a6ea8"/><path d="M38,15 L66,15" stroke="#2a5688" stroke-width="2"/>
+      <path d="M40,16 Q36,30 40,44 Q43,56 44,66 L44,72 Q42,80 36,82 Q30,86 32,90 Q34,94 44,94 L86,94 Q96,94 95,88 Q94,83 86,82 Q72,80 64,74 L62,66 Q62,52 66,40 Q68,26 64,16Z" fill="url(#a2lg)" stroke="#c98a60" stroke-width="1.2"/>
+      <path d="M46,28 Q42,40 46,52" stroke="#c98a60" stroke-width="1" fill="none" opacity=".55"/><ellipse cx="60" cy="72" rx="3.2" ry="2.4" fill="#e3a77e"/>
+      <path d="M64,82 Q70,84 74,82" stroke="#c98a60" stroke-width="1" fill="none" opacity=".6"/>
+      ${[[89, 88, 4.2], [82.5, 89.5, 3.2], [77, 90.5, 2.8], [72, 91, 2.5], [67.5, 91.5, 2.2]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#f2c39d" stroke="#c98a60" stroke-width=".8"/>`).join("")}
+      <path d="M86.5,85.5 Q89,84.5 91,86" stroke="#fff" stroke-width="1.2" fill="none" opacity=".8"/><ellipse cx="38" cy="90" rx="4" ry="2" fill="#e3a77e" opacity=".7"/>
+      <ellipse cx="50" cy="30" rx="3" ry="9" fill="#fff" opacity=".22"/>${txt(55, 106, "רֶגֶל", 9, "#3a8ad6")}`) },
+    belly: { vb: [110, 110], svg: () => frame(`<defs><radialGradient id="a2bl" cx=".5" cy=".5" r=".62"><stop offset="0" stop-color="#f7d2b2"/><stop offset=".7" stop-color="#eab58c"/><stop offset="1" stop-color="#cf8f63"/></radialGradient></defs>
+      <path d="M26,18 Q54,10 84,18 L84,28 Q54,22 26,28Z" fill="#3a8ad6"/><path d="M26,26 Q54,20 84,26" stroke="#2f74bd" stroke-width="2" fill="none"/>
+      <path d="M27,26 Q55,20 83,26 Q90,46 86,66 Q84,80 80,88 L30,88 Q26,80 24,66 Q20,46 27,26Z" fill="url(#a2bl)" stroke="#c98a60" stroke-width="1.2"/>
+      <path d="M55,30 L55,50" stroke="#d29a70" stroke-width="1.2" opacity=".5"/><path d="M40,40 Q46,44 52,42 M70,40 Q64,44 58,42" stroke="#d29a70" stroke-width="1.1" fill="none" opacity=".45"/>
+      <ellipse cx="55" cy="60" rx="2.6" ry="3.6" fill="#b5764c"/><path d="M52.6,58.6 Q55,56.4 57.4,58.6" stroke="#9a5f3a" stroke-width="1" fill="none"/>
+      <ellipse cx="44" cy="52" rx="8" ry="12" fill="#fff" opacity=".14"/>
+      <path d="M28,84 Q55,90 82,84 L82,96 L28,96Z" fill="#2b3a52"/><path d="M28,85 Q55,91 82,85" stroke="#4a5d7a" stroke-width="2.4" fill="none"/>${txt(55, 106, "בֶּטֶן", 9, "#3a8ad6")}`) },
   });
 })();

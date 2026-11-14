@@ -24,8 +24,10 @@
     <path d="M21,21 Q24,23 27,21" stroke="${C.ink}" stroke-width="1.1" fill="none" stroke-linecap="round"/>${extra || ""}`;
   const dots = (n) => { const pos = [[24, 24], [16, 18], [32, 30], [32, 18], [16, 30], [24, 12], [24, 36], [12, 24], [36, 24], [18, 38], [30, 10], [10, 12], [38, 36]];
     return SH(24, 45, 15) + pos.slice(0, n).map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="5" fill="${i % 2 ? C.orange : C.yellow}"/>${HL(x - 1.6, y - 1.8, 1.6, 1, .6)}`).join(""); };
-  const sun = (cx, cy, r) => `${Array.from({ length: 8 }, (_, i) => `<rect x="${cx - 1.6}" y="${cy - r - 7}" width="3.2" height="5" rx="1.6" fill="${C.yellow}" transform="rotate(${i * 45} ${cx} ${cy})"/>`).join("")}<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.yellow}"/>${HL(cx - r * .35, cy - r * .35, r * .3, r * .2)}`;
+  const sunOld = (cx, cy, r) => `${Array.from({ length: 8 }, (_, i) => `<rect x="${cx - 1.6}" y="${cy - r - 7}" width="3.2" height="5" rx="1.6" fill="${C.yellow}" transform="rotate(${i * 45} ${cx} ${cy})"/>`).join("")}<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.yellow}"/>${HL(cx - r * .35, cy - r * .35, r * .3, r * .2)}`;
   const shek = (x, y, size, fill) => `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${size}" font-weight="800" fill="${fill}" font-family="Arial, sans-serif">₪</text>`;
+  // солнце «как эмодзи» (art3.js); если его нет — старое плоское
+  const sun = (cx, cy, r) => window.EMO ? `<svg x="${cx - r * 1.75}" y="${cy - r * 1.75}" width="${r * 3.5}" height="${r * 3.5}" viewBox="0 0 100 100" overflow="visible">${window.EMO.sun()}</svg>` : sunOld(cx, cy, r);
   const coin = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#f2b632"/><circle cx="${x}" cy="${y}" r="${r * .75}" fill="#ffcf3f"/>${shek(x, y + r * .04, r * 1.05, "#b5810f")}`;
   let curSize = 64;
   const prod = (kind) => (window.storeProdSVG ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center">${window.storeProdSVG(kind, Math.round(curSize * .92))}</div>` : "");
@@ -212,9 +214,9 @@
       <g transform="rotate(-38 24 24)"><path d="M6,21 L32,21 L32,27 L10,27 Q5,26 6,21Z" fill="url(#icKn)" stroke="#8d98a4" stroke-width=".6"/><path d="M8,22 L31,22" stroke="#fff" stroke-width=".8" opacity=".8"/>
       <rect x="31" y="20" width="3" height="8" rx="1" fill="#aeb6be"/><rect x="34" y="20.5" width="12" height="7" rx="2.5" fill="#2b2f3a"/><circle cx="37.5" cy="24" r=".9" fill="#c7ced8"/><circle cx="42.5" cy="24" r=".9" fill="#c7ced8"/></g>`),
     fork: () => svg(`<defs><linearGradient id="icFk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8d98a4"/><stop offset=".45" stop-color="#f4f7fa"/><stop offset="1" stop-color="#9aa4ae"/></linearGradient></defs>${SH(24, 45, 10)}
-      <g transform="rotate(-18 24 24)"><path d="M22.4,23 L21.6,43 Q24,45 26.4,43 L25.6,23Z" fill="url(#icFk)"/>
-      <path d="M17,5 L17.6,16 Q18,22 24,23 Q30,22 30.4,16 L31,5 L29.6,5 L29.2,15 L27.6,15 L27.4,5 L26,5 L25.6,15 L22.4,15 L22,5 L20.6,5 L20.4,15 L18.8,15 L18.4,5Z" fill="url(#icFk)" stroke="#8d98a4" stroke-width=".5"/>
-      <path d="M19,17 Q24,20 29,17" stroke="#fff" stroke-width=".7" fill="none" opacity=".8"/></g>`),
+      <g transform="rotate(-18 24 24)"><path d="M22.5,23 L21.7,43 Q24,45 26.3,43 L25.5,23Z" fill="url(#icFk)"/>
+      <path d="M18.6,5 L18.9,16 Q19.4,22 24,23 Q28.6,22 29.1,16 L29.4,5 L27.8,5 L27.8,15 L26.3,15 L26.3,5 L24.7,5 L24.7,15 L23.3,15 L23.3,5 L21.7,5 L21.7,15 L20.2,15 L20.2,5Z" fill="url(#icFk)" stroke="#8d98a4" stroke-width=".45"/>
+      <path d="M20,17.5 Q24,20 28,17.5" stroke="#fff" stroke-width=".7" fill="none" opacity=".8"/></g>`),
     elevator: () => svg(`${SH(24, 44, 14)}<rect x="10" y="6" width="28" height="35" rx="3" fill="#cfd6de"/><rect x="13" y="12" width="10.5" height="29" fill="#aeb6be"/><rect x="24.5" y="12" width="10.5" height="29" fill="#aeb6be"/>
       <path d="M20,8.5 L22.5,5.5 L25,8.5 M27,6 L29.5,9 L32,6" stroke="${C.blue}" stroke-width="1.6" fill="none"/>`),
     stairs: () => svg(`${SH(24, 44, 17)}<path d="M6,41 L6,34 L14,34 L14,27 L22,27 L22,20 L30,20 L30,13 L38,13 L38,6 L42,6 L42,41Z" fill="#c99a63"/><path d="M6,34 L14,34 M14,27 L22,27 M22,20 L30,20 M30,13 L38,13" stroke="#fff" stroke-width="1.5" opacity=".6"/>`),
@@ -236,7 +238,8 @@
     hospital: () => svg(`${SH(24, 44, 16)}<rect x="9" y="10" width="30" height="31" rx="2" fill="#fff" stroke="#d6dde6" stroke-width="1.4"/><rect x="20" y="15" width="8" height="18" rx="1" fill="${C.red}"/><rect x="15" y="20" width="18" height="8" rx="1" fill="${C.red}"/>`),
     gift: () => svg(`${SH(24, 44, 15)}${giftBox(10, 16, 28)}`),
     clock_w: () => svg(`${SH(24, 44, 14)}<circle cx="24" cy="24" r="17" fill="#fff" stroke="${C.blue}" stroke-width="3"/><path d="M24,13 L24,24 L31,28" stroke="${C.ink}" stroke-width="2.6" stroke-linecap="round" fill="none"/><circle cx="24" cy="24" r="1.8" fill="${C.ink}"/>`),
-    sunrise: () => svg(`${SH(24, 44, 17)}<path d="M8,34 A16,16 0 0 1 40,34Z" fill="${C.yellow}"/>${[-60, -30, 0, 30, 60].map(a => `<path d="M24,34 L${24 + 22 * Math.sin(a * Math.PI / 180)},${34 - 22 * Math.cos(a * Math.PI / 180)}" stroke="${C.orange}" stroke-width="2" opacity=".6"/>`).join("")}<rect x="4" y="34" width="40" height="5" rx="2" fill="${C.sky}"/>`),
+    sunrise: () => svg(`<clipPath id="icSrC"><rect x="2" y="2" width="44" height="34"/></clipPath><g clip-path="url(#icSrC)">${sun(24, 32, 10)}</g>
+      <rect x="2" y="34" width="44" height="7" rx="3" fill="${C.sky}"/><path d="M4,37 Q14,35 24,37 T44,37" stroke="#fff" stroke-width="1.2" fill="none" opacity=".7"/>`),
     moon: () => svg(`${SH(24, 44, 12)}<path d="M30,8 A16,16 0 1 0 38,34 A13,13 0 1 1 30,8Z" fill="${C.yellow}"/>${HL(18, 20, 3, 5, .35)}`)
   };
 
@@ -268,7 +271,7 @@
     "ключ": "key", "балкон": "balcony", "автобус": "bus", "остановка": "stop", "проездной": "ticket", "магазин": "shop", "парк": "park", "светофор": "light",
     "свечи": "candles", "вино": "wine", "хала": "challah", "суп": "soup", "торт, пирог": "cake", "капучино (досл. «перевёрнутый»)": "cappuccino",
     "сок": "juice", "апельсины": "oranges", "сэндвич": "sandwich", "круассан": "croissant", "шакшука": "shakshuka", "омлет": "omelet", "мороженое": "icecream",
-    "виноград": "grapes", "арбуз": "watermelon", "клубника": "strawberries", "лимон": "lemons", "гранат": "pomegranate", "морковь": "carrot", "перец": "pepper",
+    "виноград": "emo_grapes", "арбуз": "watermelon", "клубника": "emo_strawberry", "лимон": "emo_lemon", "гранат": "emo_pomegranate", "морковь": "carrot", "перец": "emo_pepper",
     "рецепт": "prescription", "соль": "salt",
     // части тела: в квесте карточки подписаны на иврите — в уроке надпись убираем (иначе это подсказка)
     "голова": "head", "рука": "hand", "нога": "leg", "живот": "belly", "спина": "back", "глаз": "eye", "ухо": "ear", "горло": "throat",
