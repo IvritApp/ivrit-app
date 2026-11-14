@@ -186,6 +186,9 @@ function showQuestStep() {
   if (st.walk) { startWalkStep(st); return; }
   if (st.go) { startGoStep(st); return; }
   if (st.catch) { startCatch(st); return; }
+  if (st.game) { if (window.closePhone) closePhone(); startGame(st); return; }
+  if (st.ui && window.phoneStep) { document.getElementById("qHint").hidden = true; document.getElementById("qOpts").innerHTML = ""; stage.hide(); phoneStep(st); return; }
+  if (window.closePhone) closePhone();
   if (st.family) { startFamily(st); return; }
   document.getElementById("qHint").hidden = true;
   if (st.seller) { stage.say("seller", sellerHTML(st.seller)); speak(g(st.seller.he), { audio: st.seller.audio }); }
@@ -294,7 +297,7 @@ function chooseOption(btn, o, st) {
     qPoints += FIRE[lvl].points;
     updateQuestFire(true);
     if (lvl > before) setTimeout(() => showMilestone(lvl), 400);
-    meSays(ruMode() ? `<div class="ru-only">${g(o.ru)}</div>` : `<div class="he" dir="rtl">${g(o.he)}</div><div class="tr2"><span class="tr">${g(o.tr)} — </span>${g(o.ru)}</div>`);
+    if (!(window.phoneMe && phoneMe(o))) meSays(ruMode() ? `<div class="ru-only">${g(o.ru)}</div>` : `<div class="he" dir="rtl">${g(o.he)}</div><div class="tr2"><span class="tr">${g(o.tr)} — </span>${g(o.ru)}</div>`);
     speak(g(o.he), { audio: o.audio });
     if (o.add) addToTray([].concat(o.add));
     qStep++;
@@ -617,6 +620,7 @@ function addToTray(items, noStage) {
 
 // --- Финал ---
 function finishQuest() {
+  if (window.closePhone) closePhone();
   if (typeof streakDone === "function") streakDone();     // квест тоже засчитывает день
   const token = stageToken;
   const o = quest.outro;
