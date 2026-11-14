@@ -10,12 +10,21 @@
   const SKIN = [[0, "#ffe2bf"], [.55, "#f8bf86"], [1, "#e0955a"]];
 
   const EMO = {
-    hand: () => `<defs>${rg("emHand", SKIN, .38, .3, .8)}</defs>${shadow(52, 97, 22)}
-      <path d="M36,95 L33,72 C29,62 26,54 26,45 L26,35 C26,26.5 38.5,26.5 38.5,35 L39,21 C39,11.5 52.5,11.5 52.5,21 L53,15 C53,5.5 66.5,5.5 66.5,15 L67,21 C67,11.5 80.5,11.5 80.5,21 L80.5,57 C83,51 88,45 93,46.5 C99,48.5 98,55 95,59.5 L85,75 C81,82 76,89 72,95Z" fill="url(#emHand)"/>
-      <path d="M38.8,36 L38.8,60 M52.8,25 L52.8,58 M66.8,25 L66.8,58" stroke="#d98a4e" stroke-width="1.8" stroke-linecap="round" opacity=".55"/>
-      <path d="M80.5,57 C79,63 76,66 72,68" stroke="#d98a4e" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".45"/>
-      ${[[32.2, 31], [45.7, 17], [59.7, 11], [73.7, 17]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="3.6" ry="4.4" fill="#ffe7cc" opacity=".9"/><ellipse cx="${x - .8}" cy="${y - 1.4}" rx="1.4" ry="1.8" fill="#fff" opacity=".8"/>`).join("")}
-      <ellipse cx="50" cy="66" rx="13" ry="8" fill="#fff" opacity=".18"/>`,
+    hand: () => `<defs><linearGradient id="emHF" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e39a5e"/><stop offset=".3" stop-color="#fbcf9f"/><stop offset=".6" stop-color="#ffd9ae"/><stop offset="1" stop-color="#d98f54"/></linearGradient><radialGradient id="emHP" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#ffdcb4"/><stop offset=".6" stop-color="#f6bd86"/><stop offset="1" stop-color="#dd955c"/></radialGradient><linearGradient id="emHT" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e8a265"/><stop offset=".45" stop-color="#ffd6a8"/><stop offset="1" stop-color="#d98d52"/></linearGradient></defs><ellipse cx="50" cy="98" rx="20" ry="2.4" fill="#000" opacity=".12"/>
+   <g transform="rotate(34 70 84)"><path d="M64,86 L64,61 A6.5,6.5 0 0 1 77,61 L77,88Z" fill="url(#emHT)" stroke="#c97f45" stroke-width=".7" stroke-opacity=".55"/><path d="M65.5,72 Q70.5,74 75.5,72" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/><ellipse cx="69.5" cy="61" rx="2" ry="3" fill="#fff" opacity=".45"/></g>
+   <g transform="rotate(-9 35 58)"><path d="M30,58 L30.7,30.3 A4.3,4.3 0 0 1 39.3,30.3 L40,58Z" fill="url(#emHF)" stroke="#c97f45" stroke-width=".7" stroke-opacity=".55"/>
+    <path d="M32.08672,37.519999999999996 Q35,39.12 37.91328,37.519999999999996" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/><path d="M31.95232,47.120000000000005 Q35,48.720000000000006 38.04768,47.120000000000005" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/>
+    <ellipse cx="33.968" cy="30.73" rx="1.892" ry="3.01" fill="#fff" opacity=".45"/></g><g transform="rotate(-3 45.5 56)"><path d="M40,56 L40.7,17.8 A4.8,4.8 0 0 1 50.3,17.8 L51,56Z" fill="url(#emHF)" stroke="#c97f45" stroke-width=".7" stroke-opacity=".55"/>
+    <path d="M42.26672,28.479999999999997 Q45.5,30.08 48.73328,28.479999999999997" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/><path d="M42.13232,41.38 Q45.5,42.980000000000004 48.86768,41.38" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/>
+    <ellipse cx="44.348" cy="18.28" rx="2.112" ry="3.36" fill="#fff" opacity=".45"/></g><g transform="rotate(0 56.5 56)"><path d="M50.8,56 L51.5,12 A5,5 0 0 1 61.5,12 L62.2,56Z" fill="url(#emHF)" stroke="#c97f45" stroke-width=".7" stroke-opacity=".55"/>
+    <path d="M53.13872,24.64 Q56.5,26.240000000000002 59.86128,24.64" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/><path d="M53.00432,39.34 Q56.5,40.940000000000005 59.99568,39.34" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/>
+    <ellipse cx="55.3" cy="12.5" rx="2.2" ry="3.5" fill="#fff" opacity=".45"/></g><g transform="rotate(4 67 57)"><path d="M61.5,57 L62.2,16.8 A4.8,4.8 0 0 1 71.8,16.8 L72.5,57Z" fill="url(#emHF)" stroke="#c97f45" stroke-width=".7" stroke-opacity=".55"/>
+    <path d="M63.76672,28.2 Q67,29.8 70.23328,28.2" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/><path d="M63.63232,41.7 Q67,43.300000000000004 70.36768000000001,41.7" stroke="#c97f45" stroke-width=".8" fill="none" opacity=".6"/>
+    <ellipse cx="65.848" cy="17.28" rx="2.112" ry="3.36" fill="#fff" opacity=".45"/></g>
+   <path d="M30,58 Q31,52 37,53 Q42,50 46,52 Q51,49 56,51 Q61,49 66,51 Q72,51 72,56 L72,64 Q76,70 74,80 Q70,90 62,99 L40,99 Q33,90 31,80 Q28,68 30,58Z" fill="url(#emHP)" stroke="#c97f45" stroke-width=".7" stroke-opacity=".5"/>
+   <path d="M34,64 Q46,61 58,66" stroke="#c97f45" stroke-width="1" fill="none" opacity=".55"/><path d="M37,71 Q48,67 62,71" stroke="#c97f45" stroke-width="1" fill="none" opacity=".5"/>
+   <path d="M66,62 Q58,74 60,92" stroke="#c97f45" stroke-width="1" fill="none" opacity=".5"/><ellipse cx="66" cy="82" rx="6" ry="9" fill="#e9a46c" opacity=".35"/>
+   <ellipse cx="45" cy="70" rx="9" ry="6" fill="#fff" opacity=".18"/>`,
     leg: () => `<defs>${lg("emLeg", [[0, "#f6b679"], [.4, "#ffe0bc"], [1, "#df935a"]], 1, 0)}</defs>${shadow(46, 98, 34)}
       <path d="M46,8 C56,0 76,4 76,18 C80,32 76,48 72,60 C70,70 72,79 74,85 C76,94 70,98 62,98 L23,98 C13,98 11,90 17,86 C29,82 37,78 41,70 C42,50 40,30 40,20 C40,14 42,10 46,8Z" fill="url(#emLeg)"/>
       ${[[18, 92, 5.6], [26.5, 94, 4.4], [33.5, 95, 3.8], [39.5, 95.6, 3.4], [45, 96, 3]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#f9c690"/><ellipse cx="${x - r * .25}" cy="${y - r * .45}" rx="${r * .5}" ry="${r * .35}" fill="#fff" opacity=".6"/>`).join("")}

@@ -50,24 +50,32 @@
   };
 
   // ---------- Таблица всех букв ----------
+  const PAL = 8;   // 8 цветов, буквы идут по кругу
+  const col = (i) => ` ab-c${i % PAL}`;
+  const gear = `<button class="ab-gear" id="abGear" aria-label="Настройки">⚙️</button>`;
   function showGrid() {
     current = -1;
     const s = seen();
     const tiles = data.letters.map((L, i) => `
-      <button class="ab-tile${s.includes(L.id) ? " ab-seen" : ""}" data-i="${i}">
+      <button class="ab-tile${col(i)}${s.includes(L.id) ? " ab-seen" : ""}" data-i="${i}">
         <span class="ab-tile-he" dir="rtl">${L.ch}</span>
         <span class="ab-tile-name">${esc(L.name)}</span>
       </button>`).join("");
     root.innerHTML = `
       <div class="ab-wrap ab-in">
-        <h2 class="ab-title">Алфавит</h2>
-        <p class="ab-sub">Нажми на букву — узнаешь, как она называется и читается</p>
-        <div class="ab-count">Изучено: <b>${s.length}</b> из ${data.letters.length}</div>
+        <div class="ab-hero">${gear}
+          <div class="ab-hero-letters" dir="rtl"><span>א</span><span>ב</span><span>ג</span></div>
+          <h2 class="ab-title">Алфавит</h2>
+          <p class="ab-sub">Нажми на букву — узнаешь, как она называется и читается</p>
+          <div class="ab-prog"><i style="width:${Math.round(s.length / data.letters.length * 100)}%"></i></div>
+          <div class="ab-count">⭐ Изучено: <b>${s.length}</b> из ${data.letters.length}</div>
+        </div>
         <div class="ab-grid" dir="rtl">${tiles}</div>
         <button class="btn ghost" id="abHome">На главный</button>
       </div>`;
     root.querySelectorAll(".ab-tile").forEach(b => b.onclick = () => { pop(); showLetter(+b.dataset.i); });
     root.querySelector("#abHome").onclick = () => showHome();
+    root.querySelector("#abGear").onclick = () => { if (typeof openSettings === "function") openSettings(); };
     window.scrollTo(0, 0);
   }
 
@@ -114,10 +122,11 @@
     const prev = data.letters[i - 1], next = data.letters[i + 1];
 
     root.innerHTML = `
-      <div class="ab-wrap ab-in">
+      <div class="ab-wrap ab-in ab-letter${col(i)}">
         <div class="ab-top">
           <button class="ab-back" id="abBack">‹ Все буквы</button>
           <span class="ab-num">${i + 1} / ${data.letters.length}</span>
+          ${gear}
         </div>
 
         <button class="ab-big" id="abBig" dir="rtl">${L.ch}</button>
@@ -143,6 +152,7 @@
       </div>`;
 
     root.querySelector("#abBack").onclick = showGrid;
+    root.querySelector("#abGear").onclick = () => { if (typeof openSettings === "function") openSettings(); };
     const sayName = () => say(L.nameHe, L.audio);
     root.querySelector("#abBig").onclick = () => { bounce(root.querySelector("#abBig")); sayName(); };
     root.querySelector(".ab-name").onclick = sayName;
