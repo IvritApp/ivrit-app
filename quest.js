@@ -149,7 +149,7 @@ function startQuest(id) {
         window.playArrivalScene(document.getElementById("sceneBox"), { gender: profile ? profile.gender : "m", profile, part: pre.scene }, () => startQuest(id));
         return;
       }
-      quest = d; qStep = 0; qMistakes = 0; qBag = []; qCombo = 0; qPoints = 0;
+      quest = d; qStep = 0; qMistakes = 0; qBag = []; qCombo = 0; qPoints = 0; qTalk = { clean: 0, withHint: 0, misses: 0, hints: 0 };
       const token = renderStageShell(d.place || "counter", d.placeTitle || d.title, d.icon || "⭐");
       // Список заказа — по кнопке, а главное видно на прилавке
       const ob = document.getElementById("stOrder"), tray = document.getElementById("qTray");
@@ -231,56 +231,86 @@ function listenHe(onText, onFail) {
   try { r.start(); } catch (e) { onFail("start"); }
 }
 function addQuestOptions(st, opts) {
-  const voice = canSpeakNow();
-  const btns = [];
-  if (voice) {
-    opts.insertAdjacentHTML("beforeend", `<div class="q-say-head">🎤 Скажи вслух правильную фразу</div>`);
-  }
+  if (canSpeakNow()) { addSpeakTask(st, opts); return; }
+  addTapOptions(st, opts);
+}
+// Обычный режим: выбор кнопкой (если голос недоступен или «🙊 Не могу говорить»)
+function addTapOptions(st, opts) {
   shuffle([...st.options]).forEach(o => {
     const b = document.createElement("button");
-    btns.push([b, o]);
-    b.className = "option q-opt" + (voice ? " q-say" : "");
+    b.className = "option q-opt";
     b.innerHTML = ruMode() ? `<span class="ru-only">${g(o.ru)}</span><span class="he" hidden>${g(o.he)}</span>`
       : `<span class="he" dir="rtl">${g(o.he)}</span><span class="tr">${g(o.tr)}</span>`;
-    b.onclick = () => { if (b.classList.contains("q-say")) { showToast("Скажи эту фразу вслух — нажми 🎤"); return; } chooseOption(b, o, st); };
+    b.onclick = () => chooseOption(b, o, st);
     opts.appendChild(b);
   });
-  if (!voice) return;
-  const row = document.createElement("div");
-  row.className = "q-mic-row";
-  row.innerHTML = `<button class="q-mic" type="button"><span>🎤</span><b>Нажми и говори</b></button>
-    <button class="q-mic-off" type="button">🙊 Не могу говорить</button><div class="q-heard" hidden></div>`;
-  opts.appendChild(row);
-  const mic = row.querySelector(".q-mic"), heard = row.querySelector(".q-heard");
-  const tapMode = () => { btns.forEach(([b]) => b.classList.remove("q-say")); row.remove(); const h = opts.querySelector(".q-say-head"); if (h) h.remove(); };
-  row.querySelector(".q-mic-off").onclick = () => { store.set("nospeak_until", Date.now() + 15 * 60000); showToast("Хорошо, 15 минут выбираешь кнопками"); tapMode(); };
-  let misses = 0;
+}
+// ГЛАВНЫЙ режим: никаких вариантов — тебе говорят по-русски, ЧТО сказать, ты говоришь на иврите, текст «вписывается» в поле
+function addSpeakTask(st, opts) {
+  const oks = st.options.filter(o => o.ok);
+  const task = st.say ? g(st.say) : oks.length > 1 ? `Ответь сам{m:}{f:а} — например: ${oks.map(o => `«${g(o.ru)}»`).join(" или ")}` : `Скажи на иврите: «${g(oks[0].ru)}»`;
+  const box = document.createElement("div");
+  box.className = "q-speak";
+  box.innerHTML = `<div class="q-speak-task">🗣️ ${g(task)}</div>
+    <div class="q-speak-field" dir="rtl"><span class="q-speak-text"></span><i class="q-caret"></i><span class="q-speak-ph">…</span></div>
+    <div class="q-speak-hint" hidden></div>
+    <button class="q-mic" type="button"><span>🎤</span><b>Нажми и говори</b></button>
+    <div class="q-speak-row"><button class="q-mini" data-a="hint" type="button">💡 Подсказка</button><button class="q-mini" data-a="tap" type="button">🙊 Не могу говорить</button></div>`;
+  opts.appendChild(box);
+  const field = box.querySelector(".q-speak-field"), text = box.querySelector(".q-speak-text"), hint = box.querySelector(".q-speak-hint"), mic = box.querySelector(".q-mic");
+  const fake = document.createElement("button"); fake.className = "q-opt"; fake.hidden = true; box.appendChild(fake);
+  let misses = 0, hinted = false, typer = 0;
+  const showHint = () => {
+    if (!hinted) { hinted = true; qTalk.hints++; }
+    hint.hidden = false;
+    hint.innerHTML = oks.map(o => `<div><span class="he" dir="rtl">${g(o.he)}</span> <span class="tr">${g(o.tr)}</span> <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(g(o.he)).replace(/"/g, "&quot;")})">🔊</button></div>`).join("");
+  };
+  box.querySelector('[data-a="hint"]').onclick = showHint;
+  box.querySelector('[data-a="tap"]').onclick = () => { store.set("nospeak_until", Date.now() + 15 * 60000); showToast("Хорошо, 15 минут — кнопками"); box.remove(); addTapOptions(st, opts); };
+  // «печатаем» услышанное в поле
+  const type = (t, done) => {
+    clearInterval(typer); text.textContent = ""; field.classList.add("typing"); field.classList.remove("ok", "bad");
+    let i = 0; typer = setInterval(() => { text.textContent = t.slice(0, ++i); if (i >= t.length) { clearInterval(typer); field.classList.remove("typing"); done(); } }, 45);
+  };
   mic.onclick = () => {
     if (mic.classList.contains("on")) { try { qRec && qRec.stop(); } catch (e) {} return; }
-    mic.classList.add("on"); mic.querySelector("b").textContent = "Слушаю…";
-    heard.hidden = true;
+    mic.classList.add("on"); mic.querySelector("b").textContent = "Слушаю… говори";
+    field.classList.add("listen");
     listenHe((alts) => {
-      mic.classList.remove("on"); mic.querySelector("b").textContent = "Нажми и говори";
-      // какой вариант ближе всего к сказанному
-      let best = null, bs = 0;
-      btns.forEach(([b, o]) => { if (b.disabled) return; alts.forEach(t => { const sim = heSim(t, g(o.he)); if (sim > bs) { bs = sim; best = [b, o]; } }); });
-      heard.hidden = false;
-      heard.innerHTML = `Услышал: <span dir="rtl">${alts[0] || "…"}</span>`;
-      if (best && bs >= 0.55) { best[0].classList.remove("q-say"); chooseOption(best[0], best[1], st); if (!best[1].ok) best[0].classList.add("q-say"); }
-      else {
-        misses++;
-        playSound("wrong");
-        heard.innerHTML += misses >= 2 ? " — не похоже. Можно нажать «🙊 Не могу говорить»" : " — не похоже ни на одну фразу. Ещё раз!";
-      }
+      mic.classList.remove("on"); mic.querySelector("b").textContent = "Нажми и говори"; field.classList.remove("listen");
+      let best = null, bs = 0, bt = alts[0] || "";
+      oks.forEach(o => alts.forEach(t => { const sim = heSim(t, g(o.he)); if (sim > bs) { bs = sim; best = o; bt = t; } }));
+      type(bt, () => {
+        if (best && bs >= 0.6) {
+          field.classList.add("ok");
+          if (hinted) qTalk.withHint++; else qTalk.clean++;
+          chooseOption(fake, best, st);
+        } else {
+          field.classList.add("bad");
+          misses++; qTalk.misses++;
+          rememberWeak(oks[0]);
+          qMistakes++; qCombo = 0; updateQuestFire(false);
+          playSound("wrong"); vibrate("error");
+          if (misses >= 2) showHint();
+          showToast(misses >= 2 ? "Не похоже. Посмотри подсказку и скажи ещё раз" : "Не похоже на нужную фразу. Ещё раз!");
+        }
+      });
     }, (err) => {
-      mic.classList.remove("on"); mic.querySelector("b").textContent = "Нажми и говори";
+      mic.classList.remove("on"); mic.querySelector("b").textContent = "Нажми и говори"; field.classList.remove("listen");
       if (err === "not-allowed" || err === "service-not-allowed" || err === "start" || err === "network" || err === "language-not-supported") {
-        store.set("nospeak_until", Date.now() + 24 * 3600000);   // на сутки — кнопками
-        showToast("Голос на этом телефоне не работает — выбирай кнопками");
-        tapMode();
-      } else { heard.hidden = false; heard.textContent = "Ничего не услышал 🙉 Нажми 🎤 и скажи погромче"; }
+        store.set("nospeak_until", Date.now() + 24 * 3600000);
+        showToast("Голос на этом телефоне не работает — пока кнопками");
+        box.remove(); addTapOptions(st, opts);
+      } else showToast("Ничего не услышал 🙉 Нажми 🎤 и скажи погромче");
     });
   };
+}
+// Разговорность за квест: сколько фраз сказал сам, с подсказкой, сколько промахов
+let qTalk = { clean: 0, withHint: 0, misses: 0, hints: 0 };
+function rememberWeak(o) {
+  if (!o || !quest) return;
+  const key = "weak_" + quest.id, arr = store.get(key, []);
+  if (!arr.some(x => x.he === o.he)) { arr.push({ he: o.he, tr: o.tr, ru: o.ru }); store.set(key, arr.slice(-30)); }
 }
 
 function chooseOption(btn, o, st) {
@@ -306,6 +336,7 @@ function chooseOption(btn, o, st) {
   } else {
     btn.classList.remove("wrong"); void btn.offsetWidth; btn.classList.add("wrong");
     btn.disabled = true;
+    rememberWeak(st.options.find(x => x.ok));
     qMistakes++;
     if (qCombo >= 5) showToast(`Серия из ${qCombo} прервалась — начнём новую!`);
     qCombo = 0; updateQuestFire(false);
@@ -640,6 +671,15 @@ function finishQuest() {
   const rule = (fin.imgIf || []).find(r => qBag.includes(r.has));
   const finalImg = rule ? rule.img : (fin.img || "gift-shawarma");
   const order = qBag.map(itemName).join(", ");
+  // разговорность: говорил ли сам, без подсказок
+  const talked = qTalk.clean + qTalk.withHint;
+  const weakTalk = qTalk.misses >= 3 || qTalk.hints >= 2 || qMistakes >= 4;
+  if (weakTalk && lvlInfo) store.set("review_" + lvlInfo.id, true);
+  const talkHTML = `<div class="q-talk${weakTalk ? " weak" : ""}"><b>🗣️ Разговор</b><br>${talked
+      ? `Сам${g("{m:}{f:а}")} сказал${g("{m:}{f:а}")}: <b>${qTalk.clean}</b> · с подсказкой: <b>${qTalk.withHint}</b> · промахов: <b>${qTalk.misses}</b>`
+      : "В этот раз — кнопками. В следующий попробуй голосом 🎤"}
+    ${weakTalk ? `<br>Пока говорить тяжело — это нормально! Я собрал${g("")} для тебя <b>${window.reviewCount || 4} урока повторения</b> по словам уровня и твоим ошибкам.` : talked ? "<br>Ты по-настоящему разговариваешь на иврите 💪" : ""}</div>
+    ${weakTalk && lvlInfo ? `<button class="btn orange" onclick="startReview('${lvlInfo.id}')">🔁 Начать повторение</button>` : ""}`;
   // продавец заворачивает шаурму и протягивает тебе
   setTimeout(() => { if (token === stageToken && stage) stage.wrap(finalImg); }, 2600);
   setTimeout(() => {
@@ -662,6 +702,7 @@ function finishQuest() {
           <div class="pts-label">очков за квест${perfect ? " (×2)" : ""}<br>Ошибок: ${qMistakes}</div>
         </div>
         <div class="q-friend-say"><b>${friendName()}:</b> ${g(qMistakes ? o.friend_mistakes : o.friend)}</div>
+        ${talkHTML}
         <button class="btn blue" onclick="showPath()">К уровню</button>
         <button class="btn ghost" onclick="startQuest('${quest.id.replace("q-", "")}')">Пройти ещё раз</button>
       </div>`;

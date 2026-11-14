@@ -413,6 +413,10 @@ function setIconHero(lessonId) {
 
 // --- 1. Загружаем урок из файла и начинаем ---
 function startLesson(id) {
+  // уроки повторения собираются на лету (review.js)
+  if (typeof id === "string" && id.startsWith("rev-") && window.startReview) { const m = id.match(/^rev-(.+)-(\d+)$/); if (m) { startReview(m[1], +m[2] - 1); return; } }
+  const given = typeof id === "object" && id ? id : null;
+  if (given) id = given.id;
   stopHomeBird();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "lesson");
   if (tg && tg.BackButton) tg.BackButton.show();
@@ -423,8 +427,7 @@ function startLesson(id) {
   screen.textContent = "Загрузка…";
   setIconHero(id);
 
-  fetch(`content/${COURSE_LANG}/lessons/${id}.json`)
-    .then(response => response.json())
+  (given ? Promise.resolve(JSON.parse(JSON.stringify(given))) : fetch(`content/${COURSE_LANG}/lessons/${id}.json`).then(response => response.json()))
     .then(data => {
       // слова и названия — в форме игрока (парень / девушка)
       data.title = g(data.title);

@@ -1099,3 +1099,33 @@ body.theme-dark .q-opt.q-say { background: #1c2430; }
 .q-receipt-row .he { font-size: 17px; font-weight: 700; color: #1d4f86; }
 .q-receipt-row.sum { border-top: 2px solid #e0d3b0; margin-top: 4px; padding-top: 4px; font-weight: 800; }
 body.theme-dark .q-receipt { background: #1c2430; border-color: #3a4656; }
+/* квест: говоришь сам — текст «вписывается» в поле */
+.q-speak { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.q-speak-task { font-size: 17px; font-weight: 700; text-align: center; color: var(--text, #2b2f3a); }
+.q-speak-field { width: 100%; min-height: 58px; border: 3px solid #d9e6f2; border-radius: 18px; background: #f8fbff; display: flex; align-items: center; justify-content: flex-start; padding: 8px 16px; font-size: 24px; font-weight: 700; color: #1d4f86; transition: border-color .2s, background .2s; }
+.q-speak-field .q-speak-ph { color: #b8c4d0; }
+.q-speak-field .q-speak-text:not(:empty) ~ .q-speak-ph { display: none; }
+.q-speak-field .q-caret { width: 3px; height: 26px; background: #3a8ad6; margin: 0 2px; opacity: 0; }
+.q-speak-field.typing .q-caret, .q-speak-field.listen .q-caret { opacity: 1; animation: qCaret .8s steps(1) infinite; }
+@keyframes qCaret { 50% { opacity: 0; } }
+.q-speak-field.listen { border-color: #e8413a; background: #fff6f5; }
+.q-speak-field.ok { border-color: #3cae5c; background: #e3f7e8; color: #22663a; }
+.q-speak-field.bad { border-color: #e8a13a; background: #fff5e6; animation: mkNo .45s; }
+.q-speak-hint { width: 100%; background: #fff4d6; border-radius: 14px; padding: 8px 12px; text-align: center; }
+.q-speak-hint .he { font-size: 20px; font-weight: 700; color: #1d4f86; } .q-speak-hint .tr { font-size: 13px; color: #7c8a99; }
+.q-speak-row { display: flex; gap: 14px; }
+.q-mini { border: 0; background: none; color: #7c8a99; font: 600 14px Arial, sans-serif; text-decoration: underline; cursor: pointer; }
+body.theme-dark .q-speak-field { background: #1c2430; border-color: #2c3a4c; }
+.gm-phone .q-speak-task { color: #fff; } .ui-chat .q-speak-task { color: #2b2f3a; }
+/* итог квеста: разговорность и повторение */
+.q-talk { margin: 10px 0; padding: 10px 14px; border-radius: 16px; background: #e3f7e8; color: #22663a; font-size: 15px; text-align: center; }
+.q-talk.weak { background: #fff1dc; color: #8a4b00; }
+.btn.orange { background: #ff8a35; color: #fff; box-shadow: 0 4px 0 #d96a1a; }
+.p-review { margin: 4px 0 16px; padding: 10px; border-radius: 20px; background: #fff3e6; border: 2px dashed #ffb27a; }
+.p-review-h { font-weight: 800; color: #b85f0c; margin-bottom: 8px; display: flex; justify-content: space-between; }
+.p-review-h small { font-weight: 700; color: #c98a52; }
+.p-review-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.p-rev { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 14px; padding: 8px 10px; background: #fff; cursor: pointer; font: 600 13px Arial, sans-serif; color: #5a3a14; text-align: left; box-shadow: 0 2px 0 #f0d2b4; }
+.p-rev b { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #ff8a35; color: #fff; display: flex; align-items: center; justify-content: center; }
+.p-rev.done b { background: #3cae5c; }
+body.theme-dark .p-review { background: #2a2118; } body.theme-dark .p-rev { background: #1c2430; color: var(--text); }
