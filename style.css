@@ -1072,3 +1072,30 @@ body.theme-dark button.p-lvl-go.sel { background: #3a8ad6; color: #fff; }
 .pl-gdoor.pl-near .pl-gd-hit { stroke: #ffd23a; stroke-width: 5; stroke-dasharray: 10 6; animation: plDash 1s linear infinite; }
 @keyframes plDash { to { stroke-dashoffset: -32; } }
 .pl-me.pl-enter { transition: opacity .8s ease, transform .8s ease !important; opacity: 0; transform: scale(.85) translateY(-10px); }
+/* голос в квестах */
+.q-say-head { text-align: center; font-weight: 800; font-size: 14px; color: #1b5e9e; margin: 2px 0 6px; }
+.q-opt.q-say { background: #f6f9fc; border-style: dashed; cursor: default; }
+.q-opt.q-say:active { transform: none; }
+.q-mic-row { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 8px; }
+.q-mic { display: flex; align-items: center; gap: 10px; border: 0; border-radius: 999px; padding: 12px 26px; background: #3a8ad6; color: #fff; font: 800 17px Arial, sans-serif; box-shadow: 0 4px 0 #2a6cab; cursor: pointer; }
+.q-mic span { font-size: 24px; }
+.q-mic.on { background: #e8413a; box-shadow: 0 4px 0 #b92e28; animation: qMicPulse 1s ease-in-out infinite; }
+@keyframes qMicPulse { 50% { transform: scale(1.06); } }
+.q-mic-off { border: 0; background: none; color: #7c8a99; font: 600 13px Arial, sans-serif; text-decoration: underline; cursor: pointer; }
+.q-heard { font-size: 14px; color: #555; text-align: center; }
+.q-heard span { font-weight: 700; color: #1d4f86; }
+body.theme-dark .q-opt.q-say { background: #1c2430; }
+/* кафе: лови ошибку на слух */
+.mk-chip.q-catch.wrong { animation: mkNo .45s; border-color: #e8413a; }
+.mk-chip.q-catch.got { border-color: #e8a13a; background: #fff3e0; }
+.mk-chip.q-catch.got .he { color: #b85f0c; text-decoration: line-through wavy #e8413a; }
+.mk-chip.q-catch.got::after { content: "← вот!"; color: #b85f0c; }
+.q-catch-ru { font-weight: 800; font-size: 16px; color: #1d4f86; }
+.q-hidden-say { filter: blur(7px); user-select: none; transition: filter .4s; }
+.q-hidden-say.open { filter: none; }
+.q-receipt { background: #fffdf6; border: 2px dashed #e0d3b0; border-radius: 12px; padding: 8px 12px; margin: 4px auto 8px; max-width: 280px; font-size: 14px; }
+.q-receipt-h { font-weight: 800; text-align: center; margin-bottom: 4px; }
+.q-receipt-row { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 0; }
+.q-receipt-row .he { font-size: 17px; font-weight: 700; color: #1d4f86; }
+.q-receipt-row.sum { border-top: 2px solid #e0d3b0; margin-top: 4px; padding-top: 4px; font-weight: 800; }
+body.theme-dark .q-receipt { background: #1c2430; border-color: #3a4656; }

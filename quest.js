@@ -185,6 +185,7 @@ function showQuestStep() {
   if (st.ride) { startRide(st); return; }
   if (st.walk) { startWalkStep(st); return; }
   if (st.go) { startGoStep(st); return; }
+  if (st.catch) { startCatch(st); return; }
   if (st.family) { startFamily(st); return; }
   document.getElementById("qHint").hidden = true;
   if (st.seller) { stage.say("seller", sellerHTML(st.seller)); speak(g(st.seller.he), { audio: st.seller.audio }); }
@@ -196,15 +197,87 @@ function showQuestStep() {
   const token = stageToken;
   setTimeout(() => { if (token === stageToken) addQuestOptions(st, opts); }, 1100);
 }
+// =====================================================
+// ГОЛОС: вместо нажатия на вариант — говоришь его вслух
+// Работает там, где телефон умеет распознавать речь (Chrome, Safari…). Где не умеет — обычные кнопки.
+// =====================================================
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+function canSpeakNow() { return !!SR && !ruMode() && Date.now() >= store.get("nospeak_until", 0); }
+function heNorm(t) {
+  return String(t || "").replace(/[\u0591-\u05C7]/g, "").replace(/[־\-]/g, " ").replace(/[^\u05D0-\u05EA ]/g, "")
+    .replace(/ך/g, "כ").replace(/ם/g, "מ").replace(/ן/g, "נ").replace(/ף/g, "פ").replace(/ץ/g, "צ").replace(/\s+/g, " ").trim();
+}
+function lev(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function heSim(a, b) { a = heNorm(a); b = heNorm(b); if (!a || !b) return 0; return 1 - lev(a, b) / Math.max(a.length, b.length); }
+let qRec = null;
+function listenHe(onText, onFail) {
+  try { if (qRec) qRec.abort(); } catch (e) {}
+  const r = new SR();
+  qRec = r;
+  r.lang = "he-IL"; r.interimResults = false; r.maxAlternatives = 5; r.continuous = false;
+  let got = false;
+  r.onresult = (e) => { got = true; const alts = [...e.results[0]].map(x => x.transcript); onText(alts); };
+  r.onerror = (e) => { got = true; onFail(e.error || "error"); };
+  r.onend = () => { if (!got) onFail("no-speech"); qRec = null; };
+  try { r.start(); } catch (e) { onFail("start"); }
+}
 function addQuestOptions(st, opts) {
+  const voice = canSpeakNow();
+  const btns = [];
+  if (voice) {
+    opts.insertAdjacentHTML("beforeend", `<div class="q-say-head">🎤 Скажи вслух правильную фразу</div>`);
+  }
   shuffle([...st.options]).forEach(o => {
     const b = document.createElement("button");
-    b.className = "option q-opt";
+    btns.push([b, o]);
+    b.className = "option q-opt" + (voice ? " q-say" : "");
     b.innerHTML = ruMode() ? `<span class="ru-only">${g(o.ru)}</span><span class="he" hidden>${g(o.he)}</span>`
       : `<span class="he" dir="rtl">${g(o.he)}</span><span class="tr">${g(o.tr)}</span>`;
-    b.onclick = () => chooseOption(b, o, st);
+    b.onclick = () => { if (b.classList.contains("q-say")) { showToast("Скажи эту фразу вслух — нажми 🎤"); return; } chooseOption(b, o, st); };
     opts.appendChild(b);
   });
+  if (!voice) return;
+  const row = document.createElement("div");
+  row.className = "q-mic-row";
+  row.innerHTML = `<button class="q-mic" type="button"><span>🎤</span><b>Нажми и говори</b></button>
+    <button class="q-mic-off" type="button">🙊 Не могу говорить</button><div class="q-heard" hidden></div>`;
+  opts.appendChild(row);
+  const mic = row.querySelector(".q-mic"), heard = row.querySelector(".q-heard");
+  const tapMode = () => { btns.forEach(([b]) => b.classList.remove("q-say")); row.remove(); const h = opts.querySelector(".q-say-head"); if (h) h.remove(); };
+  row.querySelector(".q-mic-off").onclick = () => { store.set("nospeak_until", Date.now() + 15 * 60000); showToast("Хорошо, 15 минут выбираешь кнопками"); tapMode(); };
+  let misses = 0;
+  mic.onclick = () => {
+    if (mic.classList.contains("on")) { try { qRec && qRec.stop(); } catch (e) {} return; }
+    mic.classList.add("on"); mic.querySelector("b").textContent = "Слушаю…";
+    heard.hidden = true;
+    listenHe((alts) => {
+      mic.classList.remove("on"); mic.querySelector("b").textContent = "Нажми и говори";
+      // какой вариант ближе всего к сказанному
+      let best = null, bs = 0;
+      btns.forEach(([b, o]) => { if (b.disabled) return; alts.forEach(t => { const sim = heSim(t, g(o.he)); if (sim > bs) { bs = sim; best = [b, o]; } }); });
+      heard.hidden = false;
+      heard.innerHTML = `Услышал: <span dir="rtl">${alts[0] || "…"}</span>`;
+      if (best && bs >= 0.55) { best[0].classList.remove("q-say"); chooseOption(best[0], best[1], st); if (!best[1].ok) best[0].classList.add("q-say"); }
+      else {
+        misses++;
+        playSound("wrong");
+        heard.innerHTML += misses >= 2 ? " — не похоже. Можно нажать «🙊 Не могу говорить»" : " — не похоже ни на одну фразу. Ещё раз!";
+      }
+    }, (err) => {
+      mic.classList.remove("on"); mic.querySelector("b").textContent = "Нажми и говори";
+      if (err === "not-allowed" || err === "service-not-allowed" || err === "start" || err === "network" || err === "language-not-supported") {
+        store.set("nospeak_until", Date.now() + 24 * 3600000);   // на сутки — кнопками
+        showToast("Голос на этом телефоне не работает — выбирай кнопками");
+        tapMode();
+      } else { heard.hidden = false; heard.textContent = "Ничего не услышал 🙉 Нажми 🎤 и скажи погромче"; }
+    });
+  };
 }
 
 function chooseOption(btn, o, st) {
@@ -379,6 +452,63 @@ function startWalkStep(st) {
       qStep++;
       setTimeout(() => { if (token === stageToken) { stage.hide(); showQuestStep(); } }, 2400);
     }, 700);
+  });
+}
+
+// =====================================================
+// ЛОВИ ОШИБКУ НА СЛУХ (кафе): официантка повторяет заказ / называет сумму — и где-то ошибается.
+// Текст сначала скрыт: слушаешь. Нажимаешь то, что она перепутала.
+// catch = { intro, say:{he,tr,ru}, chips:[{id, he, tr, ru}], right: id, receipt:[{he, tr, price}], done, wrong:{id: текст} }
+// =====================================================
+function startCatch(st) {
+  const token = stageToken, c = st.catch;
+  stage.hide();
+  document.getElementById("qHint").hidden = true;
+  friendSays(g(c.intro));
+  const opts = document.getElementById("qOpts");
+  const chip = (x) => `<button class="mk-chip q-catch" data-id="${x.id}">${x.he ? `<span class="he" dir="rtl">${g(x.he)}</span>` : ""}${x.tr ? `<span class="tr">${g(x.tr)}</span>` : ""}${!x.he && x.ru ? `<span class="q-catch-ru">${g(x.ru)}</span>` : ""}</button>`;
+  const receipt = c.receipt ? `<div class="q-receipt"><div class="q-receipt-h">🧾 Чек</div>${c.receipt.map(r => `<div class="q-receipt-row"><span class="he" dir="rtl">${g(r.he)}</span><b>${r.price} ₪</b></div>`).join("")}
+    <div class="q-receipt-row sum"><span>Итого</span><b>${c.receipt.reduce((a, r) => a + r.price, 0)} ₪</b></div></div>` : "";
+  opts.innerHTML = `${receipt}<div class="mk-where">👂 ${g(c.task || "Слушай! Что она перепутала? Нажми это.")}</div>
+    <div class="mk-list">${c.chips.map(chip).join("")}</div>`;
+  let answered = false;
+  // официантка говорит; текст спрятан — только звук
+  setTimeout(() => {
+    if (token !== stageToken) return;
+    const he = g(c.say.he), id = "cs" + Math.floor(Math.random() * 1e6);
+    stage.say("seller", `${nameTag(stage.hostName || "Официантка")}
+      <div class="q-hidden-say" id="${id}"><div class="he" dir="rtl">${he}</div><div class="tr">${g(c.say.tr)}</div></div>
+      <div class="q-tools"><button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊 Ещё раз</button>
+      <button class="q-tool" onclick="event.stopPropagation();document.getElementById('${id}').classList.add('open');this.remove()">Показать текст</button></div>`);
+    speak(he, { audio: c.say.audio });
+  }, 2200);
+  opts.querySelectorAll(".q-catch").forEach(b => b.onclick = () => {
+    if (answered || token !== stageToken) return;
+    if (b.dataset.id === c.right) {
+      answered = true;
+      b.classList.add("got");
+      const before = fireLevel(qCombo); qCombo++; const lvl = fireLevel(qCombo);
+      qPoints += FIRE[lvl].points; updateQuestFire(true);
+      if (lvl > before) setTimeout(() => showMilestone(lvl), 400);
+      playSound("right"); vibrate("success");
+      document.getElementById("qHint").hidden = true;
+      const hs = document.querySelector(".q-hidden-say"); if (hs) hs.classList.add("open");
+      setTimeout(() => {
+        if (token !== stageToken) return;
+        stage.hide(); friendSays(g(c.done)); opts.innerHTML = "";
+        qStep++;
+        setTimeout(() => { if (token === stageToken) { stage.hide(); showQuestStep(); } }, 2600);
+      }, 1100);
+    } else {
+      b.classList.remove("wrong"); void b.offsetWidth; b.classList.add("wrong");
+      qMistakes++;
+      if (qCombo >= 5) showToast(`Серия из ${qCombo} прервалась — начнём новую!`);
+      qCombo = 0; updateQuestFire(false);
+      playSound("wrong"); vibrate("error");
+      const h = document.getElementById("qHint");
+      h.innerHTML = `💡 <b>${friendName()}:</b> ${g((c.wrong && c.wrong[b.dataset.id]) || c.hint || "Послушай ещё раз — нажми 🔊")}`;
+      h.hidden = false;
+    }
   });
 }
 
