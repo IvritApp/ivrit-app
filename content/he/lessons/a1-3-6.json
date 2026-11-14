@@ -41,6 +41,11 @@
       "ru": "тысяча"
     },
     {
+      "he": "אַרְבַּע",
+      "tr": "арба",
+      "ru": "четыре (4)"
+    },
+    {
       "he": "כַּמָּה",
       "tr": "кама",
       "ru": "сколько"
@@ -61,7 +66,7 @@
       "ru": "нет"
     }
   ],
-  "newCount": 7,
+  "newCount": 8,
   "exercises": [
     {
       "type": "choose_translation",
@@ -70,6 +75,10 @@
     {
       "type": "listen",
       "word": 1
+    },
+    {
+      "type": "choose_translation",
+      "word": 7
     },
     {
       "type": "choose_hebrew",

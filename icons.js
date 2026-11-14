@@ -3,7 +3,7 @@
 //   wordIcon(id, size)  → HTML картинки (SVG или PNG из assets/) или "" если картинки нет
 //   WORD_ICON_IDS       → список всех готовых картинок
 // В уроке у слова поле "img": "<id>" (ставит скрипт по переводу).
-// Партия 1 (13.11): уровни 1–2.
+// Партия 1 (13.11): уровни 1–2. Партия 2 (14.11): цвета, числа, дни, вещи + предметы живых мест (ART_BY_RU).
 // =====================================================
 (function () {
   const C = { ink: "#2b2f3a", blue: "#3a8ad6", sky: "#8fc5f2", green: "#3cae5c", red: "#e5484d", orange: "#ff8a35",
@@ -189,7 +189,50 @@
       <rect x="15" y="9" width="18" height="4" rx="2" fill="${C.green}"/>${[17, 21, 25].map((y, i) => `<path d="M15,${y} L${[30, 27, 31][i]},${y}" stroke="${C.gray}" stroke-width="1.8" stroke-linecap="round"/>`).join("")}
       <path d="M15,30 L33,30" stroke="${C.ink}" stroke-width="1" stroke-dasharray="2 1.5"/><path d="M15,37 L19,37" stroke="${C.ink}" stroke-width="2.2" stroke-linecap="round"/><text x="34" y="39.5" text-anchor="end" font-size="6.5" font-weight="800" fill="${C.ink}" font-family="Arial">25₪</text></g>`),
     change: () => svg(`${SH(24, 44, 17)}<rect x="6" y="10" width="24" height="14" rx="2" fill="#7fc38a" transform="rotate(-10 18 17)"/><circle cx="18" cy="17" r="3.6" fill="#5fae6c" transform="rotate(-10 18 17)"/>
-      ${[38, 34, 30].map((y) => `<ellipse cx="17" cy="${y}" rx="9" ry="3.4" fill="#f2b632"/><ellipse cx="17" cy="${y - 1.2}" rx="9" ry="3.4" fill="#ffcf3f"/>`).join("")}${coin(34, 32, 9)}`)
+      ${[38, 34, 30].map((y) => `<ellipse cx="17" cy="${y}" rx="9" ry="3.4" fill="#f2b632"/><ellipse cx="17" cy="${y - 1.2}" rx="9" ry="3.4" fill="#ffcf3f"/>`).join("")}${coin(34, 32, 9)}`),
+
+    // --- Партия 2 (14.11): цвета, числа, дни недели, простые вещи уровней 2–10 ---
+    ...Object.fromEntries([["red", "#e5484d"], ["green", "#3cae5c"], ["yellow", "#ffcf3f"], ["orange_c", "#ff8a35"], ["white_c", "#ffffff"], ["black", "#2b2f3a"], ["blue_c", "#3a8ad6"]].map(([k, c]) => [k, () => svg(`${SH(24, 44, 15)}
+      <path d="M24,6 C36,6 42,14 42,22 C42,30 36,32 31,31 C27,30 26,34 28,37 C30,41 27,43 23,42 C13,41 6,33 6,23 C6,13 13,6 24,6Z" fill="#f6efe2" stroke="#d9cdb6" stroke-width="1.4"/>
+      <circle cx="16" cy="18" r="5.5" fill="${c}" stroke="#0002" stroke-width=".8"/><circle cx="27" cy="13" r="3.4" fill="${c}" opacity=".55"/><circle cx="34" cy="21" r="3" fill="${c}" opacity=".35"/><circle cx="15" cy="31" r="3" fill="${c}" opacity=".45"/>
+      <path d="M44,4 L30,26" stroke="#a87442" stroke-width="2.6" stroke-linecap="round"/><path d="M30,26 L27,31" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`)])),
+    ...Object.fromEntries([["n1b", "1", "#3a8ad6"], ["n2b", "2", "#ff8a35"], ["n3b", "3", "#3cae5c"], ["n6", "6", "#e5484d"], ["n7", "7", "#2f9e8f"], ["n8", "8", "#b57be0"],
+      ["n30", "30", "#3a8ad6"], ["n50", "50", "#ff8a35"], ["n100", "100", "#3cae5c"], ["n1000", "1000", "#e5484d"], ["half", "½", "#2f9e8f"]].map(([k, t, c]) => [k, () => svg(tile(t, c, t.length > 3 ? 13 : t.length > 2 ? 16 : t.length > 1 ? 20 : 24))])),
+    ...Object.fromEntries([["sun_d", "א׳"], ["mon_d", "ב׳"], ["tue_d", "ג׳"], ["wed_d", "ד׳"], ["thu_d", "ה׳"], ["fri_d", "ו׳"]].map(([k, t]) => [k, () => svg(`${SH(24, 44, 15)}
+      <rect x="8" y="9" width="32" height="32" rx="6" fill="#fff" stroke="#d6dde6" stroke-width="1.4"/><path d="M8,15 Q8,9 14,9 L34,9 Q40,9 40,15 L40,18 L8,18Z" fill="${C.red}"/>
+      <rect x="14" y="5" width="3" height="8" rx="1.5" fill="${C.ink}"/><rect x="31" y="5" width="3" height="8" rx="1.5" fill="${C.ink}"/>
+      <text x="24" y="35" text-anchor="middle" font-size="15" font-weight="800" fill="${C.ink}" font-family="Arial">${t}</text>`)])),
+    week: () => svg(`${SH(24, 44, 15)}<rect x="7" y="9" width="34" height="32" rx="6" fill="#fff" stroke="#d6dde6" stroke-width="1.4"/><path d="M7,15 Q7,9 13,9 L35,9 Q41,9 41,15 L41,17 L7,17Z" fill="${C.blue}"/>
+      ${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="${10 + (i % 4) * 7.5}" y="${21 + Math.floor(i / 4) * 9}" width="5.5" height="6" rx="1.2" fill="${i === 6 ? C.orange : "#cfe3f6"}"/>`).join("")}`),
+    house: () => svg(`${SH(24, 44, 16)}<path d="M8,22 L24,8 L40,22" fill="none" stroke="${C.red}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><rect x="12" y="21" width="24" height="20" fill="#f2e6d0"/>
+      <rect x="20" y="29" width="8" height="12" rx="1.5" fill="${C.brown}"/><rect x="14" y="25" width="5" height="5" fill="${C.sky}"/><rect x="29" y="25" width="5" height="5" fill="${C.sky}"/>${HL(18, 23, 3, 1)}`),
+    glass: () => svg(`${SH(24, 44, 9)}<path d="M15,9 L33,9 L30,41 L18,41Z" fill="#dff1ff" stroke="#9cc6ee" stroke-width="1.6"/><path d="M16.5,22 L31.5,22 L30,40 L18,40Z" fill="${C.sky}" opacity=".7"/>${HL(20, 16, 1.4, 5, .7)}`),
+    plate: () => svg(`${SH(24, 42, 17)}<ellipse cx="24" cy="30" rx="19" ry="10" fill="#fff" stroke="#d6dde6" stroke-width="1.5"/><ellipse cx="24" cy="29" rx="12" ry="6" fill="#f3f6f9" stroke="#e3e8ee"/>${HL(16, 25, 4, 1.2)}`),
+    knife: () => svg(`${SH(24, 44, 14)}<path d="M8,38 L28,14 Q33,8 38,9 Q37,15 31,19 L13,41Z" fill="#dfe5eb" stroke="#aeb6be" stroke-width="1.2"/><rect x="5" y="35" width="10" height="5" rx="2" transform="rotate(-50 10 37)" fill="${C.ink}"/>`),
+    fork: () => svg(`${SH(24, 44, 12)}<path d="M24,22 L24,42" stroke="#aeb6be" stroke-width="3.6" stroke-linecap="round"/><path d="M17,6 L17,17 Q17,23 24,23 Q31,23 31,17 L31,6 M24,6 L24,17" stroke="#aeb6be" stroke-width="2.6" fill="none" stroke-linecap="round"/>`),
+    elevator: () => svg(`${SH(24, 44, 14)}<rect x="10" y="6" width="28" height="35" rx="3" fill="#cfd6de"/><rect x="13" y="12" width="10.5" height="29" fill="#aeb6be"/><rect x="24.5" y="12" width="10.5" height="29" fill="#aeb6be"/>
+      <path d="M20,8.5 L22.5,5.5 L25,8.5 M27,6 L29.5,9 L32,6" stroke="${C.blue}" stroke-width="1.6" fill="none"/>`),
+    stairs: () => svg(`${SH(24, 44, 17)}<path d="M6,41 L6,34 L14,34 L14,27 L22,27 L22,20 L30,20 L30,13 L38,13 L38,6 L42,6 L42,41Z" fill="#c99a63"/><path d="M6,34 L14,34 M14,27 L22,27 M22,20 L30,20 M30,13 L38,13" stroke="#fff" stroke-width="1.5" opacity=".6"/>`),
+    sea: () => svg(`${SH(24, 44, 17)}<circle cx="33" cy="15" r="6" fill="${C.yellow}"/><path d="M5,26 Q11,22 17,26 T29,26 T41,26 L43,26 L43,40 L5,40Z" fill="${C.blue}"/><path d="M5,33 Q11,29 17,33 T29,33 T43,33" stroke="#fff" stroke-width="1.6" fill="none" opacity=".7"/>`),
+    train: () => svg(`${SH(24, 44, 15)}<rect x="10" y="7" width="28" height="30" rx="8" fill="${C.red}"/><rect x="14" y="12" width="20" height="10" rx="2" fill="#dff1ff"/><circle cx="17" cy="29" r="2.4" fill="${C.yellow}"/><circle cx="31" cy="29" r="2.4" fill="${C.yellow}"/>
+      <path d="M14,37 L10,42 M34,37 L38,42" stroke="${C.ink}" stroke-width="2.4" stroke-linecap="round"/>${HL(19, 11, 5, 1.5)}`),
+    beach: () => svg(`${SH(24, 44, 17)}<rect x="4" y="32" width="40" height="9" rx="2" fill="#f2d9a0"/><path d="M24,12 L24,36" stroke="${C.ink}" stroke-width="1.8"/><path d="M8,16 Q24,2 40,16Z" fill="${C.orange}"/><path d="M16,16 Q24,6 32,16" fill="${C.yellow}"/>`),
+    money: () => svg(`${SH(24, 44, 17)}<rect x="6" y="12" width="32" height="18" rx="2.5" fill="#7fc38a"/><rect x="10" y="17" width="32" height="18" rx="2.5" fill="#5fae6c"/><circle cx="26" cy="26" r="5" fill="#7fc38a"/><text x="26" y="29" text-anchor="middle" font-size="7" font-weight="800" fill="#2f6b3a" font-family="Arial">₪</text>`),
+    coin_w: () => svg(`${SH(24, 44, 13)}${coin(24, 24, 15)}`),
+    wallet: () => svg(`${SH(24, 44, 17)}<rect x="6" y="13" width="36" height="26" rx="5" fill="${C.brown}"/><rect x="6" y="13" width="36" height="7" rx="3" fill="#a87442"/><rect x="28" y="22" width="14" height="10" rx="3" fill="#6b4426"/><circle cx="33" cy="27" r="2" fill="${C.yellow}"/>`),
+    basket: () => svg(`${SH(24, 44, 17)}<path d="M14,20 Q24,2 34,20" stroke="${C.brown}" stroke-width="2.6" fill="none"/><path d="M6,20 L42,20 L37,40 L11,40Z" fill="#c99a63"/>
+      <path d="M12,26 L36,26 M13,33 L35,33 M18,20 L19,40 M24,20 L24,40 M30,20 L29,40" stroke="#a87442" stroke-width="1.4"/>`),
+    sugar: () => svg(`${SH(24, 44, 14)}${[[10, 24], [22, 24], [16, 13], [28, 13]].map(([x, y]) => `<rect x="${x}" y="${y}" width="11" height="11" rx="1.6" fill="#fff" stroke="#d6dde6" stroke-width="1.3"/>`).join("")}`),
+    menu: () => svg(`${SH(24, 44, 13)}<rect x="11" y="6" width="26" height="35" rx="3" fill="#2b3a32"/><rect x="11" y="6" width="26" height="35" rx="3" fill="none" stroke="#a87442" stroke-width="2"/>
+      ${[16, 22, 28, 34].map(y => `<path d="M16,${y} L28,${y}" stroke="#fff" stroke-width="1.6" opacity=".85"/><circle cx="32" cy="${y}" r="1.2" fill="${C.yellow}"/>`).join("")}`),
+    letter: () => svg(`${SH(24, 44, 17)}<rect x="6" y="12" width="36" height="25" rx="3" fill="#fff" stroke="#d6dde6" stroke-width="1.4"/><path d="M6,14 L24,27 L42,14" stroke="#c7ced8" stroke-width="1.6" fill="none"/><rect x="33" y="15" width="6" height="7" fill="${C.red}"/>`),
+    atm: () => svg(`${SH(24, 44, 14)}<rect x="10" y="5" width="28" height="37" rx="3" fill="#3b4352"/><rect x="14" y="9" width="20" height="12" rx="1.5" fill="#7bf28a" opacity=".85"/>
+      <text x="24" y="18" text-anchor="middle" font-size="6.5" font-weight="800" fill="#1f5a2c" font-family="Arial">₪₪₪</text>${[0, 1, 2].map(i => `<rect x="${14 + i * 7}" y="24" width="5" height="4" rx="1" fill="#9aa4ae"/>`).join("")}<rect x="15" y="33" width="18" height="3" rx="1.5" fill="#1d232c"/>`),
+    hospital: () => svg(`${SH(24, 44, 16)}<rect x="9" y="10" width="30" height="31" rx="2" fill="#fff" stroke="#d6dde6" stroke-width="1.4"/><rect x="20" y="15" width="8" height="18" rx="1" fill="${C.red}"/><rect x="15" y="20" width="18" height="8" rx="1" fill="${C.red}"/>`),
+    gift: () => svg(`${SH(24, 44, 15)}${giftBox(10, 16, 28)}`),
+    clock_w: () => svg(`${SH(24, 44, 14)}<circle cx="24" cy="24" r="17" fill="#fff" stroke="${C.blue}" stroke-width="3"/><path d="M24,13 L24,24 L31,28" stroke="${C.ink}" stroke-width="2.6" stroke-linecap="round" fill="none"/><circle cx="24" cy="24" r="1.8" fill="${C.ink}"/>`),
+    sunrise: () => svg(`${SH(24, 44, 17)}<path d="M8,34 A16,16 0 0 1 40,34Z" fill="${C.yellow}"/>${[-60, -30, 0, 30, 60].map(a => `<path d="M24,34 L${24 + 22 * Math.sin(a * Math.PI / 180)},${34 - 22 * Math.cos(a * Math.PI / 180)}" stroke="${C.orange}" stroke-width="2" opacity=".6"/>`).join("")}<rect x="4" y="34" width="40" height="5" rx="2" fill="${C.sky}"/>`),
+    moon: () => svg(`${SH(24, 44, 12)}<path d="M30,8 A16,16 0 1 0 38,34 A13,13 0 1 1 30,8Z" fill="${C.yellow}"/>${HL(18, 20, 3, 5, .35)}`)
   };
 
   // Перевод (русский, как в уроке) → картинка. Так картинки подставляются ко всем урокам автоматически.
@@ -205,16 +248,40 @@
     "помидоры": "tomatoes", "огурцы": "cucumbers", "яблоки": "apples", "килограмм": "kilo", "бананы": "bananas", "лук": "onion", "картошка": "potatoes",
     "где": "where", "здесь": "here", "там": "there", "направо": "right", "налево": "left", "прямо": "straight", "рядом с": "near",
     "одна (1)": "n1", "две (2)": "n2", "три (3)": "n3", "десять (10)": "n10", "двадцать (20)": "n20", "четыре (4)": "n4", "пять (5)": "n5",
-    "пакет": "bag", "карта (банковская)": "card", "наличные": "cash", "можно": "can", "нужно, нужен": "need", "чек": "receipt", "сдача": "change"
+    "пакет": "bag", "карта (банковская)": "card", "наличные": "cash", "можно": "can", "нужно, нужен": "need", "чек": "receipt", "сдача": "change",
+    // партия 2
+    "красный": "red", "зелёный": "green", "жёлтый": "yellow", "оранжевый": "orange_c", "белый": "white_c", "чёрный": "black", "синий": "blue_c",
+    "один": "n1b", "два": "n2b", "три": "n3b", "четыре": "n4", "шесть": "n6", "семь": "n7", "восемь": "n8", "тридцать": "n30", "пятьдесят": "n50", "сто": "n100", "тысяча": "n1000", "половина": "half",
+    "воскресенье": "sun_d", "понедельник": "mon_d", "вторник": "tue_d", "среда": "wed_d", "четверг": "thu_d", "пятница": "fri_d", "неделя": "week",
+    "дом": "house", "стакан": "glass", "тарелка": "plate", "нож": "knife", "вилка": "fork", "лифт": "elevator", "лестница": "stairs", "море": "sea", "поезд": "train",
+    "пляж": "beach", "деньги": "money", "купюра": "money", "монета": "coin_w", "кошелёк": "wallet", "корзина": "basket", "сахар": "sugar", "меню": "menu", "письмо": "letter",
+    "банкомат": "atm", "больница": "hospital", "подарок": "gift", "время": "clock_w", "час": "clock_w", "утром": "sunrise", "вечером": "moon"
+  };
+  // Предметы из «живых мест» (places.js) — тот же стиль, рисовать заново не нужно
+  const ART_BY_RU = {
+    "кровать": "bed", "стол": "table", "стул": "kchair", "диван": "sofa", "шкаф": "wardrobe", "окно": "window", "холодильник": "fridge", "духовка": "stove", "раковина": "sink",
+    "ключ": "key", "балкон": "balcony", "автобус": "bus", "остановка": "stop", "проездной": "ticket", "магазин": "shop", "парк": "park", "светофор": "light",
+    "свечи": "candles", "вино": "wine", "хала": "challah", "суп": "soup", "торт, пирог": "cake", "капучино (досл. «перевёрнутый»)": "cappuccino",
+    "сок": "juice", "апельсины": "oranges", "сэндвич": "sandwich", "круассан": "croissant", "шакшука": "shakshuka", "омлет": "omelet", "мороженое": "icecream",
+    "виноград": "grapes", "арбуз": "watermelon", "клубника": "strawberries", "лимон": "lemons", "гранат": "pomegranate", "морковь": "carrot", "перец": "pepper",
+    // части тела и соль в живых местах подписаны на иврите — в уроке это подсказка, поэтому их нарисуем отдельно
+    "рецепт": "prescription",
+    "телефон": "phone", "компьютер": "computer", "принтер": "printer", "офис": "desk", "паспорт": "passport", "кредитная карта": "card", "марка": "stamp",
+    "конверт": "envelope", "посылка": "parcel", "бланк, анкета": "form", "ручка": "pen", "почта": "mailbox", "часы работы": "clock"
   };
   const norm = (s) => String(s || "").replace(/\{m:([^}]*)\}\{f:[^}]*\}/g, "$1").trim().toLowerCase();
 
   window.WORD_ICON_IDS = Object.keys(I);
   window.WORD_ICON_BY_RU = BY_RU;
+  window.WORD_ICON_ART = ART_BY_RU;
   window.wordIconId = (w) => (w && (w.img || BY_RU[norm(w.ru)] || BY_RU[norm(w.ru).replace(/^голод.*/, "голоден")])) || (/^голод/.test(norm(w && w.ru)) ? "hungry" : null);
   window.wordIcon = function (idOrWord, size) {
     const id = typeof idOrWord === "string" ? idOrWord : window.wordIconId(idOrWord);
-    if (!id || !I[id]) return "";
+    if (!id || !I[id]) {
+      const art = typeof idOrWord === "object" && idOrWord ? ART_BY_RU[norm(idOrWord.ru)] : null;
+      if (art && window.placeItemIcon) { const s2 = size || 64; return `<span class="w-ico" style="width:${s2}px;height:${s2}px">${window.placeItemIcon(art, s2)}</span>`; }
+      return "";
+    }
     const s = size || 64; curSize = s;
     return `<span class="w-ico" style="width:${s}px;height:${s}px">${I[id]()}</span>`;
   };

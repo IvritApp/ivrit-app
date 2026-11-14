@@ -41,6 +41,16 @@
       "ru": "дверь"
     },
     {
+      "he": "יֵשׁ",
+      "tr": "еш",
+      "ru": "есть (имеется)"
+    },
+    {
+      "he": "אֵין",
+      "tr": "эйн",
+      "ru": "нет (не имеется)"
+    },
+    {
       "he": "זֶה",
       "tr": "зэ",
       "ru": "это"
@@ -61,7 +71,7 @@
       "ru": "да"
     }
   ],
-  "newCount": 7,
+  "newCount": 9,
   "exercises": [
     {
       "type": "choose_translation",
@@ -72,12 +82,20 @@
       "word": 1
     },
     {
+      "type": "choose_translation",
+      "word": 7
+    },
+    {
       "type": "choose_hebrew",
       "word": 2
     },
     {
       "type": "choose_translation",
       "word": 3
+    },
+    {
+      "type": "choose_hebrew",
+      "word": 8
     },
     {
       "type": "build_phrase",
