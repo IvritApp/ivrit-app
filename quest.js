@@ -178,7 +178,6 @@ function sellerHTML(s, who) {
 }
 
 function showQuestStep() {
-  if (window.autoUI) autoUI();
   if (qStep >= quest.steps.length) { finishQuest(); return; }
   const st = quest.steps[qStep];
   qHinted = false;
@@ -232,6 +231,16 @@ function listenHe(onText, onFail) {
   try { r.start(); } catch (e) { onFail("start"); }
 }
 function addQuestOptions(st, opts) {
+  if (window.autoMode && autoMode()) {          // тестировщик: диалоги отвечаются сами, всё остальное (ходьба, игры) — руками
+    addTapOptions(st, opts);
+    const good = st.options.find(o => o.ok), token = stageToken;
+    setTimeout(() => {
+      if (token !== stageToken) return;
+      const b = [...opts.querySelectorAll(".q-opt:not([disabled])")].find(x => { const h = x.querySelector(".he"); return h && h.textContent === g(good.he); });
+      if (b) b.click();
+    }, 1200);
+    return;
+  }
   if (canSpeakNow()) { addSpeakTask(st, opts); return; }
   addTapOptions(st, opts);
 }

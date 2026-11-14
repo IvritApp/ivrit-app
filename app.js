@@ -1059,7 +1059,7 @@ function openSettings() {
         ? `<div class="set-test"><span>🔓 Включён: все уроки и уровни открыты</span><button class="btn ghost" id="testOff">Выключить</button></div>
            <div class="set-test"><span>🇷🇺 Всё на русском — иврит в квестах и диалогах показан переводом (проверить сюжет)</span>
              <button class="btn ${store.get("allru", false) ? "ghost" : "blue"}" id="allRu">${store.get("allru", false) ? "Выключить" : "Включить"}</button></div>
-           <div class="set-test"><span>🤖 Автопилот — в квестах не надо говорить: кнопка ⏩ делает шаг сама, ▶️ проходит квест целиком (смотреть анимации и движки)</span>
+           <div class="set-test"><span>🤖 Без разговоров — в квестах диалоги отвечаются сами (не надо говорить), а ходишь, тащишь и нажимаешь ты сам</span>
              <button class="btn ${store.get("autoplay", false) ? "ghost" : "blue"}" id="autoPlay">${store.get("autoplay", false) ? "Выключить" : "Включить"}</button></div>`
         : `<div class="set-test"><input type="password" inputmode="numeric" id="testPass" placeholder="Пароль" autocomplete="off"><button class="btn blue" id="testOn">Включить</button></div>`}
     </div>`;
@@ -1084,7 +1084,7 @@ function openSettings() {
   if (tOff) tOff.onclick = () => { store.set("testmode", false); showToast("Режим тестировщика выключен"); afterTestToggle(); };
   const tu = document.getElementById("tuOpen"); if (tu) tu.onclick = () => { closeSettings(); showTutorial(); };
   const aP = document.getElementById("autoPlay");
-  if (aP) aP.onclick = () => { const on = !store.get("autoplay", false); store.set("autoplay", on); showToast(on ? "🤖 Автопилот включён — в квестах появятся ⏩ и ▶️" : "Автопилот выключен"); openSettings(); };
+  if (aP) aP.onclick = () => { const on = !store.get("autoplay", false); store.set("autoplay", on); showToast(on ? "🤖 Диалоги в квестах будут отвечаться сами" : "Диалоги снова голосом"); openSettings(); };
   const aRu = document.getElementById("allRu");
   if (aRu) aRu.onclick = () => { const on = !store.get("allru", false); store.set("allru", on); showToast(on ? "🇷🇺 Всё на русском — включено" : "Иврит снова на месте"); openSettings(); };
   box.querySelectorAll("input[type=range]").forEach(r => {
