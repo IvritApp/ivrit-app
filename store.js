@@ -224,10 +224,10 @@
     const intro = document.createElement("div");
     intro.className = "mk-intro"; intro.innerHTML = facadeSVG();
     root.appendChild(intro);
-    const introMs = 3500;
+    const introMs = 1600;
     if (window.cutDoorHole) window.cutDoorHole(intro);        // в проёме дверей видно, что внутри
-    setTimeout(() => intro.classList.add("open"), 300);      // двери плавно разъезжаются (1,4 с)
-    setTimeout(() => intro.classList.add("walk"), 1500);     // шаг внутрь с лёгким покачиванием (1,9 с)
+    setTimeout(() => intro.classList.add("open"), 150);      // двери быстро разъезжаются (0,5 с)
+    setTimeout(() => intro.classList.add("walk"), 550);      // шаг внутрь (1 с)
     setTimeout(() => { intro.remove(); seller.classList.add("wave"); setTimeout(() => seller.classList.remove("wave"), 1800); }, introMs);
 
     let bubble = null, anchor = null, top = false;
