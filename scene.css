@@ -288,10 +288,10 @@
 .mk-intro { position: absolute; left: 0; top: 0; width: 360px; height: 440px; transform-origin: 0 0; z-index: 30; box-shadow: 0 -2000px 0 2000px #bfe0f5; }
 .mk-intro.walk { box-shadow: none; }
 .mk-intro > svg { display: block; transform-origin: 50% 64%; }
-.mk-intro .mk-door-l, .mk-intro .mk-door-r { transition: transform 1.4s cubic-bezier(.45, 0, .2, 1); }
-.mk-intro.open .mk-door-l { transform: translateX(-62px); }
-.mk-intro.open .mk-door-r { transform: translateX(62px); }
-.mk-intro.walk > svg { animation: mkWalkIn 1.9s cubic-bezier(.5, 0, .5, 1) forwards; }
+.mk-intro .mk-door-l, .mk-intro .mk-door-r { transition: transform .75s cubic-bezier(.45, 0, .2, 1); }
+.mk-intro.open .mk-door-l { transform: translateX(var(--dxl, -62px)); }
+.mk-intro.open .mk-door-r { transform: translateX(var(--dxr, 62px)); }
+.mk-intro.walk > svg { animation: mkWalkIn 1.25s cubic-bezier(.5, 0, .5, 1) forwards; }
 @keyframes mkWalkIn {
   0%   { transform: scale(1) translateY(0); opacity: 1; }
   20%  { transform: scale(1.22) translateY(3px); }

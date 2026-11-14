@@ -77,6 +77,13 @@ function currentLevelIdx(ch) {
   const open = ready.find(i => !levelDone(ch.levels[i]));
   return open !== undefined ? open : ready[ready.length - 1];
 }
+// Значок квеста: нарисованный подарок (places.js) или старая картинка-файл
+function questIcon(img) {
+  img = img || "gift-shawarma";
+  const svg = window.placeGift && window.placeGift(img);
+  return svg ? `<i class="p-quest-svg">${svg}</i>` : `<img src="assets/${img}.png" alt="">`;
+}
+
 function renderPath() {
   const ch = course.chapters[0];                 // пока одна глава — A1
   const lvlIdx = currentLevelIdx(ch);
@@ -117,6 +124,10 @@ function renderPath() {
         k === "gold" ? `все ${ch.levels.length} уровней золотые` : `${medalNeed(ch.levels.length, k)} из ${ch.levels.length} золотые (${Math.round(MEDAL_PCT[k] * 100)}%)`}</small></div>`).join("")}
       <div class="p-medal-note">Золотых уровней: <b>${goldLevels} из ${ch.levels.length}</b></div>
     </div>
+    ${ch.levels.map((l, i) => i !== lvlIdx
+      ? (l.soon ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
+        : `<button class="p-soon p-lvl-go${levelOpen(ch, i) ? "" : " locked"}" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${levelGold(l) ? "🏅" : levelDone(l) ? "✓" : levelOpen(ch, i) ? "›" : "🔒"}</span></button>`)
+      : `<div class="p-cur-level" id="p-cur-level">
     <div class="p-level">
       <div class="p-level-title">Уровень ${lvlIdx + 1} · ${lvl.title}${isGoldLvl ? ` <span class="p-lvl-gold">🏅 золотой</span>` : ""}</div>
       <div class="p-level-sub">${done.filter(id => lvl.lessons.includes(id)).length} из ${lvl.lessons.length} уроков${goldCount ? ` · <span class="p-gold">★ ${goldCount} золот${goldCount === 1 ? "ой" : "ых"}</span>` : ""}</div>
@@ -126,12 +137,10 @@ function renderPath() {
     ${lvl.introButton ? `<button class="p-scene" id="p-taxi">${lvl.introButton}</button>` : ""}
     <div class="p-track">${nodes}</div>
     <button class="p-quest ${allDone ? (questDone ? (questGold ? "done gold" : "done") : "open") : "locked"}" id="p-quest">
-      <img src="assets/${lvl.questImg || "gift-shawarma"}.png" alt="">
+      ${questIcon(lvl.questImg)}
       <span><b>Квест: ${lvl.questTitle || lvl.title}</b><br>${allDone ? (questDone ? (questGold ? "Идеально 🏆 · можно ещё раз" : "Пройден ✓ · можно ещё раз") : "Открыт — вперёд!") : `Откроется после ${lvl.lessons.length} уроков 🔒`}</span>
     </button>
-    ${ch.levels.map((l, i) => i === lvlIdx ? "" : l.soon
-      ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
-      : `<button class="p-soon p-lvl-go${levelOpen(ch, i) ? "" : " locked"}" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${levelGold(l) ? "🏅" : levelDone(l) ? "✓" : levelOpen(ch, i) ? "›" : "🔒"}</span></button>`).join("")}
+    </div>`).join("")}
     <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после ${ch.levels.length} уровней</span></div>
     <div class="p-soon next"><b>Дальше — глава ${ch.next}</b><span>🔒</span></div>`;
 
@@ -145,7 +154,8 @@ function renderPath() {
   const tb = document.getElementById("p-taxi");
   if (tb) tb.onclick = () => showTaxi(() => showPath());
   pathView.querySelectorAll(".p-lvl-go").forEach(b => b.onclick = () => {
-    if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий уровень — все уроки и квест"); vibrate("warning"); return; } store.set("level_" + ch.id, +b.dataset.lvl); renderPath(); window.scrollTo(0, 0); });
+    if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий уровень — все уроки и квест"); vibrate("warning"); return; } store.set("level_" + ch.id, +b.dataset.lvl); renderPath();
+    const cl = document.getElementById("p-cur-level"); if (cl) cl.scrollIntoView({ behavior: "smooth", block: "start" }); });
   document.getElementById("p-quest").onclick = () => {
     if (!allDone) { showToast(`Пройди все ${lvl.lessons.length} уроков — и квест откроется`); vibrate("warning"); return; }
     startQuest(lvl.quest);

@@ -163,11 +163,12 @@ function startQuest(id) {
 }
 
 // Реплика продавца: иврит + транскрипция + кнопки «послушать» и «перевод»
-function sellerHTML(s) {
+function sellerHTML(s, who) {
   const he = g(s.he), tr = g(s.tr);
   const id = "ru" + Math.floor(Math.random() * 1e6);
-  if (typeof ruMode === "function" && ruMode()) return `${nameTag((stage && stage.hostName) || "Продавец")}<div class="ru-only">${g(s.ru)}</div>`;
-  return `${nameTag((stage && stage.hostName) || "Продавец")}<div class="he" dir="rtl">${he}</div>
+  const name = who || (stage && stage.hostName) || "Продавец";
+  if (typeof ruMode === "function" && ruMode()) return `${nameTag(name)}<div class="ru-only">${g(s.ru)}</div>`;
+  return `${nameTag(name)}<div class="he" dir="rtl">${he}</div>
     <div class="tr">${tr}</div>
     <div class="q-tools">
       <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊</button>
@@ -181,8 +182,12 @@ function showQuestStep() {
   const st = quest.steps[qStep];
   qHinted = false;
   if (st.shop) { startShopping(st); return; }
+  if (st.ride) { startRide(st); return; }
+  if (st.walk) { startWalkStep(st); return; }
+  if (st.family) { startFamily(st); return; }
   document.getElementById("qHint").hidden = true;
   if (st.seller) { stage.say("seller", sellerHTML(st.seller)); speak(g(st.seller.he), { audio: st.seller.audio }); }
+  else if (st.npc) { stage.say("npc", sellerHTML(st.npc, st.npc.name || (stage && stage.npcName) || "Прохожий")); speak(g(st.npc.he), { audio: st.npc.audio }); }
   else if (st.friend) friendSays(g(st.friend));
 
   const opts = document.getElementById("qOpts");
@@ -265,7 +270,27 @@ function startShopping(st) {
   document.getElementById("mkR").onclick = () => go(1);
   stage.onSwipe = go;
   go(0);
-  stage.onPick = (kind, el) => {
+  stage.onPick = listPicker(st, sh, need, got, opts, token, () => {
+    stage.onSwipe = null;
+    setTimeout(() => {
+      if (token !== stageToken) return;
+      friendSays(g(sh.done));
+      opts.innerHTML = "";
+      setTimeout(() => {
+        if (token !== stageToken) return;
+        stage.look(1); stage.hide();
+        // покупки ложатся на прилавок
+        got.forEach((k, i) => setTimeout(() => { if (token === stageToken) stage.food(k); }, 900 + i * 350));
+        qStep++;
+        setTimeout(() => { if (token === stageToken) showQuestStep(); }, 1300 + got.length * 350);
+      }, 1800);
+    }, 900);
+  });
+}
+
+// Общая проверка «нажал на предмет»: правильный — галочка, огоньки, в «Мой заказ»; не тот — трясётся и подсказка
+function listPicker(st, sh, need, got, opts, token, onAll) {
+  return (kind, el) => {
     if (token !== stageToken) return;
     const x = sh.list.find(y => y.item === kind);
     if (x && !got.includes(kind)) {
@@ -280,27 +305,11 @@ function startShopping(st) {
       playSound("right"); vibrate("success");
       speak(g(x.he), { audio: x.audio });
       document.getElementById("qHint").hidden = true;
-      opts.querySelector(`.mk-chip[data-item="${kind}"]`).classList.add("got");
+      const chip = opts.querySelector(`.mk-chip[data-item="${kind}"]`); if (chip) chip.classList.add("got");
       addToTray([kind], true);
-      if (got.length === need.length) {
-        stage.onPick = null; stage.onSwipe = null;
-        setTimeout(() => {
-          if (token !== stageToken) return;
-          friendSays(g(sh.done));
-          opts.innerHTML = "";
-          setTimeout(() => {
-            if (token !== stageToken) return;
-            stage.look(1); stage.hide();
-            // покупки ложатся на прилавок
-            got.forEach((k, i) => setTimeout(() => { if (token === stageToken) stage.food(k); }, 900 + i * 350));
-            qStep++;
-            setTimeout(() => { if (token === stageToken) showQuestStep(); }, 1300 + got.length * 350);
-          }, 1800);
-        }, 900);
-      }
+      if (got.length === need.length) { stage.onPick = null; onAll(); }
     } else {
-      // не то: уже взяли или этого нет в списке
-      if (x) { showToast("Это уже в корзине 🙂"); return; }
+      if (x) { showToast("Это уже есть 🙂"); return; }
       stage.shake(el);
       qMistakes++;
       if (qCombo >= 5) showToast(`Серия из ${qCombo} прервалась — начнём новую!`);
@@ -311,6 +320,132 @@ function startShopping(st) {
       h.hidden = false;
     }
   };
+}
+
+// =====================================================
+// ПОЕЗДКА (автобус): садишься у окна, город едет мимо — нажимай места из списка, пока проезжаешь
+// =====================================================
+function startRide(st) {
+  const token = stageToken, sh = st.ride;
+  const need = sh.list.map(x => x.item), got = [];
+  stage.hide();
+  stage.startRide();
+  friendSays(g(sh.intro));
+  const opts = document.getElementById("qOpts");
+  opts.innerHTML = `<div class="mk-list">${sh.list.map(x => `<button class="mk-chip" data-item="${x.item}">${ruMode() ? `<span class="ru-only">${g(x.ru)}</span>` : `<span class="he" dir="rtl">${g(x.he)}</span><span class="tr">${g(x.tr)}</span>`}</button>`).join("")}</div>
+    <div class="mk-where">🚌 Едем… нажимай в окне, пока проезжаешь</div>`;
+  opts.querySelectorAll(".mk-chip").forEach(c => c.onclick = () => {
+    const x = sh.list.find(y => y.item === c.dataset.item);
+    speak(g(x.he), { audio: x.audio });
+  });
+  stage.onPick = listPicker(st, sh, need, got, opts, token, () => {
+    setTimeout(() => {
+      if (token !== stageToken) return;
+      stage.stopRide(false);
+      friendSays(g(sh.done));
+      opts.innerHTML = "";
+      qStep++;
+      setTimeout(() => { if (token === stageToken) { stage.hide(); showQuestStep(); } }, 2400);
+    }, 900);
+  });
+}
+
+// =====================================================
+// ХОЖУ ДЖОЙСТИКОМ (шабат): подходишь к вещи из списка, берёшь, несёшь к столу — она встаёт на место
+// =====================================================
+function startWalkStep(st) {
+  const token = stageToken, sh = st.walk;
+  const need = sh.list.map(x => x.item), got = [];
+  stage.hide();
+  stage.startWalk();
+  friendSays(g(sh.intro));
+  const opts = document.getElementById("qOpts");
+  opts.innerHTML = `<div class="mk-list">${sh.list.map(x => `<button class="mk-chip" data-item="${x.item}">${ruMode() ? `<span class="ru-only">${g(x.ru)}</span>` : `<span class="he" dir="rtl">${g(x.he)}</span><span class="tr">${g(x.tr)}</span>`}</button>`).join("")}</div>
+    <div class="mk-where">🕹️ Иди джойстиком · подойди к вещи и нажми «Взять» · отнеси к столу</div>`;
+  opts.querySelectorAll(".mk-chip").forEach(c => c.onclick = () => {
+    const x = sh.list.find(y => y.item === c.dataset.item);
+    speak(g(x.he), { audio: x.audio });
+  });
+  stage.onPick = listPicker(st, sh, need, got, opts, token, () => {});
+  stage.onPlaced((k, n) => {
+    if (token !== stageToken) return;
+    const chip = opts.querySelector(`.mk-chip[data-item="${k}"]`); if (chip) chip.classList.add("placed");
+    if (n < need.length) { friendSays(g(sh.placed || "На стол! Дальше.")); return; }
+    setTimeout(() => {
+      if (token !== stageToken) return;
+      friendSays(g(sh.done));
+      opts.innerHTML = "";
+      qStep++;
+      setTimeout(() => { if (token === stageToken) { stage.hide(); showQuestStep(); } }, 2400);
+    }, 700);
+  });
+}
+
+// =====================================================
+// СЕМЬЯ ЗА СТОЛОМ: все знакомятся, потом мини-тест «покажи, кто здесь …»
+// =====================================================
+function startFamily(st) {
+  const token = stageToken, fm = st.family, gk = profile && profile.gender === "f" ? "f" : "m";
+  const members = fm.members[gk], quiz = fm.quiz[gk];
+  const opts = document.getElementById("qOpts");
+  opts.innerHTML = "";
+  let q = -1, answering = false;
+  stage.hide();
+  stage.showFamily(members, (id, el) => {
+    if (token !== stageToken || !answering) return;
+    const cur = quiz[q];
+    if (id === cur.id) {
+      answering = false;
+      stage.famHappy(el); el.classList.add("pl-ok");
+      const before = fireLevel(qCombo); qCombo++; const lvl = fireLevel(qCombo);
+      qPoints += FIRE[lvl].points; updateQuestFire(true);
+      if (lvl > before) setTimeout(() => showMilestone(lvl), 400);
+      playSound("right"); vibrate("success");
+      document.getElementById("qHint").hidden = true;
+      const m = members.find(x => x.id === id);
+      speak(g(cur.he));
+      friendSays(`Да! ${m.name} — ${g(cur.ru)} 👏`);
+      setTimeout(() => { if (token === stageToken) { el.classList.remove("pl-ok"); nextQ(); } }, 1900);
+    } else {
+      stage.famShake(el);
+      qMistakes++;
+      if (qCombo >= 5) showToast(`Серия из ${qCombo} прервалась — начнём новую!`);
+      qCombo = 0; updateQuestFire(false);
+      playSound("wrong"); vibrate("error");
+      const h = document.getElementById("qHint");
+      h.innerHTML = `💡 <b>${friendName()}:</b> ${g(cur.he)} — это «${g(cur.ru)}».`;
+      h.hidden = false;
+    }
+  });
+  friendSays(g(fm.intro));
+  // по очереди: каждый говорит, кто он
+  let i = 0;
+  const hello = () => {
+    if (token !== stageToken) return;
+    if (i >= members.length) { stage.hide(); setTimeout(nextQ, 500); return; }
+    const m = members[i++];
+    stage.say(m.id, sellerHTML(m, m.name));
+    speak(g(m.he), { audio: m.audio });
+    setTimeout(hello, Math.max(2600, readTime(g(m.ru)) + 900));
+  };
+  setTimeout(hello, 2200);
+  function nextQ() {
+    if (token !== stageToken) return;
+    q++;
+    if (q >= quiz.length) {
+      friendSays(g(fm.done));
+      opts.innerHTML = "";
+      qStep++;
+      setTimeout(() => { if (token === stageToken) { stage.hide(); showQuestStep(); } }, 2400);
+      return;
+    }
+    const cur = quiz[q];
+    friendSays(`Покажи, кто здесь <b dir="rtl">${g(cur.he)}</b>?`);
+    opts.innerHTML = `<div class="q-fam-ask">${ruMode() ? `Нажми на того, кто «${g(cur.ru)}»` : `<span class="he" dir="rtl">${g(cur.he)}</span> <span class="tr">${g(cur.tr)}</span> — нажми на этого человека за столом`} <button class="q-tool" id="famSay">🔊</button></div>`;
+    document.getElementById("famSay").onclick = (e) => { e.stopPropagation(); speak(g(cur.he)); };
+    speak(g(cur.he));
+    answering = true;
+  }
 }
 
 // Ингредиенты появляются на подносе (поверх картинки)

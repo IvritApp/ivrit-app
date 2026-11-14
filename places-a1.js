@@ -55,12 +55,29 @@
       <path d="M18,22 Q32,0 46,22" stroke="#2b2f3a" stroke-width="5" fill="none"/>${HL(20, 38, 5, 10, .4)}` },
     candles: { vb: [70, 100], svg: () => `${SHD(35, 98, 30, 3)}${[14, 50].map(x => `${rr(x - 8, 82, 22, 14, 3, "#d9b25a")}${rr(x - 4, 34, 14, 50, 3, "#fffaf0")}<path d="M${x + 3},34 L${x + 3},28" stroke="#2b2f3a" stroke-width="1.5"/>
       <path d="M${x + 3},6 Q${x + 11},20 ${x + 3},28 Q${x - 5},20 ${x + 3},6Z" fill="#ffb02e"/><path d="M${x + 3},14 Q${x + 7},22 ${x + 3},27 Q${x - 1},22 ${x + 3},14Z" fill="#ffe86a"/>`).join("")}` },
-    challah: { vb: [110, 60], svg: () => `${SHD(55, 58, 52, 3)}${[0, 1, 2, 3, 4].map(i => `<ellipse cx="${16 + i * 19}" cy="${32 - Math.sin(i / 4 * Math.PI) * 8}" rx="15" ry="${16 + Math.sin(i / 4 * Math.PI) * 5}" fill="${i % 2 ? "#c98a3e" : "#d99a4e"}" transform="rotate(${i % 2 ? 20 : -20} ${16 + i * 19} 32)"/>`).join("")}
-      ${[18, 38, 58, 78].map(x => `<circle cx="${x}" cy="22" r="1.2" fill="#fff4d6"/><circle cx="${x + 6}" cy="30" r="1.2" fill="#fff4d6"/>`).join("")}${HL(40, 18, 18, 4, .3)}` },
+    challah: { vb: [110, 60], svg: () => {
+  // плетёная хала: 5 «узлов», в каждом две пряди крест-накрест, глянец и кунжут
+  let s = `<ellipse cx="55" cy="56" rx="52" ry="4" fill="#000" opacity=".12"/>
+    <defs><linearGradient id="chG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8a24f"/><stop offset=".55" stop-color="#c97a2c"/><stop offset="1" stop-color="#9a5a1e"/></linearGradient></defs>
+    <path d="M8,42 Q10,30 24,30 L86,30 Q100,30 102,42 Q98,52 84,53 L26,53 Q12,52 8,42Z" fill="#a8641f"/>`;
+  const n = 5;
+  for (let i = 0; i < n; i++) {
+    const cx = 17 + i * 19, h = 1 - Math.abs(i - 2) * .17;
+    const cy = 42 - 14 * h;
+    s += `<ellipse cx="${cx - 3}" cy="${cy}" rx="${10.5 * h}" ry="${15 * h}" fill="url(#chG)" transform="rotate(-38 ${cx - 3} ${cy})"/>`;
+    s += `<ellipse cx="${cx + 3}" cy="${cy + 3}" rx="${10.5 * h}" ry="${15 * h}" fill="url(#chG)" transform="rotate(38 ${cx + 3} ${cy + 3})"/>`;
+    s += `<path d="M${cx - 8},${cy - 6 * h} Q${cx - 3},${cy - 12 * h} ${cx + 1},${cy - 8 * h}" stroke="#ffd79a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".8"/>`;
+  }
+  [[14, 24], [22, 30], [33, 22], [41, 28], [52, 20], [60, 27], [70, 22], [78, 29], [89, 24], [95, 31], [28, 34], [65, 33]].forEach(([x, y]) => s += `<ellipse cx="${x}" cy="${y}" rx="1.6" ry="1" fill="#fff6dc" transform="rotate(${(x * 7) % 60 - 30} ${x} ${y})"/>`);
+  return s;
+    } },
     wine: { vb: [50, 110], svg: () => `${SHD(25, 108, 20, 3)}${rr(19, 0, 12, 30, 3, "#5a1e2e")}<path d="M19,28 Q4,40 6,56 L6,104 Q6,108 10,108 L40,108 Q44,108 44,104 L44,56 Q46,40 31,28Z" fill="#7a2638"/>
       ${rr(10, 60, 30, 30, 3, "#f4e9d0")}${txt(25, 80, "יין", 11, "#7a2638")}${HL(14, 50, 3, 12, .35)}` },
-    flowers: { vb: [56, 100], svg: () => `${SHD(28, 98, 20, 3)}<path d="M14,60 L42,60 L38,98 L18,98Z" fill="#7fc0f5" opacity=".8"/>
-      ${[[16, 22, "#e8413a"], [30, 12, "#ffd54f"], [44, 24, "#b57be0"], [24, 36, "#ff8a35"], [38, 40, "#e8413a"]].map(([x, y, c]) => `<path d="M28,62 L${x},${y}" stroke="#3f8f4c" stroke-width="2"/><circle cx="${x}" cy="${y}" r="7" fill="${c}"/><circle cx="${x}" cy="${y}" r="2.5" fill="#fff4b0"/>`).join("")}` },
+    flowers: { vb: [56, 100], svg: () => `<ellipse cx="28" cy="98" rx="18" ry="3" fill="#000" opacity=".12"/>
+  <path d="M28,62 Q14,40 12,22 M28,62 Q28,36 30,12 M28,62 Q40,42 46,24" stroke="#3f8f4c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M28,64 Q8,52 6,40 Q20,46 28,60Z M28,64 Q48,54 52,42 Q38,46 28,60Z" fill="#4f9d5d"/>
+  ${[[12, 22, "#e8413a", "#ff7a6e"], [30, 12, "#ffc21a", "#ffe07a"], [46, 24, "#f06aa6", "#ffa6cf"]].map(([x, y, c, l]) => `<path d="M${x - 8},${y} Q${x - 9},${y - 12} ${x - 4},${y - 15} L${x},${y - 9} L${x + 4},${y - 15} Q${x + 9},${y - 12} ${x + 8},${y} Q${x},${y + 8} ${x - 8},${y}Z" fill="${c}"/><path d="M${x - 4},${y - 12} Q${x - 4},${y - 2} ${x - 1},${y + 2}" stroke="${l}" stroke-width="2" fill="none" stroke-linecap="round"/>`).join("")}
+  <path d="M16,62 L40,62 Q42,62 41,66 L38,96 Q38,98 36,98 L20,98 Q18,98 18,96 L15,66 Q14,62 16,62Z" fill="#bfe3f7" opacity=".85"/><path d="M17,74 L39,74 L37,96 L19,96Z" fill="#8cc8ec" opacity=".7"/><path d="M20,66 L22,92" stroke="#fff" stroke-width="2" opacity=".7"/>` },
     books: { vb: [120, 230], svg: () => `${rr(0, 0, 120, 230, 3, "#a87442")}${[0, 1, 2, 3].map(r => `${rr(6, 6 + r * 56, 108, 50, 1, "#7a5230")}${[0, 1, 2, 3, 4, 5, 6].map(i => rr(10 + i * 14, 14 + r * 56 + (i % 3) * 3, 11, 40 - (i % 3) * 3, 1, ["#e8413a", "#3a8ad6", "#f2b632", "#3cae5c", "#b57be0", "#ff8a35", "#fff"][(i + r) % 7])).join("")}`).join("")}` },
     cake: { vb: [80, 60], svg: () => `${SHD(40, 58, 36, 3)}${rr(6, 22, 68, 34, 6, "#f7c6d9")}${rr(6, 22, 68, 10, 5, "#fff")}<path d="M6,32 Q16,40 26,32 Q36,40 46,32 Q56,40 66,32 L74,32" stroke="#fff" stroke-width="4" fill="none"/>
       ${[20, 40, 60].map(x => `<circle cx="${x}" cy="18" r="5" fill="#e8413a"/>`).join("")}` },
@@ -210,39 +227,90 @@
         { kind: "bench", view: 2, x: 912, y: 300, w: 100, h: 56 },
         { kind: "taxi", view: 2, x: 892, y: 352, w: 140, h: 76 },
       ],
+      // поездка: город за окном едет мимо, сосед по сиденью
+      ride: {
+        pano: () => {
+          const put = (k, x, y, w, h) => { const a = ART[k]; return `<g data-kind="${k}"><svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 0 ${a.vb[0]} ${a.vb[1]}" overflow="visible">${a.svg()}</svg><rect x="${x - 6}" y="${y - 6}" width="${w + 12}" height="${h + 12}" fill="transparent"/></g>`; };
+          const houses = Array.from({ length: 8 }, (_, i) => `${rr(i * 116 - 6, 40 + (i % 3) * 18, 104, 170, 4, ["#e9dcc6", "#f2e6d0", "#dccbb0"][i % 3])}${Array.from({ length: 4 }, (_, k) => rr(i * 116 + 8 + (k % 2) * 46, 60 + (i % 3) * 18 + Math.floor(k / 2) * 46, 32, 30, 2, "#9fc8e4")).join("")}`).join("");
+          return `<rect width="900" height="260" fill="#bfe3f7"/><circle cx="760" cy="34" r="18" fill="#ffd54f"/>${houses}
+            ${rr(0, 196, 900, 20, 0, "#d9d2c5")}${rr(0, 216, 900, 44, 0, "#7b8592")}${Array.from({ length: 12 }, (_, i) => rr(10 + i * 76, 236, 36, 4, 2, "#fff")).join("")}
+            ${[180, 520, 860].map(x => `${rr(x - 3, 120, 6, 80, 2, "#8a5a36")}<circle cx="${x}" cy="112" r="26" fill="#4f9d5d"/>`).join("")}
+            ${put("light", 40, 84, 28, 132)}${put("car", 96, 186, 92, 50)}${put("shop", 210, 70, 120, 140)}${put("streetlamp", 346, 70, 22, 140)}
+            ${put("taxi", 390, 178, 110, 62)}${put("park", 510, 54, 120, 160)}${put("bench", 640, 170, 70, 40)}${put("bus", 720, 140, 150, 106)}`;
+        },
+        interior: () => `<path fill-rule="evenodd" d="M0,0 H360 V440 H0Z M18,50 H342 V310 H18Z" fill="#e3e9ef"/>
+          <rect x="15" y="47" width="330" height="266" rx="6" fill="none" stroke="#8d969f" stroke-width="7"/><rect x="176" y="47" width="8" height="266" fill="#8d969f"/>
+          ${rr(0, 16, 360, 7, 3, "#aeb6be")}${[60, 140, 220, 300].map(x => `<path d="M${x},23 L${x},34" stroke="#aeb6be" stroke-width="3"/><circle cx="${x}" cy="40" r="7" fill="none" stroke="#5b6470" stroke-width="3"/>`).join("")}
+          ${rr(0, 313, 360, 22, 0, "#c8d0d8")}${rr(344, 0, 9, 440, 4, "#f2b632")}${rr(336, 190, 24, 18, 4, "#e8413a")}
+          <text x="348" y="223" text-anchor="middle" font-size="8" font-weight="700" fill="#e8413a" font-family="Arial">עצירה</text>
+          ${rr(4, 330, 200, 110, 22, "#3a8ad6")}${rr(14, 340, 180, 20, 10, "#5aa9f0")}${rr(204, 360, 132, 80, 18, "#2f6fb2")}`,
+        npc: { name: "Пассажирка", x: 214, y: 196, cfg: F({ hair: "bob", hairColor: 5, top: "blouse", topColor: 4, bottom: "longskirt", bottomColor: 1, skin: 1 }) },
+        front: () => `${rr(214, 380, 146, 60, 16, "#3a8ad6")}${rr(222, 388, 130, 16, 8, "#5aa9f0")}`,
+      },
       facade: () => facadeBase("#bfe3f7", `${rr(0, 380, 360, 60, 0, "#7b8592")}${rr(30, 40, 300, 360, 30, "#3cae5c")}${rr(54, 64, 252, 120, 12, "#dff1ff")}${rr(110, 46, 140, 14, 4, "#2b2f3a")}${txt(180, 57, "5 מרכז", 11, "#ffd23a")}
         ${glassDoors(126, 200, 108, 180)}<circle cx="72" cy="330" r="14" fill="#fff4b0"/><circle cx="288" cy="330" r="14" fill="#fff4b0"/>${rr(60, 380, 50, 20, 6, "#2b2f3a")}${rr(250, 380, 50, 20, 6, "#2b2f3a")}`),
     },
 
     // ---------- 5. Шабат у друзей ----------
     shabbat: {
-      viewNames: ["Кухня", "Стол", "Гостиная"], sky: "#2c3e66", basket: "🕯️",
-      hostName: (g) => g === "f" ? "Мама Цили" : "Мама Давида",
-      host: { view: 1, x: 548, y: 148, cfg: F({ hair: "bob", hairColor: 1, headwear: "tichel", top: "blouse", topColor: 6, bottom: "longskirt", bottomColor: 2, skin: 1 }) },
+      viewNames: ["Кухня", "Столовая", "Гостиная"], sky: "#2c3e66", basket: "🕯️",
+      hostName: (g) => g === "f" ? "Ирит, мама Цили" : "Рина, мама Давида",
+      host: { view: 2, x: 742, y: 148, cfg: F({ hair: "bob", hairColor: 1, headwear: "tichel", top: "blouse", topColor: 6, bottom: "longskirt", bottomColor: 2, skin: 1 }),
+              byGender: { f: F({ hair: "long", hairColor: 3, top: "blouse", topColor: 1, bottom: "skirt", bottomColor: 2, skin: 1 }) } },
       goodsAt: [380, 40],
+      // ходишь джойстиком: берёшь вещи на кухне и в гостиной и ставишь на стол в столовой
+      walk: { start: 860, table: { x1: 380, x2: 700, slots: { candles: [394, 228, 44, 74], wine: [456, 246, 28, 56], challah: [500, 264, 84, 38], soup: [598, 244, 64, 50], salt: [670, 258, 22, 42] } } },
       bg: () => `${room("#f4e2c8", "#b98a58", "#9a6e42")}
         ${rr(10, 180, 330, 12, 2, "#e9e1d2")}${rr(10, 192, 330, 190, 2, "#c99a63")}${[0, 1, 2, 3].map(i => rr(18 + i * 82, 200, 74, 176, 2, "#d6ab76")).join("")}
         ${rr(40, 150, 120, 30, 3, "#3b4352")}${[60, 100, 140].map(x => `<circle cx="${x}" cy="160" r="9" fill="#5b6470"/>`).join("")}
         ${rr(196, 26, 136, 96, 4, "#2c3e66", 'stroke="#fff" stroke-width="5"')}<circle cx="300" cy="54" r="12" fill="#fff4b0"/>${[[216, 46], [236, 96], [276, 80], [320, 104]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="#fff"/>`).join("")}${rr(261, 26, 5, 96, 0, "#fff")}
+        ${rr(196, 166, 92, 14, 3, "#c99a63")}
         ${doorway(360)}${doorway(720)}
-        ${rr(370, 296, 178, 12, 3, "#fff")}${rr(376, 300, 166, 82, 3, "#8a5a36")}<path d="M372,300 L548,300 L542,330 L376,330Z" fill="#fff" opacity=".9"/>
-        ${[400, 452, 506].map(x => `<ellipse cx="${x}" cy="300" rx="18" ry="5" fill="#fff" stroke="#c8d0d8"/>`).join("")}
-        ${rr(460, 60, 100, 70, 4, "#a87442")}${rr(466, 66, 88, 58, 2, "#fff4d6")}${txt(510, 104, "שבת שלום", 13, "#3a8ad6")}
-        ${rr(740, 330, 140, 8, 2, "#7a5230")}${rr(744, 338, 132, 44, 2, "#a87442")}${rr(752, 190, 76, 70, 3, "#a87442")}${rr(757, 195, 66, 60, 2, "#bfe0f5")}<path d="M757,240 L780,220 L800,234 L823,214 L823,255 L757,255Z" fill="#c9a06a"/>`,
+        ${rr(470, 56, 100, 70, 4, "#a87442")}${rr(476, 62, 88, 58, 2, "#fff4d6")}${txt(520, 100, "שבת שלום", 13, "#3a8ad6")}
+        <path d="M540,0 L540,150" stroke="#5b6470" stroke-width="2"/><path d="M512,150 L568,150 L558,172 L522,172Z" fill="#ffd54f"/><ellipse cx="540" cy="176" rx="40" ry="10" fill="#fff4b0" opacity=".35"/>
+        ${[400, 640].map(x => `${rr(x, 236, 46, 70, 8, "#8a5a36")}${rr(x + 4, 240, 38, 40, 6, "#a87442")}`).join("")}
+        ${rr(376, 296, 328, 12, 3, "#fff")}${rr(384, 308, 312, 76, 3, "#8a5a36")}<path d="M378,300 L702,300 L694,334 L386,334Z" fill="#fff" opacity=".95"/>
+        <path d="M386,334 Q420,342 454,334 Q488,342 522,334 Q556,342 590,334 Q624,342 658,334 Q676,340 694,334" stroke="#d9cfa8" stroke-width="2" fill="none"/>
+        ${[420, 500, 580, 660].map(x => `<ellipse cx="${x}" cy="300" rx="16" ry="4.5" fill="#fff" stroke="#c8d0d8"/>`).join("")}
+        ${rr(872, 300, 186, 10, 2, "#7a5230")}${rr(876, 310, 178, 72, 2, "#a87442")}${[0, 1].map(i => rr(884 + i * 88, 318, 80, 56, 2, "#8a5a36")).join("")}
+        ${rr(900, 120, 120, 90, 4, "#a87442")}${rr(906, 126, 108, 78, 2, "#2c3e66")}<circle cx="990" cy="150" r="10" fill="#fff4b0"/>${[[920, 140], [950, 180], [1000, 190]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.8" fill="#fff"/>`).join("")}`,
       spots: [
         { kind: "soup", view: 0, x: 64, y: 84, w: 92, h: 70 },
-        { kind: "kettle", view: 0, x: 196, y: 140, w: 60, h: 42 },
-        { kind: "salt", view: 0, x: 280, y: 138, w: 32, h: 44 },
-        { kind: "candles", view: 1, x: 378, y: 222, w: 52, h: 80 },
-        { kind: "flowers", view: 1, x: 434, y: 230, w: 38, h: 72 },
-        { kind: "challah", view: 1, x: 472, y: 266, w: 74, h: 38 },
-        { kind: "wine", view: 2, x: 770, y: 276, w: 30, h: 58 },
-        { kind: "cake", view: 2, x: 812, y: 292, w: 60, h: 42 },
-        { kind: "books", view: 2, x: 908, y: 150, w: 120, h: 232 },
-      ],
+        { kind: "challah", view: 0, x: 198, y: 130, w: 86, h: 40 },
+        { kind: "salt", view: 0, x: 296, y: 136, w: 30, h: 44 },
+        { kind: "kettle", view: 0, x: 40, y: 340, w: 0, h: 0 },
+        { kind: "candles", view: 2, x: 884, y: 228, w: 50, h: 76 },
+        { kind: "wine", view: 2, x: 946, y: 246, w: 30, h: 56 },
+        { kind: "flowers", view: 2, x: 990, y: 232, w: 40, h: 72 },
+      ].filter(x => x.w),
+      // семья за столом (вид «сел за стол»), внешность героев по id
+      familyLooks: {
+        avi: M({ hair: "short", hairColor: 1, beard: "short", headwear: "kippa", kippaColor: 0, top: "shirt", topColor: 2, skin: 1 }),
+        rina: F({ hair: "bob", hairColor: 1, headwear: "tichel", top: "blouse", topColor: 6, bottom: "longskirt", bottomColor: 2, skin: 1 }),
+        tova: F({ hair: "bob", hairColor: 5, top: "blouse", topColor: 5, bottom: "longskirt", bottomColor: 1, skin: 1 }),
+        shlomo: M({ hair: "short", hairColor: 5, beard: "short", headwear: "kippa", kippaColor: 1, top: "shirt", topColor: 2, skin: 1 }),
+        shira: F({ hair: "long", hairColor: 0, top: "tee", topColor: 3, bottom: "jeans", bottomColor: 0, skin: 1 }),
+        yossi: M({ hair: "short", hairColor: 0, beard: "stubble", top: "shirt", topColor: 0, skin: 2 }),
+        irit: F({ hair: "long", hairColor: 3, top: "blouse", topColor: 1, bottom: "skirt", bottomColor: 2, skin: 1 }),
+        batya: F({ hair: "bob", hairColor: 5, top: "blouse", topColor: 4, bottom: "longskirt", bottomColor: 1, skin: 2 }),
+        moti: M({ hair: "side", hairColor: 5, beard: "short", top: "shirt", topColor: 2, skin: 2 }),
+        daniel: M({ hair: "curly", hairColor: 2, top: "tee", topColor: 1, skin: 1 }),
+      },
+      family: {
+        bg: () => `${rr(0, 0, 360, 440, 0, "#f4e2c8")}${rr(20, 40, 110, 80, 4, "#a87442")}${rr(26, 46, 98, 68, 2, "#2c3e66")}<circle cx="100" cy="66" r="10" fill="#fff4b0"/>
+          ${rr(220, 44, 110, 72, 4, "#a87442")}${rr(226, 50, 98, 60, 2, "#fff4d6")}${txt(275, 86, "שבת שלום", 13, "#3a8ad6")}
+          <path d="M180,0 L180,30" stroke="#5b6470" stroke-width="2"/><path d="M156,30 L204,30 L196,48 L164,48Z" fill="#ffd54f"/><ellipse cx="180" cy="54" rx="60" ry="14" fill="#fff4b0" opacity=".4"/>`,
+        front: (on) => {
+          const put = (k, x, y, w, h) => { if (!on.includes(k) || !ART[k]) return ""; const a = ART[k]; return `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 0 ${a.vb[0]} ${a.vb[1]}" overflow="visible">${a.svg()}</svg>`; };
+          return `${rr(-10, 262, 380, 16, 4, "#fff")}<path d="M-10,270 L370,270 L370,440 L-10,440Z" fill="#fff"/>
+            <path d="M-10,300 Q30,310 70,300 Q110,310 150,300 Q190,310 230,300 Q270,310 310,300 Q340,308 370,300" stroke="#d9cfa8" stroke-width="2" fill="none"/>
+            ${[40, 110, 180, 250, 320].map(x => `<ellipse cx="${x}" cy="290" rx="24" ry="7" fill="#fff" stroke="#c8d0d8"/>`).join("")}
+            ${put("candles", 14, 196, 40, 70)}${put("wine", 70, 214, 24, 52)}${put("challah", 128, 234, 104, 46)}${put("soup", 240, 216, 70, 54)}${put("salt", 318, 230, 22, 40)}`;
+        },
+      },
       facade: () => facadeBase("#2c3e66", `${[[40, 40], [300, 60], [200, 30], [90, 90]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="#fff"/>`).join("")}<circle cx="290" cy="40" r="16" fill="#fff4b0"/>
         ${rr(0, 120, 360, 280, 0, "#e9dcc6")}${rr(0, 392, 360, 48, 0, "#b9b1a3")}${rr(110, 150, 140, 242, 4, "#6b4426")}${doors(116, 156, 128, 236, "#8a5a36", "#5b3a22")}
-        ${rr(258, 210, 8, 40, 3, "#c9a227", 'transform="rotate(20 262 230)"')}${rr(20, 170, 70, 80, 4, "#ffe7a1")}${rr(270, 170, 70, 80, 4, "#ffe7a1")}${txt(180, 140, "משפחת כהן", 14, "#fff4d6")}`),
+        ${rr(258, 210, 8, 40, 3, "#c9a227", 'transform="rotate(20 262 230)"')}${rr(20, 170, 70, 80, 4, "#ffe7a1")}${rr(270, 170, 70, 80, 4, "#ffe7a1")}${txt(180, 140, "שַׁבָּת שָׁלוֹם", 14, "#fff4d6")}`),
     },
 
     // ---------- 6. Кафе и кофе ----------

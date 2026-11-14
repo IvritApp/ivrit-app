@@ -106,6 +106,25 @@
   };
   window.placeGift = (img) => (GIFTS[img] ? GIFTS[img]() : "");
 
+  // Вход в место: вырезаем в фасаде «окно» на месте дверей — когда двери разъезжаются, видно, что внутри
+  let holeN = 0;
+  window.cutDoorHole = function (intro) {
+    try {
+      const svg = intro.querySelector("svg"), l = svg && svg.querySelector(".mk-door-l"), r = svg && svg.querySelector(".mk-door-r");
+      if (!l || !r) return;
+      const a = l.getBBox(), b = r.getBBox();
+      const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.max(a.x + a.width, b.x + b.width) - x, h = Math.max(a.y + a.height, b.y + b.height) - y;
+      const NS = "http://www.w3.org/2000/svg", id = "plHole" + (++holeN);
+      const defs = document.createElementNS(NS, "defs");
+      defs.innerHTML = `<mask id="${id}" maskUnits="userSpaceOnUse" x="-500" y="-500" width="1400" height="1500"><rect x="-500" y="-500" width="1400" height="1500" fill="#fff"/><rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" fill="#000"/></mask>`;
+      const g = document.createElementNS(NS, "g");
+      g.setAttribute("mask", `url(#${id})`);
+      [...svg.childNodes].forEach(n => { if (n !== l && n !== r) g.appendChild(n); });
+      svg.appendChild(defs); svg.appendChild(g); svg.appendChild(l); svg.appendChild(r);
+      l.style.setProperty("--dxl", -(a.width - 2) + "px"); r.style.setProperty("--dxr", (b.width - 2) + "px");
+    } catch (e) {}
+  };
+
   // =====================================================
   // МЕСТА
   // =====================================================
@@ -210,7 +229,8 @@
     host.className = "mk-seller pl-host";
     host.style.left = P.host.x + "px"; host.style.top = P.host.y + "px";
     let sv = "";
-    try { if (window.HirbisAvatar) sv = HirbisAvatar.svg(HirbisAvatar.sanitize(Object.assign(HirbisAvatar.defaults(P.host.cfg.gender), P.host.cfg)), { pose: "stand" }); } catch (e) {}
+    const hcfg = (P.host.byGender && P.host.byGender[opts.gender === "f" ? "f" : "m"]) || P.host.cfg;
+    try { if (window.HirbisAvatar) sv = HirbisAvatar.svg(HirbisAvatar.sanitize(Object.assign(HirbisAvatar.defaults(hcfg.gender), hcfg)), { pose: "stand" }); } catch (e) {}
     host.innerHTML = sv;
     world.appendChild(host);
     if (P.front) world.insertAdjacentHTML("beforeend", `<svg class="mk-over" viewBox="0 0 ${W} 440" width="${W}" height="440">${P.front()}</svg>`);
@@ -220,25 +240,31 @@
     const meA = document.createElement("div"); meA.className = "mk-anchor me"; root.appendChild(meA);
     const frA = document.createElement("div"); frA.className = "mk-anchor fr"; root.appendChild(frA);
     const who = { seller: host, me: meA, friend: frA };
+    let ride = null, npcEl = null;          // режим «поездка» (автобус)
+    let walk = null, fam = null;            // режим «хожу джойстиком» и «семья за столом»
 
     // Вход: двери открываются, шаг внутрь
     const intro = document.createElement("div");
     intro.className = "mk-intro"; intro.innerHTML = P.facade();
     root.appendChild(intro);
-    const introMs = 3600;
-    setTimeout(() => intro.classList.add("open"), 400);
-    setTimeout(() => intro.classList.add("walk"), 1700);
+    const introMs = 2300;
+    if (window.cutDoorHole) window.cutDoorHole(intro);        // в проёме дверей видно, что внутри
+    setTimeout(() => intro.classList.add("open"), 250);
+    setTimeout(() => intro.classList.add("walk"), 1000);
     setTimeout(() => { intro.remove(); host.classList.add("wave"); setTimeout(() => host.classList.remove("wave"), 1800); }, introMs);
 
     let bubble = null, anchor = null, top = false, sc = 1;
     function fit() {
       const w = view.clientWidth, h = view.clientHeight;
       sc = Math.max(w / VW, Math.min(h / VH, w / VW * 1.3));
-      const x = Math.min(0, Math.max(w - W * sc, -FOCUS[cur] * sc + w / 2));
+      const focus = walk ? walk.x : FOCUS[cur];             // при ходьбе камера следует за героем
+      const x = Math.min(0, Math.max(w - W * sc, -focus * sc + w / 2));
       const y = h >= VH * sc ? h - VH * sc : (h - VH * sc) / 2;
       world.style.transform = `translate(${x}px, ${y}px) scale(${sc})`;
       const isc = Math.max(w / VW, Math.min(h / VH, w / VW * 1.3));
       intro.style.transform = `translate(${(w - VW * isc) / 2}px, ${h - VH * isc}px) scale(${isc})`;
+      if (ride) ride.style.transform = `translate(${(w - VW * isc) / 2}px, ${(h - VH * isc) / 2}px) scale(${isc})`;
+      if (fam) { const fs = Math.min(w / VW, h / VH); fam.style.transform = `translate(${(w - VW * fs) / 2}px, ${Math.max(0, (h - VH * fs) / 2 + 30)}px) scale(${fs})`; }   // семья целиком влезает по ширине
       placeBubble();
     }
     function look(i) {
@@ -259,6 +285,11 @@
       const g = e.target.closest(".mk-spot");
       if (!g || dead) return;
       e.stopPropagation();
+      if (walk) {
+        if (g.classList.contains("pl-taken")) return;
+        if (!isNear(g)) { if (window.showToast) showToast("Подойди ближе — джойстиком внизу 🕹️"); return; }
+        if (walk.carry) { if (window.showToast) showToast("Сначала отнеси на стол то, что в руках 🙂"); return; }
+      }
       if (api.onPick) api.onPick(g.dataset.kind, g);
     });
     let sx = null;
@@ -266,21 +297,26 @@
     root.addEventListener("pointerup", e => {
       if (sx === null) return;
       const dx = e.clientX - sx; sx = null;
-      if (Math.abs(dx) > 60 && api.onSwipe) api.onSwipe(dx < 0 ? 1 : -1);
+      if (Math.abs(dx) > 60 && api.onSwipe && !walk) api.onSwipe(dx < 0 ? 1 : -1);
     });
 
     function shake(g) { g.classList.remove("mk-no"); void g.getBBox(); g.classList.add("mk-no"); }
     let found = 0;
     function pick(g) {
+      if (ride && g.closest(".pl-ride")) { ridePick(g); return; }
+      if (walk) { walkPick(g); return; }
       // предмет найден: зелёная галочка + значок летит в счётчик
       const s = P.spots[+g.dataset.i];
       g.insertAdjacentHTML("beforeend", `<g class="pl-check" transform="translate(${s.w - 6},${-2})"><circle r="15" fill="#3cae5c" stroke="#fff" stroke-width="3"/><path d="M-7,0 L-2,5 L8,-6" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`);
       g.classList.add("pl-got");
+      flyToBasket(g, g.dataset.kind);
+    }
+    function flyToBasket(g, kind) {
       const r = g.getBoundingClientRect(), vr = root.getBoundingClientRect();
       const size = Math.min(70, Math.max(40, r.width * .5));
       const fly = document.createElement("div");
       fly.className = "mk-fly";
-      fly.innerHTML = icon(g.dataset.kind, size);
+      fly.innerHTML = icon(kind, size);
       fly.style.left = (r.left - vr.left + r.width / 2 - size / 2) + "px"; fly.style.top = (r.top - vr.top + r.height / 2 - size / 2) + "px";
       root.appendChild(fly);
       basket.hidden = false;
@@ -316,6 +352,8 @@
     }
     // Финал: хозяин протягивает подарок (ключ, билет…)
     function wrap(img, cb) {
+      stopRide(true); stopWalk();
+      if (fam) { fam.remove(); fam = null; fit(); }
       if (cur !== P.host.view) look(P.host.view);
       if (board) board.classList.add("pl-board-out");
       setTimeout(() => {
@@ -337,12 +375,13 @@
       bubble.style.left = left + "px";
       bubble.style.setProperty("--tx", Math.min(Math.max(cx - left, 18), bw - 18) + "px");
       if (top) { bubble.style.top = "46px"; bubble.style.bottom = "auto"; }
+      else if (fam && anchor.classList && anchor.classList.contains("pl-fam-m")) bubble.style.bottom = "14px";   // за столом — пузырь снизу, не закрывает лица
       else bubble.style.bottom = Math.max(view.clientHeight - (ar.top - vr.top) + 10, 0) + "px";
     }
     function hide() {
       if (!bubble) return;
       const b = bubble; bubble = null; anchor = null;
-      b.classList.remove("show"); host.classList.remove("talk");
+      b.classList.remove("show"); host.classList.remove("talk"); root.querySelectorAll(".pl-fam-m.talk").forEach(x => x.classList.remove("talk"));
       setTimeout(() => b.remove(), 300);
     }
     function say(speaker, html) {
@@ -352,19 +391,203 @@
       b.className = "hs-st-bubble " + speaker;
       b.innerHTML = html;
       root.appendChild(b);
-      bubble = b; anchor = who[speaker] || who.friend; top = speaker === "seller";
-      if (speaker === "seller") { if (cur !== P.host.view) look(P.host.view); host.classList.add("talk"); }
+      bubble = b; anchor = who[speaker] || who.friend; top = speaker === "seller" || (speaker === "npc" && !!ride);
+      if (speaker === "seller" && !walk && !fam) { if (cur !== P.host.view) look(P.host.view); host.classList.add("talk"); }
+      if (who[speaker] && who[speaker].classList && who[speaker].classList.contains("pl-fam-m")) { who[speaker].classList.add("talk"); top = false; b.classList.add("fam"); }
       placeBubble();
       requestAnimationFrame(() => b.classList.add("show"));
       return b;
     }
+    // =====================================================
+    // ХОДЬБА ДЖОЙСТИКОМ: твой герой ходит по комнатам, берёт вещи и относит их на стол
+    // P.walk = { start: x, table: { x1, x2, slots: { kind: [x, y, w, h] } } }
+    // =====================================================
+    function startWalk() {
+      if (!P.walk || walk) return;
+      const me = document.createElement("div");
+      me.className = "pl-me";
+      let sv = "";
+      try {
+        const prof = opts.profile || {};
+        const g = prof.gender === "f" ? "f" : "m";
+        sv = HirbisAvatar.svg(HirbisAvatar.sanitize(Object.assign(HirbisAvatar.defaults(g), prof.avatar || {}, { gender: g })), { pose: "stand" });
+      } catch (e) {}
+      me.innerHTML = `<div class="pl-me-body">${sv}</div><div class="pl-carry"></div><div class="pl-here">Ты</div>`;
+      world.appendChild(me);
+      const pad = document.createElement("div");
+      pad.className = "pl-joy";
+      pad.innerHTML = `<div class="pl-joy-knob"></div><span class="pl-joy-l">◀</span><span class="pl-joy-r">▶</span>`;
+      root.appendChild(pad);
+      const act = document.createElement("button");
+      act.className = "pl-act"; act.hidden = true;
+      root.appendChild(act);
+      walk = { x: P.walk.start, vx: 0, me, pad, act, carry: null, placed: [], last: 0, raf: 0, onPlaced: null };
+      me.style.left = (walk.x - 60) + "px";
+      // джойстик: тянешь кружок влево/вправо — герой идёт; отпустил — стоит
+      const knob = pad.querySelector(".pl-joy-knob");
+      let sx = null;
+      const move = (e) => { if (sx === null) return; const dx = Math.max(-46, Math.min(46, e.clientX - sx)); knob.style.transform = `translateX(${dx}px)`; walk.vx = dx / 46 * 230; };
+      const end = () => { sx = null; knob.style.transform = ""; walk.vx = 0; };
+      pad.addEventListener("pointerdown", (e) => { e.stopPropagation(); sx = e.clientX - (e.offsetX - pad.clientWidth / 2) * 0; sx = pad.getBoundingClientRect().left + pad.clientWidth / 2; pad.setPointerCapture(e.pointerId); move(e); });
+      pad.addEventListener("pointermove", move);
+      pad.addEventListener("pointerup", end); pad.addEventListener("pointercancel", end);
+      walk.key = (e) => { if (e.key === "ArrowLeft") walk.vx = e.type === "keydown" ? -230 : 0; if (e.key === "ArrowRight") walk.vx = e.type === "keydown" ? 230 : 0; };
+      window.addEventListener("keydown", walk.key); window.addEventListener("keyup", walk.key);
+      act.onclick = (e) => { e.stopPropagation(); const g = nearSpot(); if (g && api.onPick) api.onPick(g.dataset.kind, g); };
+      const step = (t) => {
+        if (!walk || dead) return;
+        const dt = walk.last ? Math.min(.05, (t - walk.last) / 1000) : 0; walk.last = t;
+        if (walk.vx) {
+          walk.x = Math.max(40, Math.min(W - 40, walk.x + walk.vx * dt));
+          me.style.left = (walk.x - 60) + "px";
+          me.classList.toggle("left", walk.vx < 0);
+          me.classList.add("walking");
+          fit();
+        } else me.classList.remove("walking");
+        updateNear();
+        walk.raf = requestAnimationFrame(step);
+      };
+      walk.raf = requestAnimationFrame(step);
+      fit();
+    }
+    // предмет рядом с героем (до него можно дотянуться)
+    function spotCenter(g) { const s = P.spots[+g.dataset.i]; return s.x + s.w / 2; }
+    function isNear(g) { const s = P.spots[+g.dataset.i]; return Math.abs(walk.x - spotCenter(g)) < s.w / 2 + 46; }
+    function nearSpot() {
+      let best = null, bd = 1e9;
+      world.querySelectorAll(".mk-spot:not(.pl-taken)").forEach(g => { if (isNear(g)) { const d = Math.abs(walk.x - spotCenter(g)); if (d < bd) { bd = d; best = g; } } });
+      return best;
+    }
+    function updateNear() {
+      const n = nearSpot();
+      world.querySelectorAll(".mk-spot.pl-near").forEach(g => { if (g !== n) g.classList.remove("pl-near"); });
+      if (n) n.classList.add("pl-near");
+      const T = P.walk.table;
+      const atTable = walk.x > T.x1 && walk.x < T.x2;
+      if (walk.carry && atTable) placeCarry();
+      if (walk.carry) { walk.act.hidden = true; }
+      else if (n) { walk.act.hidden = false; walk.act.textContent = "✋ Взять"; }
+      else walk.act.hidden = true;
+    }
+    // взяли: предмет исчезает с места и «едет» над головой героя
+    function walkPick(g) {
+      const k = g.dataset.kind;
+      g.classList.add("pl-taken");
+      walk.carry = k;
+      walk.me.querySelector(".pl-carry").innerHTML = icon(k, 58);
+      walk.me.classList.add("carrying");
+    }
+    function placeCarry() {
+      const k = walk.carry, sl = P.walk.table.slots[k];
+      walk.carry = null;
+      walk.me.querySelector(".pl-carry").innerHTML = "";
+      walk.me.classList.remove("carrying");
+      if (sl) {
+        const a = ART[k];
+        world.querySelector(".mk-world-svg").insertAdjacentHTML("beforeend", `<g class="pl-placed"><svg x="${sl[0]}" y="${sl[1]}" width="${sl[2]}" height="${sl[3]}" viewBox="0 0 ${a.vb[0]} ${a.vb[1]}" overflow="visible">${a.svg()}</svg></g>`);
+      }
+      walk.placed.push(k);
+      if (window.playSound) try { playSound("pop"); } catch (e) {}
+      if (walk.onPlaced) walk.onPlaced(k, walk.placed.length);
+    }
+    function stopWalk() {
+      if (!walk) return;
+      cancelAnimationFrame(walk.raf);
+      window.removeEventListener("keydown", walk.key); window.removeEventListener("keyup", walk.key);
+      walk.pad.remove(); walk.act.remove();
+      walk.me.classList.remove("walking");
+      walk = null;
+    }
+
+    // =====================================================
+    // СЕМЬЯ ЗА СТОЛОМ: герои сидят за накрытым столом; по ним можно нажимать
+    // members: [{id, name, cfg}], на столе — то, что поставили
+    // =====================================================
+    function showFamily(members, onTap) {
+      stopWalk();
+      fam = document.createElement("div");
+      fam.className = "pl-fam";
+      const T = P.walk ? P.walk.table : null;
+      const onTable = T ? Object.keys(T.slots) : [];
+      const slotsX = [6, 76, 146, 216, 286];
+      fam.innerHTML = `<svg class="pl-fam-bg" viewBox="0 0 360 440" width="360" height="440">${P.family ? P.family.bg() : ""}</svg>`;
+      members.forEach((m, i) => {
+        const el = document.createElement("div");
+        el.className = "pl-fam-m"; el.dataset.id = m.id;
+        el.style.left = (slotsX[i] || 0) + "px"; el.style.top = (m.kid ? 150 : 128) + "px";
+        let sv = "";
+        const mc = m.cfg || (P.familyLooks && P.familyLooks[m.id]) || {};
+        try { sv = HirbisAvatar.svg(HirbisAvatar.sanitize(Object.assign(HirbisAvatar.defaults(mc.gender || "m"), mc)), { pose: "stand" }); } catch (e) {}
+        el.innerHTML = `${sv}<span class="pl-fam-name">${m.name}</span>`;
+        el.onclick = (e) => { e.stopPropagation(); if (onTap) onTap(m.id, el); };
+        fam.appendChild(el);
+        who[m.id] = el;
+        if (m.host) who.seller = el;          // мама за столом — её реплики идут от неё
+      });
+      fam.insertAdjacentHTML("beforeend", `<svg class="pl-fam-front" viewBox="0 0 360 440" width="360" height="440">${P.family ? P.family.front(onTable) : ""}</svg>`);
+      root.insertBefore(fam, basket);
+      fit();
+    }
+    function famShake(el) { el.classList.remove("pl-no"); void el.offsetWidth; el.classList.add("pl-no"); }
+    function famHappy(el) { el.classList.remove("pl-yes"); void el.offsetWidth; el.classList.add("pl-yes"); }
+
+    // ---------- ПОЕЗДКА (автобус): вид из окна, город едет мимо ----------
+    // P.ride = { pano: () => svg-полоса 900×260 (предметы с data-kind), interior: () => svg салона 360×440, npc: {cfg, name, x, y} }
+    function startRide() {
+      if (!P.ride || ride) return;
+      ride = document.createElement("div");
+      ride.className = "pl-ride";
+      const strip = P.ride.pano();
+      ride.innerHTML = `<div class="pl-pano-win"><div class="pl-pano">
+          <svg viewBox="0 0 900 260" width="900" height="260">${strip}</svg><svg viewBox="0 0 900 260" width="900" height="260">${strip}</svg>
+        </div></div>
+        <svg class="pl-interior" viewBox="0 0 360 440" width="360" height="440">${P.ride.interior()}</svg>`;
+      if (P.ride.npc) {
+        npcEl = document.createElement("div");
+        npcEl.className = "pl-npc";
+        npcEl.style.left = P.ride.npc.x + "px"; npcEl.style.top = P.ride.npc.y + "px";
+        try { npcEl.innerHTML = HirbisAvatar.svg(HirbisAvatar.sanitize(Object.assign(HirbisAvatar.defaults(P.ride.npc.cfg.gender), P.ride.npc.cfg)), { pose: "stand" }); } catch (e) {}
+        ride.appendChild(npcEl);
+        ride.insertAdjacentHTML("beforeend", `<svg class="pl-interior pl-front" viewBox="0 0 360 440" width="360" height="440">${P.ride.front ? P.ride.front() : ""}</svg>`);
+        who.npc = npcEl;
+      }
+      root.insertBefore(ride, basket);
+      ride.querySelectorAll(".pl-pano [data-kind]").forEach(g => g.classList.add("pl-ride-spot"));
+      ride.addEventListener("click", (e) => {
+        const g = e.target.closest(".pl-ride-spot");
+        if (!g || dead) return;
+        e.stopPropagation();
+        if (api.onPick) api.onPick(g.dataset.kind, g);
+      });
+      fit();
+    }
+    function stopRide(remove) {
+      if (!ride) return;
+      ride.querySelector(".pl-pano").classList.add("pl-stop");
+      if (remove) { ride.remove(); ride = null; who.npc = null; fit(); }
+    }
+    // найдено в окне: галочка на обеих копиях полосы
+    function ridePick(g) {
+      const k = g.dataset.kind;
+      ride.querySelectorAll(`.pl-pano [data-kind="${k}"]`).forEach(x => {
+        x.classList.add("pl-got");
+        const bb = x.getBBox();
+        x.insertAdjacentHTML("beforeend", `<g class="pl-check" transform="translate(${bb.x + bb.width - 8},${bb.y + 6})"><circle r="14" fill="#3cae5c" stroke="#fff" stroke-width="3"/><path d="M-7,0 L-2,5 L8,-6" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`);
+      });
+      flyToBasket(g, k);
+    }
+
     function destroy() {
-      dead = true;
+      dead = true; stopWalk();
       window.removeEventListener("resize", fit);
       if (ro) ro.disconnect();
       root.remove();
     }
-    return Object.assign(api, { say, hide, destroy, fit, root, food, wrap, look, pick, shake, introMs,
+    return Object.assign(api, { say, hide, destroy, fit, root, food, wrap, look, pick, shake, introMs, startRide, stopRide,
+      startWalk, stopWalk, showFamily, famShake, famHappy, hasWalk: !!P.walk,
+      onPlaced: (fn) => { if (walk) walk.onPlaced = fn; }, carrying: () => walk && walk.carry,
+      _walkTo: (x) => { if (walk) { walk.x = x; walk.me.style.left = (x - 60) + "px"; fit(); } },   // для автотестов
+      hasRide: !!P.ride, npcName: P.ride && P.ride.npc ? P.ride.npc.name : null,
       current: () => cur, views: NV, viewNames: P.viewNames, itemIcon: icon,
       hostName: typeof P.hostName === "function" ? P.hostName(opts.gender) : P.hostName });
   }

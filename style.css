@@ -1002,3 +1002,61 @@ body.no-scroll { position: fixed; left: 0; right: 0; width: 100%; }
 .pl-gift { width: 100px !important; height: 100px !important; z-index: 6; filter: drop-shadow(0 6px 10px rgba(0,0,0,.2)); }
 .sy-lost { margin-top: 10px; font-size: 12px; opacity: .8; }
 .ru-only { font-size: 17px; font-weight: 700; line-height: 1.35; }
+
+/* ---------- Дорожка: уровни всегда по порядку, выбранный раскрыт на своём месте ---------- */
+.p-cur-level { border: 3px solid var(--blue, #3a8ad6); border-radius: 22px; padding: 10px 8px 12px; margin: 8px 0; scroll-margin-top: 12px; }
+.p-quest-svg { display: inline-flex; width: 64px; height: 64px; flex: none; font-style: normal; }
+.p-quest-svg > svg { width: 100%; height: 100%; }
+
+/* ---------- Поездка в автобусе (places.js startRide): вид из окна ---------- */
+.pl-ride { position: absolute; left: 0; top: 0; width: 360px; height: 440px; transform-origin: 0 0; z-index: 20; box-shadow: 0 0 0 2000px #dfe6ee; animation: fadeIn .4s ease; }
+.pl-pano-win { position: absolute; left: 18px; top: 50px; width: 324px; height: 260px; overflow: hidden; background: #bfe3f7; }
+.pl-pano { display: flex; width: 1800px; animation: plRide 26s linear infinite; }
+.pl-pano > svg { display: block; flex: none; }
+.pl-pano.pl-stop { animation-play-state: paused; }
+@keyframes plRide { to { transform: translateX(-900px); } }
+@media (prefers-reduced-motion: reduce) { .pl-pano { animation-duration: 60s; } }
+.pl-interior { position: absolute; left: 0; top: 0; pointer-events: none; }
+.pl-npc { position: absolute; width: 120px; height: 240px; transform-origin: 50% 100%; }
+.pl-npc > svg { width: 100%; height: 100%; }
+.pl-ride-spot { cursor: pointer; }
+.pl-ride-spot.mk-no > svg { animation: mkNo .45s; }
+
+/* ---------- Хожу джойстиком (places.js startWalk) ---------- */
+.pl-me { position: absolute; top: 152px; width: 120px; height: 240px; z-index: 3; pointer-events: none; }
+.pl-me-body { width: 100%; height: 100%; transform-origin: 50% 100%; }
+.pl-me-body > svg { width: 100%; height: 100%; }
+.pl-me.left .pl-me-body { transform: scaleX(-1); }
+.pl-me.walking .pl-me-body { animation: plStep .42s ease-in-out infinite; }
+.pl-me.left.walking .pl-me-body { animation-name: plStepL; }
+@keyframes plStep { 50% { transform: translateY(-6px) rotate(1.5deg); } }
+@keyframes plStepL { 0%, 100% { transform: scaleX(-1); } 50% { transform: scaleX(-1) translateY(-6px) rotate(1.5deg); } }
+.pl-carry { position: absolute; left: 31px; top: -54px; width: 58px; height: 58px; animation: plBob 1s ease-in-out infinite; }
+@keyframes plBob { 50% { transform: translateY(-5px); } }
+.pl-here { position: absolute; left: 50%; top: -22px; transform: translateX(-50%); background: #3a8ad6; color: #fff; font: 700 12px Arial, sans-serif; padding: 2px 8px; border-radius: 9px; }
+.pl-me.carrying .pl-here { display: none; }
+.mk-spot.pl-near .mk-units { filter: drop-shadow(0 0 8px #ffd23a) drop-shadow(0 0 3px #ffd23a); }
+.mk-spot.pl-taken { opacity: 0; pointer-events: none; transition: opacity .25s; }
+.pl-placed { animation: plCheck .45s cubic-bezier(.3,1.6,.5,1) both; transform-box: fill-box; transform-origin: 50% 100%; }
+.pl-joy { position: absolute; z-index: 24; right: 14px; bottom: 14px; width: 132px; height: 64px; border-radius: 32px; background: rgba(255,255,255,.85); box-shadow: 0 4px 14px rgba(0,0,0,.18); touch-action: none; display: flex; align-items: center; justify-content: center; }
+.pl-joy-knob { width: 50px; height: 50px; border-radius: 50%; background: #3a8ad6; box-shadow: 0 3px 0 #2a6fb4; transition: transform .12s; position: relative; z-index: 1; }
+.pl-joy-l, .pl-joy-r { position: absolute; top: 50%; transform: translateY(-50%); color: #3a8ad6; font-size: 16px; opacity: .7; }
+.pl-joy-l { left: 12px; } .pl-joy-r { right: 12px; }
+.pl-act { position: absolute; z-index: 24; right: 158px; bottom: 22px; border: 0; border-radius: 16px; padding: 12px 16px; font: 800 16px Arial, sans-serif; background: #ffd23a; color: #2b2f3a; box-shadow: 0 3px 0 #d9a520; animation: plCheck .3s ease both; }
+/* ---------- Семья за столом ---------- */
+.pl-fam { position: absolute; left: 0; top: 0; width: 360px; height: 440px; transform-origin: 0 0; z-index: 20; box-shadow: 0 0 0 2000px #f4e2c8; animation: fadeIn .5s ease; }
+.pl-fam-bg, .pl-fam-front { position: absolute; left: 0; top: 0; pointer-events: none; }
+.pl-fam-m { position: absolute; width: 68px; height: 136px; cursor: pointer; transform-origin: 50% 100%; }
+.pl-fam-m > svg { width: 100%; height: 100%; }
+.pl-fam-name { position: absolute; left: 50%; top: -16px; transform: translateX(-50%); white-space: nowrap; background: #fff; color: #2b2f3a; font: 700 11px Arial, sans-serif; padding: 1px 7px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+.pl-fam-m.talk { animation: plTalk .6s ease-in-out infinite; }
+@keyframes plTalk { 50% { transform: translateY(-3px); } }
+.pl-fam-m.pl-no { animation: mkNo .45s; }
+.pl-fam-m.pl-yes { animation: plYes .6s ease; }
+@keyframes plYes { 30% { transform: translateY(-14px) scale(1.06); } }
+.pl-fam-m.pl-ok .pl-fam-name { background: #3cae5c; color: #fff; }
+.mk-chip.placed { background: #3cae5c !important; color: #fff !important; }
+.mk-chip.placed .tr { color: #eafff0 !important; }
+.q-fam-ask { text-align: center; font-size: 15px; padding: 10px 6px; line-height: 1.5; }
+.q-fam-ask .he { font-size: 24px; font-weight: 800; }
+.hs-st-bubble.fam::after { display: none; }
