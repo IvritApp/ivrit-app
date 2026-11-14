@@ -323,7 +323,6 @@
       <label class="sy-f"><span>➕ Добавить очков</span><input type="number" id="syPts" value="0"></label>
       <label class="sy-f"><span>Имя в игре</span><input id="syName" value="${esc(prof.name || "")}" maxlength="20"></label>
       <div class="set-seg" id="syGender"><button data-g="m" class="${prof.gender === "m" ? "on" : ""}">Парень</button><button data-g="f" class="${prof.gender === "f" ? "on" : ""}">Девушка</button></div>
-      <button class="btn blue sy-wide" id="sySave">Сохранить</button>
 
       <div class="set-title">Ники</div>
       <div class="sy-nicks">${p.nicks.map(n => `<span class="sy-chip ${n === p.handle ? "main" : ""}" data-n="${esc(n)}">@${esc(n)}${n === p.handle ? " ⭐" : ""}</span>`).join("")}</div>
@@ -343,58 +342,106 @@
 
       <div class="set-title">Опасно</div>
       <button class="btn ghost sy-wide" id="syReset">Стереть прогресс игрока</button>
+      <div class="sy-savebar" id="sySaveBar"><span id="syPendN">Нет изменений</span><button class="btn ghost" id="syCancel" hidden>Отменить</button><button class="btn blue" id="sySaveAll" disabled>💾 Сохранить</button></div>
     </div>`;
-    const set = async (body, okText) => {
-      try { const r = await api("/admin/set", Object.assign({ handle: p.handle }, body)); renderCard(box, r, back); if (!r.error) showToast(okText); return r; }
-      catch (e) { showToast("Нет связи с сервером"); }
-    };
+    // ВСЕ изменения копятся и уходят на сервер одной кнопкой «💾 Сохранить» внизу карточки
+    const pend = {}, nickOps = [], labels = {};
     const confirm2 = (btn, text, fn) => () => { if (!btn.classList.contains("confirm")) { btn.classList.add("confirm"); btn.textContent = text; return; } fn(); };
     card.querySelector("#syBack").onclick = back;
     const gsel = card.querySelector("#syGender");
-    gsel.onclick = (e) => { const b = e.target.closest("button"); if (b) gsel.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); };
-    card.querySelector("#sySave").onclick = () => {
+    const progressDiff = () => {
       const n = id => card.querySelector(id).value === "" ? null : +card.querySelector(id).value;
-      const body = { streak: {} };
-      if (n("#syCount") !== s.count) body.streak.count = n("#syCount");
-      if (n("#syBest") !== s.best) body.streak.best = n("#syBest");
-      if (n("#syFr") !== s.freezes) body.streak.freezes = n("#syFr");
-      if (!Object.keys(body.streak).length) delete body.streak;
+      const body = {}, st2 = {};
+      if (n("#syCount") !== s.count) st2.count = n("#syCount");
+      if (n("#syBest") !== s.best) st2.best = n("#syBest");
+      if (n("#syFr") !== s.freezes) st2.freezes = n("#syFr");
+      if (Object.keys(st2).length) body.streak = st2;
       if (n("#syPts")) body.addPoints = n("#syPts");
       const nm = card.querySelector("#syName").value.trim(), g = (gsel.querySelector(".on") || {}).dataset;
       const prf = {};
       if (nm && nm !== prof.name) prf.name = nm;
       if (g && g.g && g.g !== prof.gender) prf.gender = g.g;
       if (Object.keys(prf).length) body.profile = prf;
-      if (!Object.keys(body).length) { showToast("Ничего не изменено"); return; }
-      set(body, "Сохранено ✓ Игрок увидит при следующем открытии");
+      return body;
     };
+    const refresh = () => {
+      const all = Object.assign(progressDiff(), pend);
+      const list = [];
+      if (all.streak) list.push("серия");
+      if (all.addPoints) list.push("очки");
+      if (all.profile) list.push("имя/пол");
+      Object.keys(labels).forEach(k => list.push(labels[k]));
+      nickOps.forEach(o => list.push(o.label));
+      const n = list.length;
+      card.querySelector("#syPendN").innerHTML = n ? `Изменений: <b>${n}</b> — ${esc(list.join(", "))}` : "Нет изменений";
+      card.querySelector("#sySaveAll").disabled = !n;
+      card.querySelector("#syCancel").hidden = !n;
+      card.querySelector("#sySaveBar").classList.toggle("dirty", !!n);
+    };
+    card.querySelectorAll("#syCount, #syBest, #syFr, #syPts, #syName").forEach(i => i.oninput = refresh);
+    gsel.onclick = (e) => { const b = e.target.closest("button"); if (b) { gsel.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); refresh(); } };
+    const mark = (btn, text) => { btn.classList.add("pending"); btn.textContent = text; };
     // ники
     card.querySelectorAll(".sy-chip").forEach(ch => ch.onclick = () => {
       const n = ch.dataset.n, act = card.querySelector("#syANickAct");
       act.innerHTML = `<div class="set-test"><span>@${esc(n)}</span>${n !== p.handle ? `<button class="btn blue" id="syAMain">⭐ Основной</button>` : ""}<button class="btn ghost" id="syADel">Забрать</button></div>`;
-      const m = act.querySelector("#syAMain"); if (m) m.onclick = () => set({ nick: { action: "main", handle: n } }, "Основной ник: @" + n);
-      const d = act.querySelector("#syADel"); d.onclick = confirm2(d, "Точно забрать?", () => set({ nick: { action: "remove", handle: n } }, "Ник @" + n + " забран"));
+      const m = act.querySelector("#syAMain"); if (m) m.onclick = () => { nickOps.push({ nick: { action: "main", handle: n }, label: "основной @" + n }); mark(m, "✓ будет основным"); refresh(); };
+      const d = act.querySelector("#syADel"); d.onclick = () => { nickOps.push({ nick: { action: "remove", handle: n }, label: "забрать @" + n }); ch.classList.add("gone"); mark(d, "✓ заберём"); refresh(); };
     });
-    card.querySelector("#syANickAdd").onclick = async () => {
-      const h = card.querySelector("#syANick").value;
-      const r = await set({ nick: { action: "add", handle: h } }, "Ник выдан");
-      if (r && r.error && /уже у другого/.test(r.error)) {
-        const note = box.querySelector("#syANickNote");
-        note.innerHTML = `${esc(r.error)} <button class="btn ghost" id="syForce">Забрать и отдать</button>`;
-        note.querySelector("#syForce").onclick = () => set({ nick: { action: "add", handle: h, force: true } }, "Ник передан");
-      }
+    const addNickOp = (h, force, owner) => {
+      nickOps.push({ nick: Object.assign({ action: "add", handle: h }, force ? { force: true } : {}), label: force ? `передать @${h} от @${owner}` : "дать @" + h });
+      card.querySelector(".sy-nicks").insertAdjacentHTML("beforeend", `<span class="sy-chip new">+@${esc(h)}</span>`);
+      card.querySelector("#syANick").value = ""; card.querySelector("#syANickNote").innerHTML = ""; refresh();
     };
-    card.querySelector("#syLim").onchange = (e) => set({ nickLimit: e.target.value === "inf" ? "inf" : +e.target.value }, "Лимит ников изменён");
+    card.querySelector("#syANickAdd").onclick = async () => {
+      const h = card.querySelector("#syANick").value.trim().replace(/^@/, "").toLowerCase();
+      if (!h) return;
+      if (nickOps.some(o => o.nick.handle === h)) { showToast("Этот ник уже в изменениях"); return; }
+      const note = card.querySelector("#syANickNote");
+      // свободен ли ник? если занят — показать, кем, и спросить
+      let o = null;
+      try { const r = await api("/admin/get", { handle: h }); o = r && r.player ? r.player : null; } catch (e) { showToast("Нет связи с сервером"); return; }
+      if (!o) { addNickOp(h, false); return; }
+      if (o.tg_id === p.tg_id) { showToast("Этот ник уже у этого игрока"); return; }
+      const who = `${esc((o.profile && o.profile.name) || o.name || "без имени")} · основной ник @${esc(o.handle)}${o.tg_username ? ` · Telegram @${esc(o.tg_username)}` : ""} · ID ${o.tg_id}`;
+      note.innerHTML = `<div class="sy-warn">⚠️ Ник <b>@${esc(h)}</b> занят: ${who}.<br>Уверен, что хочешь <b>забрать его и передать @${esc(p.handle)}</b>?
+        <div class="sy-warn-btns"><button class="btn ghost" id="syForceNo">Нет</button><button class="btn blue" id="syForceYes">Да, передать</button></div></div>`;
+      note.querySelector("#syForceNo").onclick = () => { note.innerHTML = ""; };
+      note.querySelector("#syForceYes").onclick = () => addNickOp(h, true, o.handle);
+    };
+    card.querySelector("#syLim").onchange = (e) => { pend.nickLimit = e.target.value === "inf" ? "inf" : +e.target.value; labels.nickLimit = "лимит ников"; refresh(); };
     // бан, права, сброс
     const days = card.querySelector("#syDays");
     if (days) days.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; days.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); };
     const bg = card.querySelector("#syBanGo");
-    if (bg) bg.onclick = () => set({ ban: { days: +days.querySelector(".on").dataset.d, reason: card.querySelector("#syReason").value } }, "Игрок заблокирован");
-    const ub = card.querySelector("#syUnban"); if (ub) ub.onclick = () => set({ ban: null }, "Игрок разблокирован");
+    if (bg) bg.onclick = () => { pend.ban = { days: +days.querySelector(".on").dataset.d, reason: card.querySelector("#syReason").value }; labels.ban = "блокировка"; mark(bg, "✓ заблок."); refresh(); };
+    const ub = card.querySelector("#syUnban"); if (ub) ub.onclick = () => { pend.ban = null; labels.ban = "разблокировать"; mark(ub, "✓ разблокируем при сохранении"); refresh(); };
     const ad = card.querySelector("#syAdm");
-    if (ad) ad.onclick = confirm2(ad, p.admin ? "Точно снять?" : "Точно дать полный доступ?", () => set({ admin: !p.admin }, p.admin ? "Права сняты" : "Теперь админ 👑"));
+    if (ad) ad.onclick = confirm2(ad, p.admin ? "Точно снять?" : "Точно дать полный доступ?", () => { pend.admin = !p.admin; labels.admin = p.admin ? "снять админа" : "сделать админом"; mark(ad, p.admin ? "✓ снимем права" : "✓ сделаем админом"); refresh(); });
     const rs = card.querySelector("#syReset");
-    rs.onclick = confirm2(rs, "Точно стереть? Нажми ещё раз", () => set({ resetProgress: true }, "Прогресс игрока стёрт"));
+    rs.onclick = confirm2(rs, "Точно стереть? Нажми ещё раз", () => { pend.resetProgress = true; labels.reset = "стереть прогресс"; mark(rs, "✓ сотрём при сохранении"); refresh(); });
+    card.querySelector("#syCancel").onclick = () => renderCard(box, res, back);
+    const saveBtn = card.querySelector("#sySaveAll");
+    saveBtn.onclick = async () => {
+      const first = Object.assign(progressDiff(), pend);
+      const calls = [];
+      if (Object.keys(first).length || !nickOps.length) calls.push(first);
+      nickOps.forEach(o => calls.push({ nick: o.nick }));
+      if (!calls.length || (calls.length === 1 && !Object.keys(calls[0]).length)) { showToast("Ничего не изменено"); return; }
+      saveBtn.disabled = true; saveBtn.textContent = "Сохраняю…";
+      let last = null; const errs = [];
+      try {
+        for (const body of calls) {
+          if (!Object.keys(body).length) continue;
+          last = await api("/admin/set", Object.assign({ handle: p.handle }, body));
+          if (last.error) errs.push(last.error);
+          if (last.player && last.player.handle) p.handle = last.player.handle;
+        }
+      } catch (e) { showToast(e.server ? "Сервер: " + e.message : "Нет связи с сервером"); saveBtn.disabled = false; saveBtn.textContent = "💾 Сохранить"; return; }
+      if (last) renderCard(box, Object.assign({}, last, { error: errs.join(" · ") || null }), back);
+      if (!errs.length) showToast("Сохранено ✓ Игрок увидит при следующем открытии");
+    };
+    refresh();
   }
 
   // --- «Начать сначала»: стираем и на сервере ---

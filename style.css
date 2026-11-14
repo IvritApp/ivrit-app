@@ -1153,3 +1153,15 @@ body.theme-dark .p-review { background: #2a2118; } body.theme-dark .p-rev { back
 .tu-mic-res { font-size: 14px; min-height: 18px; max-width: 34ch; }
 .tu-nav { display: flex; gap: 10px; margin-top: 14px; }
 .tu-nav .btn { flex: 1; margin: 0; }
+/* админка: одна кнопка «Сохранить» для всех изменений */
+.sy-savebar { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; gap: 8px; margin: 16px -4px 0; padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--soft, #e3ecf5); font-size: 13px; }
+.sy-savebar { flex-wrap: wrap; }
+.sy-savebar span { flex: 1 1 100%; min-width: 0; color: var(--hint, #8a8a8a); }
+.sy-savebar.dirty span { color: var(--text); }
+.sy-savebar .btn { flex: 1; margin: 0; padding: 10px 14px; white-space: nowrap; }
+.sy-chip.gone { text-decoration: line-through; opacity: .5; }
+.sy-chip.new { border-style: dashed; }
+.btn.pending { border-color: #ff8a35 !important; color: #c25e12 !important; }
+.sy-warn { background: #fff1dc; color: #7a4300; border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1.4; }
+.sy-warn-btns { display: flex; gap: 8px; margin-top: 8px; } .sy-warn-btns .btn { flex: 1; margin: 0; }
+body.theme-dark .sy-warn { background: #3a2a16; color: #ffd9a8; }
