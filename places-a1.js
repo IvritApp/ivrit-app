@@ -323,13 +323,14 @@
       family: {
         bg: () => `${rr(0, 0, 360, 440, 0, "#f4e2c8")}${rr(20, 40, 110, 80, 4, "#a87442")}${rr(26, 46, 98, 68, 2, "#2c3e66")}<circle cx="100" cy="66" r="10" fill="#fff4b0"/>
           ${rr(220, 44, 110, 72, 4, "#a87442")}${rr(226, 50, 98, 60, 2, "#fff4d6")}${txt(275, 86, "שבת שלום", 13, "#3a8ad6")}
-          <path d="M180,0 L180,30" stroke="#5b6470" stroke-width="2"/><path d="M156,30 L204,30 L196,48 L164,48Z" fill="#ffd54f"/><ellipse cx="180" cy="54" rx="60" ry="14" fill="#fff4b0" opacity=".4"/>`,
+          <path d="M180,0 L180,30" stroke="#5b6470" stroke-width="2"/><path d="M156,30 L204,30 L196,48 L164,48Z" fill="#ffd54f"/><ellipse cx="180" cy="54" rx="60" ry="14" fill="#fff4b0" opacity=".4"/>
+          ${[6, 76, 146, 216, 286].map(x => `<rect x="${x + 6}" y="168" width="56" height="100" rx="8" fill="#8a5a36"/><rect x="${x + 12}" y="176" width="44" height="84" rx="5" fill="#a87442"/><rect x="${x + 4}" y="164" width="60" height="10" rx="5" fill="#6b4426"/>`).join("")}`,
         front: (on) => {
           const put = (k, x, y, w, h) => { if (!on.includes(k) || !ART[k]) return ""; const a = ART[k]; return `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="0 0 ${a.vb[0]} ${a.vb[1]}" overflow="visible">${a.svg()}</svg>`; };
           return `${rr(-10, 262, 380, 16, 4, "#fff")}<path d="M-10,270 L370,270 L370,440 L-10,440Z" fill="#fff"/>
             <path d="M-10,300 Q30,310 70,300 Q110,310 150,300 Q190,310 230,300 Q270,310 310,300 Q340,308 370,300" stroke="#d9cfa8" stroke-width="2" fill="none"/>
             ${[40, 110, 180, 250, 320].map(x => `<ellipse cx="${x}" cy="290" rx="24" ry="7" fill="#fff" stroke="#c8d0d8"/>`).join("")}
-            ${put("candles", 14, 196, 40, 70)}${put("wine", 70, 214, 24, 52)}${put("challah", 128, 234, 104, 46)}${put("soup", 240, 216, 70, 54)}${put("salt", 318, 230, 22, 40)}`;
+            ${put("candles", 58, 226, 26, 44)}${put("wine", 112, 232, 18, 38)}${put("challah", 140, 240, 80, 34)}${put("soup", 222, 234, 52, 40)}${put("salt", 276, 246, 14, 26)}`;
         },
       },
       facade: () => facadeBase("#2c3e66", `${[[40, 40], [300, 60], [200, 30], [90, 90]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="#fff"/>`).join("")}<circle cx="290" cy="40" r="16" fill="#fff4b0"/>

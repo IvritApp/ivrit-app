@@ -270,6 +270,7 @@
       const focus = walk ? walk.x : FOCUS[cur];             // при ходьбе камера следует за героем
       const x = Math.min(0, Math.max(w - W * sc, -focus * sc + w / 2));
       const y = h >= VH * sc ? h - VH * sc : (h - VH * sc) / 2;
+      world.style.transition = walk ? "none" : "";          // при ходьбе камера едет ровно с героем, без «догоняния»
       world.style.transform = `translate(${x}px, ${y}px) scale(${sc})`;
       const isc = Math.max(w / VW, Math.min(h / VH, w / VW * 1.3));
       intro.style.transform = `translate(${(w - VW * isc) / 2}px, ${h - VH * isc}px) scale(${isc})`;
@@ -557,7 +558,7 @@
       members.forEach((m, i) => {
         const el = document.createElement("div");
         el.className = "pl-fam-m"; el.dataset.id = m.id;
-        el.style.left = (m.x != null ? m.x : (slotsX[i] || 0)) + "px"; el.style.top = (m.y != null ? m.y : (m.kid ? 150 : 128)) + "px";
+        el.style.left = (m.x != null ? m.x : (slotsX[i] || 0)) + "px"; el.style.top = (m.y != null ? m.y : sceneKey ? (m.kid ? 150 : 128) : (m.kid ? 204 : 186)) + "px";   // за столом — сидят: стол закрывает ноги
         if (m.w) { el.style.width = m.w + "px"; el.style.height = (m.h || m.w * 2) + "px"; }
         let sv = "";
         const mc = m.cfg || (P.familyLooks && P.familyLooks[m.id]) || {};
