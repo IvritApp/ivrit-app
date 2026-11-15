@@ -15,7 +15,7 @@
  * │ pairWrong    │ пара не совпала {a, b}                                     │ 0,45 с       │
  * │ chipMove     │ «Собери фразу»: слово летит {el, to}                       │ 0,32 с       │
  * │ blitz        │ таймер блица {el, seconds} → .stop()                       │ seconds      │
- * │ combo        │ огонь 5х/10х/15х {level}                                   │ 1,5 с        │
+ * │ combo        │ огонь 5х/10х/15х {level}                                   │ 1,5–2,1 с    │
  * │ lessonEnd    │ конец урока {xp, streak, time, accuracy, counterEl, total} │ до нажатия   │
  * │ perfect      │ идеальный урок {xp}                                        │ 2,3 с        │
  * │ nodePulse    │ текущий узел дорожки {el, progress 0..1}                   │ 0,6 с + цикл │
@@ -46,7 +46,7 @@
  *
  * ЗВУК: каждая анимация в свой «пик» вызывает options.onPeak(detail) и шлёт событие
  *   window.addEventListener("hanim:peak", e => playSound(...e.detail.name...))
- * Мелочи: HAnim.confetti · sparkle · countUp · shake · pop · flyTo · rec · type · clear
+ * Мелочи: HAnim.fire (живой огонь) · confetti · sparkle · countUp · shake · pop · flyTo · rec · type · clear
  * Уменьшение движения: само по prefers-reduced-motion; вручную HAnim.setReduced(true).
  */
 (function () {
@@ -372,6 +372,60 @@
     });
   };
 
+  /* живой огонь на canvas. Язык пламени — поток кругов: у основания широкий, кверху сужается,
+     по нему бежит волна (качается как настоящий), сверху отрываются маленькие язычки.
+     HAnim.fire(el, {colors:[внешний, средний, ядро], sides:true}) → {stop()} */
+  H.fire = function (host, o) {
+    o = o || {};
+    if (!host || H.reduced) return { stop: function () {} };
+    var cols = o.colors || ["#ff8a35", "#ffcf3f", "#fff3c0"], w = o.width || host.clientWidth || 150;
+    var cw = Math.round(w * 2.5), ch = Math.round(w * 2.5), dpr = Math.min(W.devicePixelRatio || 1, 2);
+    var cv = el("canvas", "ha-fire-cv");
+    cv.width = cw * dpr; cv.height = ch * dpr;
+    cv.style.cssText = "width:" + cw + "px;height:" + ch + "px;margin-left:" + -cw / 2 + "px";
+    host.innerHTML = ""; host.classList.add("ha-fire"); host.style.height = w * 1.25 + "px"; host.appendChild(cv);
+    var ctx = cv.getContext("2d"), P = [], live = true, acc = 0, t0 = performance.now(), last = t0, baseY = ch - w * .36;
+    var em = o.sides ? [[0, 1, 0], [-.5, .56, 2.1], [.5, .56, 4.2]] : [[0, 1, 0]];
+    var SZ = [1, .6, .3], CUT = [1, .66, .4], rate = o.rate || 90;
+    function frame(t) {
+      if (!cv.isConnected) return;
+      var dt = Math.min(Math.max(t - last, 0) / 1000, .05), pw = Math.max(0, Math.min(1, (t - t0) / (o.grow || 450))), ts = t / 1000, i, p, e, k;
+      last = t;
+      if (live) {
+        acc += dt * rate;
+        while (acc >= 1) {
+          acc--;
+          for (i = 0; i < em.length; i++) {
+            e = em[i];
+            var lick = Math.random() < .13;        /* маленький язычок, который отрывается выше */
+            P.push({ e: e, off: (Math.random() - .5) * w * (lick ? .5 : .2) * e[1], k: 0,
+              h: w * (1.12 + Math.random() * .25) * e[1] * (lick ? 1.32 : 1), r: w * .4 * e[1] * (lick ? .4 : .9 + Math.random() * .2),
+              life: (.62 + Math.random() * .2) * (lick ? 1.15 : 1) });
+          }
+        }
+      }
+      for (i = P.length - 1; i >= 0; i--) { p = P[i]; p.k += dt / p.life; if (p.k >= 1) P.splice(i, 1); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, cw, ch);
+      for (k = 0; k < 3; k++) {                    /* три слоя: внешний, средний, ядро */
+        ctx.fillStyle = cols[k]; ctx.beginPath();
+        for (i = 0; i < P.length; i++) {
+          p = P[i]; if (p.k > CUT[k]) continue;
+          var kk = p.k, q1 = 1 - kk / CUT[k];
+          var rr = p.r * pw * Math.min(1, kk * 9 + .55) * Math.pow(q1, 1.05) * SZ[k];
+          if (rr < .7) continue;
+          var wave = Math.sin(ts * 6.5 - kk * 4.6 + p.e[2]) * .17 + Math.sin(ts * 11 - kk * 7 + p.e[2] * 2) * .05;
+          var x = cw / 2 + p.e[0] * w + p.off * (1 - kk) + wave * w * kk * p.e[1];
+          var y = baseY - p.h * pw * kk + p.r * .32 * k * (1 - kk);
+          ctx.moveTo(x + rr, y); ctx.arc(x, y, rr, 0, 6.2832);
+        }
+        ctx.fill();
+      }
+      if (live || P.length) requestAnimationFrame(frame); else cv.remove();
+    }
+    requestAnimationFrame(frame);
+    return { stop: function () { live = false; }, el: cv };
+  };
+
   /* запись голоса: HAnim.rec(btn, true/false);  печать по буквам: HAnim.type(el, text) */
   H.rec = function (btn, on) {
     if (!btn) return;
@@ -538,18 +592,48 @@
     return p;
   };
   A.combo = async function (o, pk) {
-    var lv = o.level || 5;
-    var w = ov("ha-ov--clear ha-combo ha-combo--" + lv,
-      '<div class="ha-combo-flash"></div><div class="ha-combo-fl">' + flameSVG() + '</div><div class="ha-combo-num">' + lv + 'х</div><div class="ha-combo-tx">' + esc(o.text || (lv >= 15 ? "ВАУ! ОГОНЬ!" : lv >= 10 ? "ТЫ В УДАРЕ!" : "ОГОНЬ!")) + '</div><div class="ha-combo-bird"></div>');
-    H.mascot(q(w, ".ha-combo-bird"), lv >= 15 ? "surprised" : "happy", { hold: true });
-    go(q(w, ".ha-combo-flash"), [{ opacity: 0 }, { opacity: .5, offset: .25 }, { opacity: 0 }], { duration: 700, fill: "both" });
-    go(q(w, ".ha-combo-fl"), [{ transform: "scale(.12)", opacity: 0 }, { transform: "scale(1.15)", opacity: 1, offset: .6 }, { transform: "scale(1)", opacity: 1 }], { duration: 520, easing: SPRING, fill: "both" });
-    go(q(w, ".ha-combo-num"), [{ transform: "translateX(70vw) rotate(18deg)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 480, delay: 260, easing: SPRING, fill: "both" });
-    enter(q(w, ".ha-combo-tx"), 480);
-    enter(q(w, ".ha-combo-bird"), 200, "translateY(60px)");
-    await wait(340); pk({ level: lv });
-    if (lv >= 10) H.confetti({ size: "small", y: .45 });
-    await wait(1000);
+    var lv = o.level || 5, tier = lv >= 15 ? 3 : lv >= 10 ? 2 : 1;
+    var side = function (k) { return '<div class="ha-combo-side ha-combo-side--' + k + '">' + flameSVG() + "</div>"; };
+    var w = ov("ha-ov--clear ha-combo ha-combo--" + [5, 10, 15][tier - 1],
+      '<div class="ha-combo-flash"></div><div class="ha-combo-stage"><div class="ha-combo-rays"></div><i class="ha-combo-ring"></i><i class="ha-combo-ring"></i><i class="ha-combo-ring"></i>' +
+      (H.reduced && tier > 1 ? side("l") + side("r") : "") + '<div class="ha-combo-fl">' + flameSVG() + '</div></div><div class="ha-combo-num">' + lv + 'х</div><div class="ha-combo-tx">' +
+      esc(o.text || (tier === 3 ? "ВАУ! ОГОНЬ!" : tier === 2 ? "ТЫ В УДАРЕ!" : "ОГОНЬ!")) + '</div><div class="ha-combo-bird"></div>');
+    var stage = q(w, ".ha-combo-stage"), fl = q(w, ".ha-combo-fl"), num = q(w, ".ha-combo-num"), body = q(w, ".ha-ov-body");
+    H.mascot(q(w, ".ha-combo-bird"), tier === 3 ? "surprised" : "happy", { hold: true });
+    var FC = [["#ff8a35", "#ffcf3f", "#fff3c0"], ["#f0503a", "#ffa63a", "#ffe9a8"], ["#7a5ce0", "#b9a4ff", "#f3edff"]][tier - 1];
+    var fire = H.fire(fl, { colors: FC, sides: tier > 1, });
+    /* 1 · вспышка, огонь вырастает из искры */
+    go(q(w, ".ha-combo-flash"), [{ opacity: 0 }, { opacity: .55, offset: .25 }, { opacity: 0 }], { duration: 800, fill: "both" });
+    go(fl, [{ transform: "translateY(50px) scale(.06)", opacity: 0 }, { transform: "translateY(0) scale(1.2)", opacity: 1, offset: .6 }, { transform: "translateY(0) scale(1)", opacity: 1 }], { duration: 560, easing: SPRING, fill: "both" });
+    w.querySelectorAll(".ha-combo-side").forEach(function (s, i) {
+      var r = i ? 16 : -16;
+      go(s, [{ transform: "translateY(50px) scale(.15) rotate(" + r * 2 + "deg)", opacity: 0 }, { transform: "translateY(0) scale(1) rotate(" + r + "deg)", opacity: 1 }], { duration: 480, delay: 240 + i * 90, easing: SPRING, fill: "both" });
+    });
+    if (tier > 1) go(q(w, ".ha-combo-rays"), [{ opacity: 0 }, { opacity: tier === 3 ? .34 : .22 }], { duration: 400, delay: 250, fill: "both" });
+    enter(q(w, ".ha-combo-bird"), 200, "translateY(70px)");
+    await wait(330);
+    /* 2 · пик: ударные кольца, искры летят вверх, цифра «впечатывается» и досчитывает */
+    pk({ level: lv });
+    w.querySelectorAll(".ha-combo-ring").forEach(function (r, i) {
+      if (i < tier) go(r, [{ transform: "scale(.3)", opacity: .9 }, { transform: "scale(" + (2.6 + i * .6) + ")", opacity: 0 }], { duration: 720, delay: i * 150, fill: "both" });
+    });
+    if (!H.reduced) for (var i = 0, n = [9, 16, 26][tier - 1]; i < n; i++) {
+      var e = el("i", "ha-ember"), sz = 5 + Math.random() * 7;
+      e.style.cssText = "width:" + sz + "px;height:" + sz + "px;margin-left:" + (Math.random() - .5) * 70 + "px" + (i % 3 ? "" : ";background:var(--ha-fl)");
+      stage.appendChild(e);
+      go(e, [{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: "translate(" + (Math.random() - .5) * (150 + tier * 60) + "px," + -(130 + Math.random() * (140 + tier * 50)) + "px) scale(.3)", opacity: 0 }],
+        { duration: 700 + Math.random() * 600, delay: Math.random() * (350 + tier * 150), easing: "ease-out", fill: "both" });
+    }
+    go(num, [{ transform: "scale(3.4) rotate(-14deg)", opacity: 0 }, { transform: "scale(.88) rotate(4deg)", opacity: 1, offset: .6 }, { transform: "scale(1) rotate(0deg)", opacity: 1 }], { duration: 430, easing: "cubic-bezier(.3,0,.2,1)", fill: "both" });
+    H.countUp(num, Math.max(1, lv - 4), lv, 420, function (v) { return v + "х"; });
+    enter(q(w, ".ha-combo-tx"), 280);
+    await wait(260);
+    go(fl, [{ transform: "scale(1)" }, { transform: "scale(1.16)" }, { transform: "scale(1)" }], { duration: 340 });
+    if (tier > 1) go(body, [{ transform: "translate(0,0)" }, { transform: "translate(-7px,3px)" }, { transform: "translate(6px,-3px)" }, { transform: "translate(-4px,2px)" }, { transform: "translate(0,0)" }], { duration: 300 });
+    if (tier > 1) H.confetti({ size: "small", y: .42, count: tier === 3 ? 70 : 36 });
+    if (tier === 3) H.sparkle(fl, { count: 14 });
+    await wait([900, 1150, 1450][tier - 1]);
+    fire.stop();
     await closeOv(w);
   };
   A.lessonEnd = async function (o, pk) {
@@ -727,6 +811,7 @@
       '</div><div class="ha-streak-bird"></div>', BTN(o.button || "ДАЛЕЕ", "blue"));
     var t = tap(w), num = q(w, ".ha-bigfl-n");
     H.mascot(q(w, ".ha-streak-bird"), "idle");
+    H.fire(q(w, ".ha-bigfl-f"));
     go(q(w, ".ha-bigfl"), [{ transform: "scale(.3)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 520, easing: SPRING, fill: "backwards" });
     enter(q(w, ".ha-h1"), 200); enter(q(w, ".ha-sub"), 300); enter(q(w, ".ha-week"), 400);
     await Promise.race([wait(750), t]);

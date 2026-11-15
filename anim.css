@@ -303,13 +303,25 @@
 .ha-combo--10{--ha-fl:#f0503a;--ha-fl2:#ffb23f}
 .ha-combo--15{--ha-fl:#7a5ce0;--ha-fl2:#cdbdff}
 .ha-combo-flash{position:absolute;left:-20px;top:-20px;right:-20px;bottom:-20px;background:radial-gradient(circle at 50% 44%,var(--ha-fl),transparent 68%);opacity:0}
-.ha-combo-fl{width:150px;position:relative}
-.ha-combo-fl .ha-flame,.ha-bigfl-f .ha-flame{width:100%;transform-origin:50% 100%;animation:ha-flick .5s ease-in-out infinite alternate}
+.ha-combo{--w:190px;--n:84px}
+.ha-combo--10{--w:215px;--n:96px}
+.ha-combo--15{--w:240px;--n:108px}
+.ha-combo-stage{position:relative;width:var(--w);display:flex;justify-content:center}
+.ha-combo-fl{width:100%;position:relative}
+.ha-combo-side{position:absolute;bottom:2%;width:54%;opacity:0}
+.ha-combo-side--l{left:-30%} .ha-combo-side--r{right:-30%}
+.ha-combo-fl .ha-flame,.ha-combo-side .ha-flame,.ha-bigfl-f .ha-flame{width:100%;transform-origin:50% 100%;animation:ha-flick .5s ease-in-out infinite alternate}
+.ha-combo-side--r .ha-flame{animation-delay:-.25s}
 @keyframes ha-flick{from{transform:scale(1,1) rotate(-1.5deg)}to{transform:scale(1.04,1.08) rotate(1.5deg)}}
+.ha-fire{position:relative}
+.ha-fire-cv{position:absolute;left:50%;bottom:0;pointer-events:none}
+.ha-combo-rays{position:absolute;left:50%;top:56%;width:460px;height:460px;margin:-230px 0 0 -230px;border-radius:50%;background:repeating-conic-gradient(var(--ha-fl) 0 9deg,transparent 9deg 30deg);-webkit-mask-image:radial-gradient(closest-side,#000 30%,transparent 100%);mask-image:radial-gradient(closest-side,#000 30%,transparent 100%);opacity:0;animation:ha-spin 9s linear infinite}
+.ha-combo-ring{position:absolute;left:50%;top:62%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:6px solid var(--ha-fl);opacity:0}
+.ha-ember{position:absolute;left:50%;bottom:16%;border-radius:50%;background:var(--ha-fl2);opacity:0}
 .ha-combo-num,.ha-combo-tx{position:relative;font-weight:900;line-height:1;color:var(--ha-fl);text-shadow:0 3px 0 var(--ha-bg),0 -3px 0 var(--ha-bg),3px 0 0 var(--ha-bg),-3px 0 0 var(--ha-bg),2px 2px 0 var(--ha-bg),-2px 2px 0 var(--ha-bg),2px -2px 0 var(--ha-bg),-2px -2px 0 var(--ha-bg)}
-.ha-combo-num{font-size:68px;margin-top:-8px}
-.ha-combo-tx{font-size:22px;letter-spacing:1px}
-.ha-combo-bird{position:absolute;right:4px;bottom:76px;--ha-m-size:104px}
+.ha-combo-num{font-size:var(--n);margin-top:-10px;opacity:0}
+.ha-combo-tx{font-size:24px;letter-spacing:1px}
+.ha-combo-bird{position:absolute;right:0;bottom:4px;--ha-m-size:118px}
 
 /* 20 · конец урока */
 .ha-end1-bird{--ha-m-size:230px;margin-top:70px}
