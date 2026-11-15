@@ -163,7 +163,7 @@
     <button class="d-b" data-run="medalBronze"><small>25</small>Медаль 🥉</button>
   </div>
   <div class="d-h3">26 · Главный экран</div>
-  <div class="d-home" id="home"><div id="homeBird"></div><b>Шалом!</b></div>
+  <div class="d-home" id="home"><div id="homeBird"></div><b dir="rtl">שָׁלוֹם!</b></div>
   <div class="d-grid">
     <button class="d-b" data-run="home"><small>26</small>Хибри здоровается</button>
     <button class="d-b" data-run="flipFire"><small>27</small>Серия +1 (табло)</button>
@@ -401,8 +401,8 @@
     call: function () { return P("call", { name: "Мама Рина", who: "tzila" }); },
     chat: function () {
       return P("chat", { name: "Давид", messages: [
-        { text: "Шалом! Ты уже дома?" }, { me: true, text: "Да, только зашёл" },
-        { text: "Сабаба. В пятницу шабат у моих — приходи!" }, { me: true, text: "Тода! Буду 🙂" }] });
+        { text: HAnim.he("שָׁלוֹם!") + " Ты уже дома?" }, { me: true, text: "Да, только зашёл" },
+        { text: HAnim.he("סַבָּבָּה!") + " В пятницу " + HAnim.he("שַׁבָּת") + " у моих — приходи!" }, { me: true, text: HAnim.he("תּוֹדָה!") + " Буду 🙂" }] });
     },
     screenFwd: function () { return P("screen", { from: $("scrA"), to: $("scrB"), dir: "forward" }); },
     screenBack: function () { return P("screen", { from: $("scrB"), to: $("scrA"), dir: "back" }); },

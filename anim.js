@@ -15,7 +15,7 @@
  * │ pairWrong    │ пара не совпала {a, b}                                     │ 0,45 с       │
  * │ chipMove     │ «Собери фразу»: слово летит {el, to}                       │ 0,32 с       │
  * │ blitz        │ таймер блица {el, seconds} → .stop()                       │ seconds      │
- * │ combo        │ огонь 5х/10х/15х {level}                                   │ 1,5–2,1 с    │
+ * │ combo        │ огонь 5х/10х/15х {level}                                   │ 2,7–3,4 с    │
  * │ lessonEnd    │ конец урока {xp, streak, time, accuracy, counterEl, total} │ до нажатия   │
  * │ perfect      │ идеальный урок {xp}                                        │ 2,3 с        │
  * │ nodePulse    │ текущий узел дорожки {el, progress 0..1}                   │ 0,6 с + цикл │
@@ -116,7 +116,11 @@
     if (!bags[key] || !bags[key].length) bags[key] = list.slice().sort(function () { return Math.random() - .5; });
     return bags[key].pop();
   }
-  var PRAISE = ["Здорово!", "Превосходно!", "Сабаба!", "Отлично!", "Ялла, дальше!", "Так держать!", "Метуям!"];
+  /* иврит внутри русской строки: he("…") держит слово и его знак препинания вместе, справа налево */
+  /* строка с русскими словами читается слева направо, чистый иврит — справа налево */
+  function dirOf(t) { return /[А-Яа-яЁё]/.test(String(t || "")) ? "ltr" : "auto"; }
+  function he(s) { return "\u2067" + s + "\u2069"; }
+  var PRAISE = ["Здорово!", "Превосходно!", he("סַבָּבָּה!"), "Отлично!", he("יַאלְלָה!") + " Дальше!", "Так держать!", he("מְצוּיָּן!")];
 
   /* ───────── рисунки (SVG) ───────── */
   var CHECK = '<svg class="ha-ic" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -194,6 +198,7 @@
       '<g class="ha-m-wind" stroke="#9cc6ee" stroke-width="4" stroke-linecap="round"><path d="M-6 96h26"/><path d="M-18 128h22"/><path d="M-4 160h20"/></g>' +
       "</svg>";
   }
+  H.he = he;
   H.svg = { hibri: hibriSVG, flame: flameSVG, ice: iceSVG, star: starSVG, medal: medalSVG, avatar: avatarSVG, check: CHECK };
 
   /* ───────── МАСКОТ ───────── */
@@ -372,58 +377,73 @@
     });
   };
 
-  /* живой огонь на canvas. Язык пламени — поток кругов: у основания широкий, кверху сужается,
-     по нему бежит волна (качается как настоящий), сверху отрываются маленькие язычки.
-     HAnim.fire(el, {colors:[внешний, средний, ядро], sides:true}) → {stop()} */
+  /* живой огонь на canvas: одна гладкая «капля» на пружинах. Упруго выскакивает, мягко качается
+     (верхушка догоняет основание, как желе), без искр и отрывающихся кусочков.
+     HAnim.fire(el, {colors:[внешний, средний, ядро], sides:true}) → {stop(), pulse()} */
   H.fire = function (host, o) {
     o = o || {};
-    if (!host || H.reduced) return { stop: function () {} };
+    if (!host || H.reduced) return { stop: function () {}, pulse: function () {} };
     var cols = o.colors || ["#ff8a35", "#ffcf3f", "#fff3c0"], w = o.width || host.clientWidth || 150;
-    var cw = Math.round(w * 2.5), ch = Math.round(w * 2.5), dpr = Math.min(W.devicePixelRatio || 1, 2);
+    var cw = Math.round(w * 2.5), ch = Math.round(w * 2.3), dpr = Math.min(W.devicePixelRatio || 1, 2);
     var cv = el("canvas", "ha-fire-cv");
     cv.width = cw * dpr; cv.height = ch * dpr;
     cv.style.cssText = "width:" + cw + "px;height:" + ch + "px;margin-left:" + -cw / 2 + "px";
     host.innerHTML = ""; host.classList.add("ha-fire"); host.style.height = w * 1.25 + "px"; host.appendChild(cv);
-    var ctx = cv.getContext("2d"), P = [], live = true, acc = 0, t0 = performance.now(), last = t0, baseY = ch - w * .36;
-    var em = o.sides ? [[0, 1, 0], [-.5, .56, 2.1], [.5, .56, 4.2]] : [[0, 1, 0]];
-    var SZ = [1, .6, .3], CUT = [1, .66, .4], rate = o.rate || 90;
+    var ctx = cv.getContext("2d"), live = true, t0 = performance.now(), last = t0, baseY = ch - w * .12, N = 26;
+    /* каждый язык: [сдвиг по x, размер, фаза, задержка появления] + пружины: s — рост, b — наклон */
+    var F = (o.sides ? [[-.52, .56, 2.1, 140], [.52, .56, 4.2, 220], [0, 1, 0, 0]] : [[0, 1, 0, 0]]).map(function (e) {
+      return { x: e[0], z: e[1], ph: e[2], dl: e[3], s: 0, vs: 0, b: 0, vb: 0 };
+    });
+    var LAY = [[1, 0, 0], [.6, .05, .5], [.33, .09, 1]];      /* слой: размер, подъём основания, отставание */
+    function prof(k) { return Math.pow(Math.sin(Math.PI * Math.pow(k, .6)), .66); }   /* ширина капли по высоте */
+    function shape(f, ts, sc, lift, lag) {
+      var R = w * .47 * f.z * sc * (.55 + .45 / Math.max(.5, f.s)) * Math.min(1, f.s * 1.6), Hh = w * 1.5 * f.z * sc * f.s;
+      if (Hh < 1) return;
+      var cx = cw / 2 + f.x * w, by = baseY - lift * w * f.z, L = [], Rr = [], i, k, off, p, y, a, b2;
+      for (i = 0; i <= N; i++) {
+        k = i / N;
+        off = f.b * w * f.z * Math.pow(k, 1.8) * (1 - lag * .25) + Math.sin(ts * 4.2 - k * 3 + f.ph - lag * .6) * w * .035 * f.z * k * k;
+        p = prof(k) * R; y = by - Hh * k;
+        L.push([cx + off - p, y]); Rr.push([cx + off + p, y]);
+      }
+      var pts = L.concat(Rr.reverse());
+      ctx.moveTo((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
+      for (i = 1; i < pts.length; i++) {
+        a = pts[i]; b2 = pts[(i + 1) % pts.length];
+        ctx.quadraticCurveTo(a[0], a[1], (a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2);
+      }
+      a = pts[0]; b2 = pts[1];
+      ctx.quadraticCurveTo(a[0], a[1], (a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2);
+    }
     function frame(t) {
       if (!cv.isConnected) return;
-      var dt = Math.min(Math.max(t - last, 0) / 1000, .05), pw = Math.max(0, Math.min(1, (t - t0) / (o.grow || 450))), ts = t / 1000, i, p, e, k;
+      var dt = Math.min(Math.max(t - last, 0) / 1000, .034), ts = t / 1000, alive = false, i, k, f, n, st = 2;
       last = t;
-      if (live) {
-        acc += dt * rate;
-        while (acc >= 1) {
-          acc--;
-          for (i = 0; i < em.length; i++) {
-            e = em[i];
-            var lick = Math.random() < .13;        /* маленький язычок, который отрывается выше */
-            P.push({ e: e, off: (Math.random() - .5) * w * (lick ? .5 : .2) * e[1], k: 0,
-              h: w * (1.12 + Math.random() * .25) * e[1] * (lick ? 1.32 : 1), r: w * .4 * e[1] * (lick ? .4 : .9 + Math.random() * .2),
-              life: (.62 + Math.random() * .2) * (lick ? 1.15 : 1) });
-          }
+      for (i = 0; i < F.length; i++) {
+        f = F[i];
+        var goal = !live ? 0 : (t - t0 < f.dl ? 0 : 1 + Math.sin(ts * 5.2 + f.ph) * .035);   /* лёгкое «дыхание» */
+        var lean = Math.sin(ts * 2.1 + f.ph) * .1 + Math.sin(ts * 3.7 + f.ph * 2) * .05;     /* куда тянет «ветер» */
+        for (n = 0; n < st; n++) {                 /* пружины: рост упругий, наклон мягкий */
+          f.vs += ((goal - f.s) * 190 - f.vs * 11) * dt / st; f.s += f.vs * dt / st;
+          f.vb += ((lean - f.b) * 55 - f.vb * 5) * dt / st; f.b += f.vb * dt / st;
         }
+        if (f.s < 0) { f.s = 0; f.vs = 0; }
+        if (f.s > .02 || live) alive = true;
       }
-      for (i = P.length - 1; i >= 0; i--) { p = P[i]; p.k += dt / p.life; if (p.k >= 1) P.splice(i, 1); }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, cw, ch);
-      for (k = 0; k < 3; k++) {                    /* три слоя: внешний, средний, ядро */
+      for (k = 0; k < 3; k++) {
         ctx.fillStyle = cols[k]; ctx.beginPath();
-        for (i = 0; i < P.length; i++) {
-          p = P[i]; if (p.k > CUT[k]) continue;
-          var kk = p.k, q1 = 1 - kk / CUT[k];
-          var rr = p.r * pw * Math.min(1, kk * 9 + .55) * Math.pow(q1, 1.05) * SZ[k];
-          if (rr < .7) continue;
-          var wave = Math.sin(ts * 6.5 - kk * 4.6 + p.e[2]) * .17 + Math.sin(ts * 11 - kk * 7 + p.e[2] * 2) * .05;
-          var x = cw / 2 + p.e[0] * w + p.off * (1 - kk) + wave * w * kk * p.e[1];
-          var y = baseY - p.h * pw * kk + p.r * .32 * k * (1 - kk);
-          ctx.moveTo(x + rr, y); ctx.arc(x, y, rr, 0, 6.2832);
-        }
+        for (i = 0; i < F.length; i++) shape(F[i], ts, LAY[k][0], LAY[k][1], LAY[k][2]);
         ctx.fill();
       }
-      if (live || P.length) requestAnimationFrame(frame); else cv.remove();
+      if (alive) requestAnimationFrame(frame); else cv.remove();
     }
     requestAnimationFrame(frame);
-    return { stop: function () { live = false; }, el: cv };
+    return {
+      el: cv,
+      stop: function () { live = false; },
+      pulse: function (v) { F.forEach(function (f) { f.vs += v || 5; }); }     /* «вздрогнуть» в такт */
+    };
   };
 
   /* запись голоса: HAnim.rec(btn, true/false);  печать по буквам: HAnim.type(el, text) */
@@ -505,7 +525,7 @@
       var title = o.text || (ok ? pick("praise", PRAISE) : "Правильный ответ:");
       var b = el("div", "ha-banner " + (ok ? "ha-banner--ok" : "ha-banner--bad"),
         '<div class="ha-banner-row"><div class="ha-banner-ic">' + (ok ? CHECK : CROSS) + '</div><div class="ha-banner-tx"><b>' + esc(title) + "</b>" +
-        (o.answer ? '<span dir="auto">' + esc(o.answer) + "</span>" : "") + '</div><button type="button" class="ha-banner-flag" aria-label="Пожаловаться">' + FLAG + "</button></div>" +
+        (o.answer ? '<span dir="' + dirOf(o.answer) + '">' + esc(o.answer) + "</span>" : "") + '</div><button type="button" class="ha-banner-flag" aria-label="Пожаловаться">' + FLAG + "</button></div>" +
         '<button type="button" class="ha-btn ha-btn--' + (ok ? "green" : "red") + ' ha-banner-go">' + esc(o.button || (ok ? "ДАЛЕЕ" : "ПОНЯТНО")) + "</button>");
       D.body.appendChild(b); void b.offsetWidth; b.classList.add("ha-in"); pk({ ok: ok });
       q(b, ".ha-banner-flag").onclick = function () { if (o.onReport) o.onReport(); };
@@ -604,7 +624,7 @@
     var fire = H.fire(fl, { colors: FC, sides: tier > 1, });
     /* 1 · вспышка, огонь вырастает из искры */
     go(q(w, ".ha-combo-flash"), [{ opacity: 0 }, { opacity: .55, offset: .25 }, { opacity: 0 }], { duration: 800, fill: "both" });
-    go(fl, [{ transform: "translateY(50px) scale(.06)", opacity: 0 }, { transform: "translateY(0) scale(1.2)", opacity: 1, offset: .6 }, { transform: "translateY(0) scale(1)", opacity: 1 }], { duration: 560, easing: SPRING, fill: "both" });
+    if (!fire.el) go(fl, [{ transform: "scale(.06)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 560, easing: SPRING, fill: "both" });
     w.querySelectorAll(".ha-combo-side").forEach(function (s, i) {
       var r = i ? 16 : -16;
       go(s, [{ transform: "translateY(50px) scale(.15) rotate(" + r * 2 + "deg)", opacity: 0 }, { transform: "translateY(0) scale(1) rotate(" + r + "deg)", opacity: 1 }], { duration: 480, delay: 240 + i * 90, easing: SPRING, fill: "both" });
@@ -617,22 +637,14 @@
     w.querySelectorAll(".ha-combo-ring").forEach(function (r, i) {
       if (i < tier) go(r, [{ transform: "scale(.3)", opacity: .9 }, { transform: "scale(" + (2.6 + i * .6) + ")", opacity: 0 }], { duration: 720, delay: i * 150, fill: "both" });
     });
-    if (!H.reduced) for (var i = 0, n = [9, 16, 26][tier - 1]; i < n; i++) {
-      var e = el("i", "ha-ember"), sz = 5 + Math.random() * 7;
-      e.style.cssText = "width:" + sz + "px;height:" + sz + "px;margin-left:" + (Math.random() - .5) * 70 + "px" + (i % 3 ? "" : ";background:var(--ha-fl)");
-      stage.appendChild(e);
-      go(e, [{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: "translate(" + (Math.random() - .5) * (150 + tier * 60) + "px," + -(130 + Math.random() * (140 + tier * 50)) + "px) scale(.3)", opacity: 0 }],
-        { duration: 700 + Math.random() * 600, delay: Math.random() * (350 + tier * 150), easing: "ease-out", fill: "both" });
-    }
     go(num, [{ transform: "scale(3.4) rotate(-14deg)", opacity: 0 }, { transform: "scale(.88) rotate(4deg)", opacity: 1, offset: .6 }, { transform: "scale(1) rotate(0deg)", opacity: 1 }], { duration: 430, easing: "cubic-bezier(.3,0,.2,1)", fill: "both" });
     H.countUp(num, Math.max(1, lv - 4), lv, 420, function (v) { return v + "х"; });
     enter(q(w, ".ha-combo-tx"), 280);
     await wait(260);
-    go(fl, [{ transform: "scale(1)" }, { transform: "scale(1.16)" }, { transform: "scale(1)" }], { duration: 340 });
+    fire.pulse(5);
     if (tier > 1) go(body, [{ transform: "translate(0,0)" }, { transform: "translate(-7px,3px)" }, { transform: "translate(6px,-3px)" }, { transform: "translate(-4px,2px)" }, { transform: "translate(0,0)" }], { duration: 300 });
     if (tier > 1) H.confetti({ size: "small", y: .42, count: tier === 3 ? 70 : 36 });
-    if (tier === 3) H.sparkle(fl, { count: 14 });
-    await wait([900, 1150, 1450][tier - 1]);
+    await wait(o.hold || [1900, 2200, 2600][tier - 1]);
     fire.stop();
     await closeOv(w);
   };
@@ -751,7 +763,7 @@
     var type = o.type || "gold";
     var names = { gold: "Золото", silver: "Серебро", bronze: "Бронза" };
     var w = ov("ha-ov--dim ha-medal",
-      '<div class="ha-medal-box"><div class="ha-rays"></div><div class="ha-medal-m">' + medalSVG(type) + '</div></div><div class="ha-h1">' + esc(o.title || "Глава пройдена!") + '</div><div class="ha-sub">' + esc(o.text || names[type] + " — ялла, дальше!") + '</div><div class="ha-medal-bird"></div>',
+      '<div class="ha-medal-box"><div class="ha-rays"></div><div class="ha-medal-m">' + medalSVG(type) + '</div></div><div class="ha-h1">' + esc(o.title || "Глава пройдена!") + '</div><div class="ha-sub">' + esc(o.text || names[type] + "! " + he("יַאלְלָה!")) + '</div><div class="ha-medal-bird"></div>',
       BTN(o.button || "ДАЛЕЕ", "blue"));
     var m = q(w, ".ha-medal-m"), t = tap(w);
     H.mascot(q(w, ".ha-medal-bird"), "dance");
@@ -806,18 +818,18 @@
     var today = o.today == null ? Math.min(day, 7) - 1 : o.today;
     var w = ov("ha-streak",
       bigFlame(first ? 0 : day - 1) + '<div class="ha-h1">' + esc(o.title || (first ? "Вы начали серию!" : "Серия продлена!")) + '</div><div class="ha-sub">' +
-      esc(o.text || (first ? "Заходи каждый день — и огонёк будет расти" : day + " " + plural(day, "день", "дня", "дней") + " подряд. Сабаба!")) + '</div><div class="ha-week">' +
+      esc(o.text || (first ? "Заходи каждый день — и огонёк будет расти" : day + " " + plural(day, "день", "дня", "дней") + " подряд. " + he("סַבָּבָּה!"))) + '</div><div class="ha-week">' +
       ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map(function (d, i) { return '<div class="ha-day' + (week[i] && i !== today ? " ha-on" : "") + '"><i>' + CHECK + "</i><span>" + d + "</span></div>"; }).join("") +
       '</div><div class="ha-streak-bird"></div>', BTN(o.button || "ДАЛЕЕ", "blue"));
     var t = tap(w), num = q(w, ".ha-bigfl-n");
     H.mascot(q(w, ".ha-streak-bird"), "idle");
-    H.fire(q(w, ".ha-bigfl-f"));
+    var sfire = H.fire(q(w, ".ha-bigfl-f"));
     go(q(w, ".ha-bigfl"), [{ transform: "scale(.3)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 520, easing: SPRING, fill: "backwards" });
     enter(q(w, ".ha-h1"), 200); enter(q(w, ".ha-sub"), 300); enter(q(w, ".ha-week"), 400);
     await Promise.race([wait(750), t]);
     pk({ day: day });
     await A.flip({ el: num, to: day }, function () {});
-    H.pop(q(w, ".ha-bigfl")); H.sparkle(q(w, ".ha-bigfl"), { count: 8 });
+    H.pop(q(w, ".ha-bigfl")); sfire.pulse(6);
     var d = w.querySelectorAll(".ha-day")[today];
     if (d) { d.classList.add("ha-on"); H.pop(d); }
     H.mascot(q(w, ".ha-streak-bird"), "happy");
@@ -828,7 +840,7 @@
     var w = ov("ha-freeze",
       '<i class="ha-frost ha-frost--t"></i><i class="ha-frost ha-frost--b"></i><i class="ha-frost ha-frost--l"></i><i class="ha-frost ha-frost--r"></i>' +
       '<div class="ha-freeze-box">' + bigFlame(day) + '<div class="ha-freeze-ice">' + iceSVG() + '</div></div><div class="ha-h1">' + esc(o.title || "Заморозка спасла серию!") + '</div><div class="ha-sub">' +
-      esc(o.text || day + " " + plural(day, "день", "дня", "дней") + " в безопасности. Завтра — урок, ялла!") + "</div>", BTN(o.button || "ПОНЯТНО", "blue"));
+      esc(o.text || day + " " + plural(day, "день", "дня", "дней") + " в безопасности. Завтра — урок, " + he("יַאלְלָה!")) + "</div>", BTN(o.button || "ПОНЯТНО", "blue"));
     var t = tap(w);
     enter(q(w, ".ha-h1"), 500); enter(q(w, ".ha-sub"), 600);
     await Promise.race([wait(500), t]);
@@ -867,7 +879,7 @@
       q(w, ".ha-gift-me").classList.add("ha-sent");
       await H.flyTo(q(w, ".ha-gift-me svg"), ava, iceSVG(), { duration: 750, arc: 90, endScale: .7 });
       pk(); H.sparkle(ava, { count: 8, colors: ["#bfe6ff", "#ffffff", "#ffcf3f"] });
-      q(w, ".ha-h1").textContent = o.thanks || "Тода! " + name + " в безопасности";
+      q(w, ".ha-h1").textContent = o.thanks || he("תּוֹדָה!") + " " + name + " в безопасности";
       await wait(1100);
     }
     await closeOv(w); return k;
@@ -891,7 +903,7 @@
     l.remove(); r.remove(); h.classList.remove("ha-doors-host");
   };
   function bubble(o, cls) {
-    var r = rect(o.el), b = el("div", "ha-bubble " + cls, '<span dir="auto">' + esc(o.text || "") + "</span>");
+    var r = rect(o.el), b = el("div", "ha-bubble " + cls, '<span dir="' + dirOf(o.text) + '">' + esc(o.text || "") + "</span>");
     layer().appendChild(b);
     var bw = Math.min(260, W.innerWidth - 24); b.style.maxWidth = bw + "px";
     var br = rect(b), cx = r.left + r.width / 2;
@@ -977,12 +989,12 @@
         await Promise.race([wait(m.delay || clamp(500 + String(m.text).length * 22, 600, 1500)), t]);
         ty.remove(); if (st) st.textContent = "в сети";
       } else await Promise.race([wait(m.delay || 500), t]);
-      var b = el("div", "ha-msg" + (m.me ? " ha-msg--me" : ""), '<span dir="auto">' + esc(m.text) + "</span>");
+      var b = el("div", "ha-msg" + (m.me ? " ha-msg--me" : ""), '<span dir="' + dirOf(m.text) + '">' + esc(m.text) + "</span>");
       host.appendChild(b); host.scrollTop = host.scrollHeight;
       if (!stop) { enter(b, 0, "translateY(10px) scale(.7)"); pk({ index: i, me: !!m.me }); }
       await Promise.race([wait(350), t]);
     }
-    for (; i < msgs.length; i++) host.appendChild(el("div", "ha-msg" + (msgs[i].me ? " ha-msg--me" : ""), '<span dir="auto">' + esc(msgs[i].text) + "</span>"));
+    for (; i < msgs.length; i++) host.appendChild(el("div", "ha-msg" + (msgs[i].me ? " ha-msg--me" : ""), '<span dir="' + dirOf(msgs[i].text) + '">' + esc(msgs[i].text) + "</span>"));
     if (w) { await t; await closeOv(w); }
   };
 
