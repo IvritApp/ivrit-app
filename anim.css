@@ -1,0 +1,516 @@
+/* Hirbis Animations — anim.css · все классы начинаются с ha-
+   Анимируются только transform и opacity. Цвета — через переменные --ha-*.
+   Тёмная тема: body.theme-dark (как в приложении) или [data-theme="dark"]. */
+
+:root{
+  --ha-blue:#3a8ad6; --ha-blue-d:#2b6fb3;
+  --ha-green:#3cae5c; --ha-green-d:#2c8a46;
+  --ha-red:#e5484d; --ha-red-d:#bd3338;
+  --ha-orange:#ff8a35; --ha-orange-d:#d96c1c;
+  --ha-yellow:#ffcf3f; --ha-violet:#7a5ce0;
+  --ha-bg:#ffffff; --ha-card:#f3f6fa; --ha-text:#1f2733; --ha-muted:#677283; --ha-line:#dde3ec;
+  --ha-ok-bg:#dff5e4; --ha-ok-tx:#1f7a3a; --ha-bad-bg:#fde3e4; --ha-bad-tx:#b3262b;
+  --ha-dim:rgba(20,26,36,.82); --ha-cloud:#ffffff;
+  --ha-spring:cubic-bezier(.34,1.56,.64,1); --ha-out:cubic-bezier(.22,1,.36,1);
+  --ha-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+.theme-dark,[data-theme="dark"]{
+  --ha-bg:#151b24; --ha-card:#212a37; --ha-text:#eef2f7; --ha-muted:#9aa6b6; --ha-line:#34414f;
+  --ha-ok-bg:#173a25; --ha-ok-tx:#8fe0a6; --ha-bad-bg:#431c1f; --ha-bad-tx:#ff9da1;
+  --ha-dim:rgba(0,0,0,.84); --ha-cloud:#3a4658;
+}
+
+#ha-layer{position:fixed;left:0;top:0;width:0;height:0;z-index:9600;pointer-events:none}
+.ha-ic{width:1em;height:1em;display:block}
+
+/* ═════════ МАСКОТ ХИБРИ ═════════ */
+.ha-m{display:inline-block;width:var(--ha-m-size,140px);position:relative;vertical-align:bottom;line-height:0;-webkit-tap-highlight-color:transparent}
+.ha-m-svg{display:block;width:100%;height:auto;overflow:visible}
+.ha-m-shadow{opacity:.13}
+.ha-m-f{transform:rotate(calc(var(--a) * var(--fan,.5)));transition:transform .38s var(--ha-spring)}
+.ha-m-head,.ha-m-wing,.ha-m-crest,.ha-m-pupil,.ha-m-root{transition:transform .3s var(--ha-out)}
+.ha-m-eyeopen{transition:transform .07s linear}
+.ha-m-eyeshut,.ha-m-brow,.ha-m-zzz,.ha-m-dots,.ha-m-wind{opacity:0}
+.ha-m--flip .ha-m-svg{transform:scaleX(-1)}
+.ha-m--gone{visibility:hidden}
+.ha-m-lookL .ha-m-head{transform:rotate(-7deg)} .ha-m-lookL .ha-m-pupil{transform:translateX(-3px)}
+.ha-m-lookR .ha-m-head{transform:rotate(7deg)}  .ha-m-lookR .ha-m-pupil{transform:translateX(3px)}
+
+/* idle — дышит, хохолок покачивается */
+.ha-m--idle .ha-m-torso,.ha-m--wave .ha-m-torso,.ha-m--think .ha-m-torso,.ha-m--point .ha-m-torso,.ha-m--surprised .ha-m-torso{animation:ha-m-breath 2.6s ease-in-out infinite}
+@keyframes ha-m-breath{50%{transform:scale(1.02,.975)}}
+.ha-m--idle .ha-m-crest{animation:ha-m-sway 3.4s ease-in-out infinite}
+@keyframes ha-m-sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
+
+/* happy — два прыжка, хохолок веером */
+.ha-m--happy,.ha-m--cheer,.ha-m--dance{--fan:1}
+.ha-m--happy .ha-m-eyeopen,.ha-m--cheer .ha-m-eyeopen,.ha-m--dance .ha-m-eyeopen{opacity:0}
+.ha-m--happy .ha-m-eyeshut,.ha-m--cheer .ha-m-eyeshut,.ha-m--dance .ha-m-eyeshut{opacity:1}
+.ha-m--happy .ha-m-root{animation:ha-m-jump .5s var(--ha-out) 2}
+.ha-m--happy .ha-m-shadow{animation:ha-m-shj .5s var(--ha-out) 2}
+.ha-m--happy .ha-m-wing{animation:ha-m-flap .25s ease-in-out 4 alternate}
+@keyframes ha-m-jump{0%,100%{transform:translateY(0) scale(1,1)}15%{transform:translateY(0) scale(1.07,.9)}50%{transform:translateY(-34px) scale(.95,1.06)}85%{transform:translateY(0) scale(1.06,.93)}}
+@keyframes ha-m-shj{50%{transform:scale(.6);opacity:.06}}
+@keyframes ha-m-flap{from{transform:rotate(14deg)}to{transform:rotate(78deg)}}
+@keyframes ha-m-flapbig{from{transform:rotate(20deg)}to{transform:rotate(125deg)}}
+
+/* cheer — взлёт, кувырок, крылья машут */
+.ha-m--cheer .ha-m-root{animation:ha-m-cheer 1.9s linear both}
+.ha-m--cheer .ha-m-shadow{animation:ha-m-shc 1.9s ease-in-out both}
+.ha-m--cheer .ha-m-wing{animation:ha-m-flapbig .16s ease-in-out 11 alternate}
+@keyframes ha-m-cheer{
+  0%{transform:translateY(0) translateY(-80px) rotate(0deg) translateY(80px) scale(1,1);animation-timing-function:ease-out}
+  9%{transform:translateY(0) translateY(-80px) rotate(0deg) translateY(80px) scale(1.1,.85);animation-timing-function:cubic-bezier(.2,.8,.3,1)}
+  36%{transform:translateY(-76px) translateY(-80px) rotate(0deg) translateY(80px) scale(.96,1.05);animation-timing-function:ease-in-out}
+  64%{transform:translateY(-84px) translateY(-80px) rotate(360deg) translateY(80px) scale(1,1);animation-timing-function:cubic-bezier(.6,0,.9,.5)}
+  82%{transform:translateY(0) translateY(-80px) rotate(360deg) translateY(80px) scale(1.09,.88);animation-timing-function:ease-out}
+  91%{transform:translateY(-10px) translateY(-80px) rotate(360deg) translateY(80px) scale(.98,1.03);animation-timing-function:ease-in}
+  100%{transform:translateY(0) translateY(-80px) rotate(360deg) translateY(80px) scale(1,1)}
+}
+@keyframes ha-m-shc{20%,70%{transform:scale(.45);opacity:.05}}
+
+/* sad — мягкое «эх» */
+.ha-m--sad,.ha-m--sleep{--fan:.1}
+.ha-m--sad .ha-m-crest{transform:rotate(-26deg)}
+.ha-m--sad .ha-m-head{transform:translateY(5px) rotate(5deg)}
+.ha-m--sad .ha-m-wing{transform:rotate(-7deg)}
+.ha-m--sad .ha-m-brow{opacity:1}
+.ha-m--sad .ha-m-pupil{transform:translateY(3px)}
+.ha-m--sad .ha-m-torso{animation:ha-m-sigh 2.8s ease-in-out infinite}
+@keyframes ha-m-sigh{0%,100%{transform:scale(1,.965)}35%{transform:scale(1.015,1)}}
+
+/* think — чешет голову, «…» */
+.ha-m--think .ha-m-wingL{animation:ha-m-scratch .5s ease-in-out infinite alternate}
+@keyframes ha-m-scratch{from{transform:rotate(136deg)}to{transform:rotate(156deg)}}
+.ha-m--think .ha-m-head{transform:rotate(-7deg)}
+.ha-m--think .ha-m-pupil{transform:translate(2px,-3px)}
+.ha-m--think .ha-m-dots{opacity:1}
+.ha-m--think .ha-m-dot,.ha-dots i{animation:ha-m-dot 1.2s ease-in-out infinite}
+.ha-m-dot:nth-of-type(3),.ha-dots i:nth-child(2){animation-delay:.15s}
+.ha-m-dot:nth-of-type(4),.ha-dots i:nth-child(3){animation-delay:.3s}
+@keyframes ha-m-dot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+
+/* wave — машет крылом */
+.ha-m--wave{--fan:.75}
+.ha-m--wave .ha-m-wingR{animation:ha-m-wave 2.4s ease-in-out infinite}
+.ha-m--wave .ha-m-head{animation:ha-m-tilt 2.4s ease-in-out infinite}
+@keyframes ha-m-wave{0%,62%,100%{transform:rotate(8deg)}9%,25%,41%{transform:rotate(152deg)}17%,33%{transform:rotate(116deg)}50%{transform:rotate(140deg)}}
+@keyframes ha-m-tilt{0%,62%,100%{transform:rotate(0)}10%,50%{transform:rotate(6deg)}}
+
+/* sleep — спит, Z-z-z */
+.ha-m--sleep .ha-m-eyeopen{opacity:0}
+.ha-m--sleep .ha-m-eyeshut{opacity:1;transform:scaleY(-1)}
+.ha-m--sleep .ha-m-head{transform:translateY(6px) rotate(9deg)}
+.ha-m--sleep .ha-m-torso{animation:ha-m-breath 3.6s ease-in-out infinite}
+.ha-m--sleep .ha-m-zzz{opacity:1}
+.ha-m--sleep .ha-m-zzz text{animation:ha-m-z 2.4s ease-in-out infinite;opacity:0}
+.ha-m-zzz text:nth-child(2){animation-delay:.5s!important}
+.ha-m-zzz text:nth-child(3){animation-delay:1s!important}
+@keyframes ha-m-z{0%{transform:translate(-8px,10px);opacity:0}30%{opacity:1}100%{transform:translate(8px,-14px);opacity:0}}
+
+/* fly / flyout — влетает и садится; улетает */
+.ha-m--fly .ha-m-root{animation:ha-m-flyin 1.3s both}
+.ha-m--fly .ha-m-shadow{animation:ha-m-shin 1.3s both}
+.ha-m--fly .ha-m-wing{animation:ha-m-flapbig .16s ease-in-out 6 alternate}
+@keyframes ha-m-flyin{
+  0%{transform:translate(-260px,-210px) rotate(18deg) scale(1,1);opacity:0;animation-timing-function:cubic-bezier(.2,.7,.3,1)}
+  12%{opacity:1}
+  68%{transform:translate(0,-22px) rotate(-6deg) scale(1,1);animation-timing-function:ease-in}
+  80%{transform:translate(0,0) rotate(0deg) scale(1.09,.88);animation-timing-function:ease-out}
+  100%{transform:translate(0,0) rotate(0deg) scale(1,1);opacity:1}
+}
+@keyframes ha-m-shin{0%,55%{transform:scale(.3);opacity:0}80%,100%{transform:scale(1);opacity:.13}}
+.ha-m--flyout .ha-m-root{animation:ha-m-flyout .9s both}
+.ha-m--flyout .ha-m-shadow{animation:ha-m-shout .9s both}
+.ha-m--flyout .ha-m-wing{animation:ha-m-flapbig .16s ease-in-out infinite alternate}
+@keyframes ha-m-flyout{
+  0%{transform:translate(0,0) rotate(0deg) scale(1,1);opacity:1;animation-timing-function:ease-out}
+  16%{transform:translate(0,0) rotate(0deg) scale(1.09,.87);animation-timing-function:cubic-bezier(.5,0,.8,.4)}
+  85%{opacity:1}
+  100%{transform:translate(280px,-270px) rotate(-14deg) scale(1,1);opacity:0}
+}
+@keyframes ha-m-shout{30%{opacity:.13}100%{transform:scale(.3);opacity:0}}
+
+/* dance — «Ялла!» */
+.ha-m--dance .ha-m-root{animation:ha-m-dance .9s ease-in-out infinite}
+.ha-m--dance .ha-m-wingL{animation:ha-m-dw .9s ease-in-out infinite}
+.ha-m--dance .ha-m-wingR{animation:ha-m-dw .9s ease-in-out -.45s infinite}
+.ha-m--dance .ha-m-crest{animation:ha-m-sway .45s ease-in-out infinite}
+@keyframes ha-m-dance{0%,50%,100%{transform:translate(0,0) rotate(0deg)}12%{transform:translate(-8px,-11px) rotate(-9deg)}27%{transform:translate(-8px,0) rotate(-9deg)}62%{transform:translate(8px,-11px) rotate(9deg)}77%{transform:translate(8px,0) rotate(9deg)}}
+@keyframes ha-m-dw{0%,50%,100%{transform:rotate(10deg)}12%,30%{transform:rotate(128deg)}}
+
+/* point — показывает крылом (вправо; с flip — влево) */
+.ha-m--point{--fan:.7}
+.ha-m--point .ha-m-root{transform:rotate(4deg)}
+.ha-m--point .ha-m-head{transform:rotate(5deg)}
+.ha-m--point .ha-m-pupil{transform:translateX(3px)}
+.ha-m--point .ha-m-wingR{animation:ha-m-point 1s ease-in-out infinite}
+@keyframes ha-m-point{0%,100%{transform:rotate(84deg) translateY(0)}50%{transform:rotate(84deg) translateY(11px)}}
+
+/* surprised — глаза большие, хохолок дыбом */
+.ha-m--surprised{--fan:1.25}
+.ha-m--surprised .ha-m-eyeopen{transform:scale(1.22)}
+.ha-m--surprised .ha-m-pupil{transform:scale(.62)}
+.ha-m--surprised .ha-m-wing{transform:rotate(40deg)}
+.ha-m--surprised .ha-m-beak{transform:translateY(3px)}
+.ha-m--surprised .ha-m-root{animation:ha-m-startle .55s var(--ha-out)}
+@keyframes ha-m-startle{0%{transform:translateY(0) scale(1,1)}30%{transform:translateY(-22px) scale(.94,1.08)}70%{transform:translateY(0) scale(1.06,.93)}100%{transform:translateY(0) scale(1,1)}}
+
+/* run — бежит-летит на месте (загрузка) */
+.ha-m--run{--fan:.2}
+.ha-m--run .ha-m-crest{transform:rotate(-24deg)}
+.ha-m--run .ha-m-root{animation:ha-m-bob .36s ease-in-out infinite}
+.ha-m--run .ha-m-legL{animation:ha-m-leg .36s linear infinite}
+.ha-m--run .ha-m-legR{animation:ha-m-leg .36s linear -.18s infinite}
+.ha-m--run .ha-m-wing{animation:ha-m-flap .18s ease-in-out infinite alternate}
+.ha-m--run .ha-m-wind{opacity:1}
+.ha-m--run .ha-m-wind path{animation:ha-m-wind .5s linear infinite}
+.ha-m-wind path:nth-child(2){animation-delay:.17s!important}
+.ha-m-wind path:nth-child(3){animation-delay:.33s!important}
+@keyframes ha-m-bob{0%,100%{transform:rotate(7deg) translateY(0)}50%{transform:rotate(7deg) translateY(-8px)}}
+@keyframes ha-m-leg{0%,100%{transform:rotate(38deg)}50%{transform:rotate(-38deg)}}
+@keyframes ha-m-wind{0%{transform:translateX(34px);opacity:0}30%{opacity:1}100%{transform:translateX(-30px);opacity:0}}
+
+.ha-m.ha-m-blink .ha-m-eyeopen{transform:scaleY(.08)}
+
+/* ═════════ СОСТОЯНИЯ КНОПОК И ПЛИТОК ═════════ */
+.ha-correct{background:var(--ha-green)!important;border-color:var(--ha-green-d)!important;color:#fff!important;box-shadow:0 4px 0 var(--ha-green-d)!important}
+.ha-wrong{background:var(--ha-red)!important;border-color:var(--ha-red-d)!important;color:#fff!important;box-shadow:0 4px 0 var(--ha-red-d)!important}
+.ha-picked{background:var(--ha-blue)!important;border-color:var(--ha-blue-d)!important;color:#fff!important;box-shadow:0 4px 0 var(--ha-blue-d)!important}
+.ha-done{background:var(--ha-card)!important;border-color:var(--ha-line)!important;color:var(--ha-muted)!important;box-shadow:0 4px 0 var(--ha-line)!important;opacity:.6;pointer-events:none}
+.ha-found{opacity:.35}
+.ha-flying{position:relative;z-index:5}
+.ha-check{position:absolute;right:8px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:#fff;color:var(--ha-green);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:ha-pop-in .35s var(--ha-spring) both}
+.ha-check .ha-ic{width:16px;height:16px}
+@keyframes ha-pop-in{from{transform:scale(0)}to{transform:scale(1)}}
+.ha-bounce{animation:ha-bounce .42s var(--ha-out)}
+@keyframes ha-bounce{0%,100%{transform:scale(1,1) translateY(0)}30%{transform:scale(1.07,.93) translateY(0)}60%{transform:scale(.97,1.05) translateY(-4px)}}
+.ha-shake{animation:ha-shake .42s ease-in-out}
+@keyframes ha-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-9px)}30%{transform:translateX(8px)}45%{transform:translateX(-6px)}60%{transform:translateX(5px)}75%{transform:translateX(-3px)}90%{transform:translateX(2px)}}
+.ha-pop{animation:ha-pop .36s var(--ha-spring)}
+@keyframes ha-pop{0%,100%{transform:scale(1)}40%{transform:scale(1.16)}}
+.ha-land{animation:ha-land .22s ease-out}
+@keyframes ha-land{40%{transform:scale(1.08,.9)}}
+.ha-nod{animation:ha-nod .46s ease-in-out 3;transform-origin:50% 90%}
+@keyframes ha-nod{50%{transform:rotate(3.5deg) translateY(-2px)}}
+
+/* тактильная кнопка: нижняя грань 4px «вдавливается» */
+.ha-btn{-webkit-appearance:none;appearance:none;border:0;margin:0;font:800 16px/1.1 var(--ha-font);letter-spacing:.3px;color:#fff;background:var(--ha-b,var(--ha-blue));box-shadow:0 4px 0 var(--ha-bd,var(--ha-blue-d));border-radius:16px;padding:14px 18px;min-height:50px;width:100%;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:transform .08s ease-out;box-sizing:border-box}
+.ha-btn:active,.ha-btn.ha-pressed{transform:translateY(4px);box-shadow:0 0 0 var(--ha-bd,var(--ha-blue-d))}
+.ha-btn:focus-visible{outline:3px solid var(--ha-yellow);outline-offset:2px}
+.ha-btn--green{--ha-b:var(--ha-green);--ha-bd:var(--ha-green-d)}
+.ha-btn--red{--ha-b:var(--ha-red);--ha-bd:var(--ha-red-d)}
+.ha-btn--orange{--ha-b:var(--ha-orange);--ha-bd:var(--ha-orange-d)}
+.ha-btn--ghost{--ha-b:transparent;--ha-bd:transparent;color:var(--ha-muted);min-height:42px;padding:10px 18px}
+
+/* ═════════ ЧАСТИЦЫ ═════════ */
+.ha-spark{position:fixed;pointer-events:none;will-change:transform,opacity}
+.ha-spark svg{display:block;width:100%;height:100%}
+.ha-fly{position:fixed;width:0;height:0;pointer-events:none;will-change:transform}
+.ha-fly-y{position:absolute;left:0;top:0;will-change:transform,opacity}
+.ha-fly-c{transform:translate(-50%,-50%);white-space:nowrap;font-size:28px;line-height:1}
+.ha-fly-c svg{width:34px;height:auto;display:block}
+.ha-confetti{position:fixed;left:0;top:0;width:100%;height:100%;z-index:9700;pointer-events:none}
+
+/* ═════════ ОКНА ПОВЕРХ ЭКРАНА ═════════ */
+.ha-ov{position:fixed;left:0;top:0;right:0;bottom:0;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));background:var(--ha-bg);color:var(--ha-text);font-family:var(--ha-font);text-align:center;opacity:0;transition:opacity .2s ease;box-sizing:border-box;overflow:hidden}
+.ha-ov *{box-sizing:border-box}
+.ha-ov.ha-in{opacity:1}
+.ha-ov-body{flex:1;min-height:0;width:100%;max-width:420px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.ha-ov>.ha-btn{max-width:420px;flex:none}
+.ha-ov--dim{background:var(--ha-dim);color:#fff}
+.ha-ov--clear{background:transparent;pointer-events:none;z-index:9100}
+.ha-h1{font-size:24px;font-weight:800;line-height:1.2;margin:0}
+.ha-sub{font-size:16px;line-height:1.35;color:var(--ha-muted);max-width:320px}
+.ha-ov--dim .ha-sub{color:rgba(255,255,255,.88)}
+.ha-sheet{background:var(--ha-bg);color:var(--ha-text);border-radius:20px;padding:20px 18px 12px;width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;gap:12px;animation:ha-sheet-in .42s var(--ha-spring) both}
+.ha-sheet .ha-sub{color:var(--ha-muted)}
+.ha-sheet .ha-h1{font-size:21px}
+@keyframes ha-sheet-in{from{transform:translateY(46px) scale(.92);opacity:0}}
+.ha-rays{position:absolute;left:50%;top:50%;width:280px;height:280px;margin:-140px 0 0 -140px;border-radius:50%;background:repeating-conic-gradient(rgba(255,207,63,.38) 0 12deg,transparent 12deg 30deg);-webkit-mask-image:radial-gradient(closest-side,#000 35%,transparent 100%);mask-image:radial-gradient(closest-side,#000 35%,transparent 100%);opacity:0;transition:opacity .4s;animation:ha-spin 16s linear infinite;pointer-events:none}
+.ha-open .ha-rays{opacity:1}
+@keyframes ha-spin{to{transform:rotate(360deg)}}
+.ha-flame,.ha-star,.ha-ice{display:block}
+.ha-fl-o{fill:var(--ha-fl,#ff8a35)} .ha-fl-i{fill:var(--ha-fl2,#ffcf3f)}
+.ha-star{color:var(--ha-yellow)} .ha-star--off{color:#8d97a8}
+.ha-dots{display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle;font-style:normal}
+.ha-dots i{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* 14 · нижняя плашка-итог */
+.ha-banner{position:fixed;left:0;right:0;bottom:0;z-index:8800;display:flex;flex-direction:column;gap:12px;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));border-radius:20px 20px 0 0;font-family:var(--ha-font);box-sizing:border-box;transform:translateY(110%);transition:transform .22s ease-in}
+.ha-banner.ha-in{transform:translateY(0);transition:transform .4s var(--ha-spring)}
+.ha-banner::after{content:"";position:absolute;left:0;right:0;top:100%;height:48px;background:inherit}
+.ha-banner--ok{background:var(--ha-ok-bg);color:var(--ha-ok-tx)}
+.ha-banner--bad{background:var(--ha-bad-bg);color:var(--ha-bad-tx)}
+.ha-banner-row{display:flex;align-items:center;gap:12px}
+.ha-banner-ic{flex:none;width:40px;height:40px;border-radius:50%;background:currentColor;display:flex;align-items:center;justify-content:center;animation:ha-pop-in .4s var(--ha-spring) .12s both}
+.ha-banner-ic .ha-ic{width:24px;height:24px}
+.ha-banner--ok .ha-banner-ic .ha-ic{color:var(--ha-ok-bg)}
+.ha-banner--bad .ha-banner-ic .ha-ic{color:var(--ha-bad-bg)}
+.ha-banner-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
+.ha-banner-tx b{font-size:20px;font-weight:800;line-height:1.2}
+.ha-banner-tx span{font-size:18px;line-height:1.3;overflow-wrap:anywhere}
+.ha-banner-flag{flex:none;width:44px;height:44px;border:0;padding:0;background:transparent;color:inherit;opacity:.75;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ha-banner-flag:active{transform:scale(.9)}
+.ha-banner-flag .ha-ic{width:22px;height:22px}
+
+/* 15 · прогресс-бар урока */
+.ha-pb{position:relative;height:16px}
+.ha-pb-track{position:absolute;left:0;top:0;right:0;bottom:0;border-radius:8px;background:var(--ha-line);overflow:hidden}
+.ha-pb-fill{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:8px;overflow:hidden;transform:translateX(-100%);transition:transform .45s var(--ha-out)}
+.ha-pb-fill i{position:absolute;left:0;top:0;width:100%;height:100%;transition:opacity .4s}
+.ha-pb-fill::after{content:"";position:absolute;left:8px;right:8px;top:3px;height:4px;border-radius:2px;background:rgba(255,255,255,.32)}
+.ha-pb-c1{background:var(--ha-green)}
+.ha-pb-c2{background:var(--ha-yellow);opacity:0}
+.ha-pb-c3{background:linear-gradient(90deg,#3cae5c,#2fc7c0 55%,#6fe6d6);opacity:0}
+.ha-pb--hot .ha-pb-c2,.ha-pb--max .ha-pb-c3{opacity:1}
+.ha-pb-fill .ha-pb-shine{background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);opacity:0;transition:none}
+.ha-pb--run .ha-pb-shine{animation:ha-shine .9s ease-out}
+@keyframes ha-shine{from{transform:translateX(-100%);opacity:1}to{transform:translateX(100%);opacity:1}}
+.ha-pb-label{position:absolute;bottom:calc(100% + 6px);font:800 13px/1 var(--ha-font);letter-spacing:.5px;color:var(--ha-orange);white-space:nowrap;pointer-events:none;animation:ha-label 1.1s var(--ha-out) both}
+@keyframes ha-label{0%{transform:translate(-50%,10px) scale(.6);opacity:0}18%{transform:translate(-50%,0) scale(1.15);opacity:1}30%{transform:translate(-50%,0) scale(1);opacity:1}80%{transform:translate(-50%,-4px) scale(1);opacity:1}100%{transform:translate(-50%,-12px) scale(1);opacity:0}}
+
+/* 18 · блиц: таймер-кольцо */
+.ha-blitz{position:relative;width:64px;height:64px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--ha-font)}
+.ha-blitz svg{position:absolute;left:0;top:0;width:100%;height:100%}
+.ha-blitz circle{fill:none;stroke-width:7}
+.ha-blitz-bg{stroke:var(--ha-line)}
+.ha-blitz-arc{stroke:var(--ha-blue);stroke-linecap:round}
+.ha-blitz b{position:relative;font-size:22px;font-weight:800;color:var(--ha-text)}
+.ha-blitz--hurry{animation:ha-hurry .5s ease-in-out infinite}
+.ha-blitz--hurry .ha-blitz-arc{stroke:var(--ha-red)}
+.ha-blitz--hurry b{color:var(--ha-red)}
+@keyframes ha-hurry{50%{transform:scale(1.13)}}
+
+/* 19 · огонь-комбо */
+.ha-combo{--ha-fl:#ff8a35;--ha-fl2:#ffcf3f}
+.ha-combo--10{--ha-fl:#f0503a;--ha-fl2:#ffb23f}
+.ha-combo--15{--ha-fl:#7a5ce0;--ha-fl2:#cdbdff}
+.ha-combo-flash{position:absolute;left:-20px;top:-20px;right:-20px;bottom:-20px;background:radial-gradient(circle at 50% 44%,var(--ha-fl),transparent 68%);opacity:0}
+.ha-combo-fl{width:150px;position:relative}
+.ha-combo-fl .ha-flame,.ha-bigfl-f .ha-flame{width:100%;transform-origin:50% 100%;animation:ha-flick .5s ease-in-out infinite alternate}
+@keyframes ha-flick{from{transform:scale(1,1) rotate(-1.5deg)}to{transform:scale(1.04,1.08) rotate(1.5deg)}}
+.ha-combo-num,.ha-combo-tx{position:relative;font-weight:900;line-height:1;color:var(--ha-fl);text-shadow:0 3px 0 var(--ha-bg),0 -3px 0 var(--ha-bg),3px 0 0 var(--ha-bg),-3px 0 0 var(--ha-bg),2px 2px 0 var(--ha-bg),-2px 2px 0 var(--ha-bg),2px -2px 0 var(--ha-bg),-2px -2px 0 var(--ha-bg)}
+.ha-combo-num{font-size:68px;margin-top:-8px}
+.ha-combo-tx{font-size:22px;letter-spacing:1px}
+.ha-combo-bird{position:absolute;right:4px;bottom:76px;--ha-m-size:104px}
+
+/* 20 · конец урока */
+.ha-end1-bird{--ha-m-size:230px;margin-top:70px}
+.ha-end2-bird{--ha-m-size:120px}
+.ha-cards{display:flex;gap:10px;width:100%;margin-top:8px}
+.ha-card{flex:1;min-width:0;border-radius:16px;padding:3px;background:var(--c);opacity:0}
+.ha-card.ha-on{opacity:1}
+.ha-card>span{display:block;font-size:12px;font-weight:800;color:#fff;padding:5px 2px 6px;white-space:nowrap}
+.ha-card-v{background:var(--ha-bg);border-radius:13px;padding:12px 4px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:20px;font-weight:800;color:var(--c)}
+.ha-card-v svg{width:20px;height:auto;flex:none}
+.ha-card--xp{--c:#eda413} .ha-card--st{--c:var(--ha-orange)} .ha-card--time{--c:var(--ha-blue)} .ha-card--acc{--c:var(--ha-green)}
+
+/* 21 · идеальный урок */
+.ha-perfect-star{position:relative;width:150px}
+.ha-perfect-star svg{position:relative;width:100%}
+.ha-perfect .ha-rays{opacity:1}
+.ha-perfect-xp{display:flex;align-items:center;gap:10px;font-size:46px;font-weight:900;line-height:1;color:var(--ha-yellow)}
+.ha-perfect-xp b{display:inline-block}
+.ha-perfect-xp i{font-style:normal;font-size:26px;background:var(--ha-orange);color:#fff;border-radius:12px;padding:6px 10px;opacity:0}
+
+/* 22–23 · узел дорожки, замок */
+.ha-node-cur{animation:ha-node 1.8s ease-in-out infinite}
+@keyframes ha-node{50%{transform:scale(1.06)}}
+.ha-node-cur::after{content:"";position:absolute;left:-9px;top:-9px;right:-9px;bottom:-9px;border-radius:50%;border:3px solid var(--ha-blue);opacity:0;pointer-events:none;animation:ha-ping 1.8s ease-out infinite}
+@keyframes ha-ping{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.4);opacity:0}}
+.ha-node-ring{position:absolute;left:-9px;top:-9px;right:-9px;bottom:-9px;pointer-events:none}
+.ha-node-ring svg{display:block;width:100%;height:100%}
+.ha-node-ring circle{fill:none;stroke-width:6}
+.ha-ring-bg{stroke:var(--ha-line)}
+.ha-ring-arc{stroke:var(--ha-yellow);stroke-linecap:round;transition:stroke-dashoffset .6s var(--ha-out)}
+.ha-lock{position:fixed;width:34px;margin:-20px 0 0 -17px;pointer-events:none}
+.ha-lock svg{display:block;width:100%;overflow:visible}
+.ha-lock--shake{animation:ha-lockshake .52s ease-in-out}
+@keyframes ha-lockshake{0%,100%{transform:rotate(0)}20%{transform:rotate(-16deg)}40%{transform:rotate(14deg)}60%{transform:rotate(-10deg)}80%{transform:rotate(8deg)}}
+.ha-lock--break .ha-lock-sh{animation:ha-lock-sh .5s var(--ha-out) forwards}
+.ha-lock--break .ha-lock-b{animation:ha-lock-b .5s ease-in forwards}
+@keyframes ha-lock-sh{to{transform:translate(12px,-42px) rotate(40deg);opacity:0}}
+@keyframes ha-lock-b{to{transform:translate(-6px,48px) rotate(-25deg);opacity:0}}
+
+/* 24 · сундук · 37 · подарок */
+.ha-chest-box,.ha-qend-box{position:relative;width:170px}
+.ha-chest-svg,.ha-gift-svg{position:relative;display:block;width:100%;overflow:visible}
+.ha-chest-glow{opacity:0;transition:opacity .3s}
+.ha-chest-lid{transition:transform .45s var(--ha-spring)}
+.ha-open .ha-chest-lid{transform:rotate(-32deg) translateY(-6px)}
+.ha-open .ha-chest-glow{opacity:.9}
+.ha-gift-lid{transition:transform .55s var(--ha-out),opacity .3s .25s}
+.ha-open .ha-gift-lid{transform:translate(34px,-70px) rotate(38deg);opacity:0}
+.ha-hop{animation:ha-hop .45s ease-in-out 2}
+@keyframes ha-hop{0%,100%{transform:translateY(0) rotate(0) scale(1,1)}20%{transform:translateY(0) rotate(0) scale(1.08,.9)}55%{transform:translateY(-22px) rotate(-4deg) scale(1,1)}85%{transform:translateY(0) rotate(0) scale(1.05,.94)}}
+.ha-rewards{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;min-height:88px}
+.ha-reward{background:var(--ha-bg);color:var(--ha-text);border-radius:16px;padding:10px 14px;min-width:100px;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0}
+.ha-reward.ha-on{opacity:1}
+.ha-reward span{font-size:32px;line-height:1.1}
+.ha-reward b{font-size:14px}
+.ha-qend-stars{display:flex;gap:8px;align-items:flex-end}
+.ha-qend-stars svg{width:54px;opacity:0}
+.ha-qend-stars svg:nth-child(2){width:68px;margin-bottom:8px}
+.ha-qend-next{background:var(--ha-green);color:#fff;font-weight:800;font-size:16px;border-radius:14px;padding:10px 16px;opacity:0;transform:translateY(20px) scale(.8);transition:transform .45s var(--ha-spring),opacity .2s}
+.ha-qend-next.ha-on{opacity:1;transform:none}
+
+/* 25 · медаль */
+.ha-medal-box{position:relative;width:150px;perspective:600px}
+.ha-medal-m{position:relative;will-change:transform}
+.ha-medal-svg{display:block;width:100%}
+.ha-medal-bird{--ha-m-size:100px}
+
+/* 26 · главный экран: небо */
+.ha-sky{position:absolute;left:0;top:0;right:0;bottom:0;overflow:hidden;pointer-events:none;border-radius:inherit}
+.ha-sun{position:absolute;right:22px;top:16px;width:46px;height:46px;border-radius:50%;background:var(--ha-yellow);animation:ha-sun 6s ease-in-out infinite}
+.ha-sun::after{content:"";position:absolute;left:-12px;top:-12px;right:-12px;bottom:-12px;border-radius:50%;background:var(--ha-yellow);opacity:.25}
+@keyframes ha-sun{50%{transform:scale(1.08)}}
+.ha-cloud{position:absolute;left:0;top:26px;width:70px;height:22px;border-radius:11px;background:var(--ha-cloud);opacity:.9;animation:ha-cloud 46s linear infinite}
+.ha-cloud::before,.ha-cloud::after{content:"";position:absolute;border-radius:50%;background:inherit}
+.ha-cloud::before{left:12px;top:-13px;width:30px;height:30px}
+.ha-cloud::after{left:36px;top:-7px;width:22px;height:22px}
+.ha-cloud--2{top:74px;width:54px;animation-duration:64s;animation-delay:-30s;opacity:.7}
+.ha-cloud--3{top:112px;animation-duration:82s;animation-delay:-58s;opacity:.55}
+@keyframes ha-cloud{from{transform:translateX(-90px)}to{transform:translateX(105vw)}}
+
+/* 27 · счётчик-табло */
+.ha-flip-d{display:inline-block;position:relative;overflow:hidden;vertical-align:bottom;white-space:pre}
+.ha-flip-ch>span{display:inline-block}
+.ha-flip-old{position:absolute;left:0;top:0}
+
+/* 28–32 · серия */
+.ha-bigfl{position:relative;width:150px}
+.ha-bigfl-n{position:absolute;left:0;right:0;bottom:16px;text-align:center;font-size:54px;font-weight:900;line-height:1;color:#fff;text-shadow:0 3px 0 #c75a10,0 -2px 0 #c75a10,2px 0 0 #c75a10,-2px 0 0 #c75a10,2px 2px 0 #c75a10,-2px 2px 0 #c75a10}
+.ha-bigfl--shiver{animation:ha-shiver .22s linear infinite}
+.ha-bigfl--shiver .ha-bigfl-f{opacity:.7}
+@keyframes ha-shiver{0%,100%{transform:translateX(-2px) rotate(-1.5deg)}50%{transform:translateX(2px) rotate(1.5deg)}}
+.ha-week{display:flex;gap:8px;margin-top:6px}
+.ha-day{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--ha-muted)}
+.ha-day i{width:30px;height:30px;border-radius:50%;background:var(--ha-line);color:transparent;display:flex;align-items:center;justify-content:center}
+.ha-day i .ha-ic{width:18px;height:18px}
+.ha-day.ha-on i{background:var(--ha-orange);color:#fff}
+.ha-streak-bird{--ha-m-size:110px}
+.ha-freeze-box{position:relative;width:150px}
+.ha-freeze-ice{position:absolute;left:-12%;top:-8%;width:124%;opacity:0}
+.ha-freeze-ice svg{width:100%}
+.ha-freeze .ha-bigfl-f{transition:opacity .5s}
+.ha-freeze.ha-open .ha-bigfl-f{opacity:.85}
+.ha-freeze.ha-open .ha-flame{animation-play-state:paused}
+.ha-frost{position:absolute;opacity:0;transition:opacity .8s;pointer-events:none}
+.ha-open .ha-frost{opacity:.9}
+.theme-dark .ha-open .ha-frost,[data-theme="dark"] .ha-open .ha-frost{opacity:.3}
+.ha-frost--t{left:0;right:0;top:0;height:90px;background:linear-gradient(#bfe6ff,rgba(191,230,255,0))}
+.ha-frost--b{left:0;right:0;bottom:0;height:90px;background:linear-gradient(0deg,#bfe6ff,rgba(191,230,255,0))}
+.ha-frost--l{left:0;top:0;bottom:0;width:46px;background:linear-gradient(90deg,#bfe6ff,rgba(191,230,255,0))}
+.ha-frost--r{right:0;top:0;bottom:0;width:46px;background:linear-gradient(270deg,#bfe6ff,rgba(191,230,255,0))}
+.ha-risk-row{display:flex;align-items:flex-end;justify-content:center;gap:6px}
+.ha-risk .ha-bigfl{width:92px}
+.ha-risk .ha-bigfl-n{font-size:34px;bottom:10px}
+.ha-risk-bird{--ha-m-size:108px}
+.ha-alarm-row{display:flex;align-items:flex-end;justify-content:center;gap:4px}
+.ha-alarm-ph{position:relative;width:96px;animation:ha-buzz 1.6s ease-in-out infinite}
+.ha-phone-svg{position:relative;display:block;width:100%}
+@keyframes ha-buzz{0%,40%,100%{transform:rotate(0)}5%,15%,25%,35%{transform:rotate(-7deg)}10%,20%,30%{transform:rotate(7deg)}}
+.ha-ring-w{position:absolute;left:50%;top:44%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:3px solid var(--ha-yellow);opacity:0;animation:ha-ping 1.6s ease-out infinite}
+.ha-ring-w--2{animation-delay:.5s}
+.ha-alarm-bird{--ha-m-size:130px}
+.ha-gift-row{display:flex;align-items:center;justify-content:center;gap:16px;width:100%;padding:4px 0}
+.ha-gift-me,.ha-gift-fr{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:14px;font-weight:700;color:var(--ha-muted)}
+.ha-gift-me svg{width:52px;transition:opacity .2s,transform .2s}
+.ha-gift-me.ha-sent svg{opacity:.3;transform:scale(.8)}
+.ha-gift-ava{width:68px;height:68px;border-radius:50%;background:#dfe9f5;overflow:hidden}
+.ha-ava{display:block;width:100%;height:100%}
+.ha-gift-arrow{display:flex;gap:6px}
+.ha-gift-arrow i{width:8px;height:8px;border-radius:50%;background:var(--ha-blue);animation:ha-dotrun 1s ease-in-out infinite}
+.ha-gift-arrow i:nth-child(2){animation-delay:.15s}
+.ha-gift-arrow i:nth-child(3){animation-delay:.3s}
+@keyframes ha-dotrun{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
+
+/* 33 · двери */
+.ha-doors-host{overflow:hidden}
+.ha-door{position:absolute;top:0;bottom:0;width:50%;z-index:3;background:linear-gradient(90deg,#8a5a34,#a8703f)}
+.ha-door--l{left:0;border-right:2px solid #6b4424}
+.ha-door--r{right:0;border-left:2px solid #6b4424;background:linear-gradient(270deg,#8a5a34,#a8703f)}
+.ha-door::before{content:"";position:absolute;left:18%;right:18%;top:12%;height:40%;border-radius:10px;background:rgba(255,255,255,.24)}
+.ha-door::after{content:"";position:absolute;top:58%;width:8px;height:34px;border-radius:4px;background:var(--ha-yellow)}
+.ha-door--l::after{right:10px} .ha-door--r::after{left:10px}
+
+/* 34, 41 · облачко речи и подсказка */
+.ha-bubble{position:fixed;background:#fff;color:#1f2733;border-radius:18px;padding:10px 14px;font:600 16px/1.3 var(--ha-font);box-shadow:0 0 0 2px #dde3ec;pointer-events:none;box-sizing:border-box}
+.ha-bubble span{position:relative;z-index:1;display:block}
+.ha-bubble::after{content:"";position:absolute;left:var(--ha-tail,50%);width:14px;height:14px;margin-left:-7px;background:inherit;transform:rotate(45deg)}
+.ha-bubble--above::after{bottom:-6px;box-shadow:2px 2px 0 #dde3ec}
+.ha-bubble--below::after{top:-6px;box-shadow:-2px -2px 0 #dde3ec}
+.ha-bubble--tip{background:var(--ha-violet);color:#fff;box-shadow:none}
+.ha-bubble--tip::after{box-shadow:none}
+
+/* 36 · голос */
+.ha-rec{animation:ha-recpulse 1s ease-in-out infinite}
+@keyframes ha-recpulse{50%{transform:scale(1.08)}}
+.ha-rec::before{content:"";position:absolute;left:0;top:0;right:0;bottom:0;border-radius:inherit;border:3px solid var(--ha-red);pointer-events:none;animation:ha-ping 1s ease-out infinite}
+.ha-wave{position:absolute;left:50%;bottom:calc(100% + 10px);margin-left:-21px;display:flex;gap:4px;align-items:center;height:30px;pointer-events:none}
+.ha-wave i{width:5px;height:28px;border-radius:3px;background:var(--ha-red);transform:scaleY(.2);animation:ha-wave .5s ease-in-out infinite alternate}
+.ha-wave i:nth-child(1){animation-delay:-.1s} .ha-wave i:nth-child(2){animation-delay:-.35s} .ha-wave i:nth-child(3){animation-delay:-.2s} .ha-wave i:nth-child(4){animation-delay:-.45s} .ha-wave i:nth-child(5){animation-delay:-.05s}
+@keyframes ha-wave{from{transform:scaleY(.2)}to{transform:scaleY(1)}}
+.ha-typing::after{content:"";display:inline-block;width:2px;height:1em;margin:0 2px;background:currentColor;vertical-align:-2px;animation:ha-caret .6s steps(1) infinite}
+@keyframes ha-caret{50%{opacity:0}}
+
+/* 38 · звонок и переписка */
+.ha-ringer{position:fixed;left:50%;top:50%;width:84px;margin:-72px 0 0 -42px;z-index:9200;pointer-events:none;opacity:0}
+.ha-ringer--on{animation:ha-ringer .9s ease-in-out}
+@keyframes ha-ringer{0%{transform:scale(.4) rotate(0);opacity:0}15%,90%{transform:scale(1) rotate(0);opacity:1}25%,45%,65%{transform:scale(1) rotate(-9deg);opacity:1}35%,55%,75%{transform:scale(1) rotate(9deg);opacity:1}100%{transform:scale(1.6) rotate(0);opacity:0}}
+.ha-call{background:linear-gradient(#2a3f5c,#16202e);color:#fff;transform:translateY(30px);transition:opacity .2s ease,transform .3s var(--ha-out)}
+.ha-call.ha-in{transform:none}
+.ha-call .ha-ov-body{justify-content:space-between;padding:50px 0 30px}
+.ha-call-top{display:flex;flex-direction:column;align-items:center;gap:10px}
+.ha-call-ava{position:relative;width:120px;height:120px;border-radius:50%;background:#dfe9f5}
+.ha-call-ava .ha-ava{position:relative;border-radius:50%}
+.ha-call-ava i{position:absolute;left:0;top:0;right:0;bottom:0;border-radius:50%;border:3px solid #fff;opacity:0;animation:ha-ping 1.8s ease-out infinite}
+.ha-call-ava i+i{animation-delay:.9s}
+.ha-call .ha-sub{color:rgba(255,255,255,.78)}
+.ha-call-btns{display:flex;justify-content:space-around;width:100%;max-width:300px}
+.ha-call-b{width:68px;height:68px;padding:0;border-radius:50%;border:0;color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.3);-webkit-tap-highlight-color:transparent}
+.ha-call-b:active{transform:translateY(4px);box-shadow:none}
+.ha-call-b--yes{background:var(--ha-green);animation:ha-callyes 1.1s ease-in-out infinite}
+.ha-call-b--no{background:var(--ha-red)}
+.ha-call-b--no .ha-ic{transform:rotate(135deg)}
+@keyframes ha-callyes{0%,70%,100%{transform:rotate(0) scale(1)}15%,45%{transform:rotate(-12deg) scale(1.08)}30%,60%{transform:rotate(12deg) scale(1.08)}}
+.ha-chat{padding:0 0 calc(16px + env(safe-area-inset-bottom,0px));background:var(--ha-card);gap:0}
+.ha-chat .ha-ov-body{justify-content:flex-start;align-items:stretch;gap:0;max-width:none}
+.ha-chat-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--ha-bg);border-bottom:1px solid var(--ha-line);text-align:left}
+.ha-chat-ava{flex:none;width:40px;height:40px;border-radius:50%;overflow:hidden;background:#dfe9f5}
+.ha-chat-head b{font-size:17px}
+.ha-chat-st{margin-left:auto;font-size:13px;color:var(--ha-blue)}
+.ha-chat-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px 12px}
+.ha-msg{align-self:flex-start;max-width:80%;background:var(--ha-bg);color:var(--ha-text);border-radius:18px 18px 18px 6px;padding:9px 13px;font-size:16px;line-height:1.3;text-align:left;transform-origin:0 100%}
+.ha-msg--me{align-self:flex-end;background:var(--ha-blue);color:#fff;border-radius:18px 18px 6px 18px;transform-origin:100% 100%}
+.ha-msg--typing{padding:13px 14px;color:var(--ha-muted)}
+.ha-msg--typing .ha-dots{margin:0}
+.ha-chat>.ha-btn{width:calc(100% - 32px)}
+
+/* 41 · тосты */
+.ha-toast{position:fixed;left:50%;z-index:9500;width:max-content;max-width:calc(100vw - 32px);background:#2b2733;color:#fff;border-radius:16px;padding:12px 16px;font:600 15px/1.3 var(--ha-font);display:flex;gap:8px;align-items:center;opacity:0;pointer-events:none;box-sizing:border-box;transition:transform .25s ease-in,opacity .2s}
+.theme-dark .ha-toast,[data-theme="dark"] .ha-toast{background:#eef2f7;color:#1f2733}
+.ha-toast i{font-style:normal;font-size:20px;line-height:1}
+.ha-toast--top{top:calc(12px + env(safe-area-inset-top,0px));transform:translate(-50%,-150%)}
+.ha-toast--bottom{bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,150%)}
+.ha-toast.ha-in{opacity:1;transform:translate(-50%,0);transition:transform .42s var(--ha-spring),opacity .15s}
+
+/* 42 · загрузка */
+.ha-load{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;overflow:hidden;font-family:var(--ha-font)}
+.ha-load-bird{--ha-m-size:120px}
+.ha-load-ground{position:relative;width:180px;height:6px;overflow:hidden}
+.ha-load-ground i{position:absolute;left:0;top:1px;width:26px;height:4px;border-radius:2px;background:var(--ha-line);animation:ha-ground .7s linear infinite}
+.ha-load-ground i:nth-child(2){animation-delay:-.175s} .ha-load-ground i:nth-child(3){animation-delay:-.35s} .ha-load-ground i:nth-child(4){animation-delay:-.525s}
+@keyframes ha-ground{from{transform:translateX(190px)}to{transform:translateX(-30px)}}
+
+/* ═════════ УМЕНЬШЕНИЕ ДВИЖЕНИЯ ═════════
+   Класс ha-rm ставит anim.js (сам по prefers-reduced-motion или HAnim.setReduced(true)).
+   Полёты и прыжки выключены, остаётся короткое проявление. */
+.ha-rm [class*="ha-"],.ha-rm [class*="ha-"]::before,.ha-rm [class*="ha-"]::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important}
+.ha-rm .ha-ov,.ha-rm .ha-toast,.ha-rm .ha-banner{transition:opacity .15s linear!important}
+.ha-rm .ha-banner{transform:none;opacity:0}
+.ha-rm .ha-banner.ha-in{opacity:1}
+.ha-rm .ha-toast{transform:translate(-50%,0)}
+.ha-rm .ha-m-zzz text,.ha-rm .ha-m-dot{opacity:1!important}
