@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hirbis · витрина анимаций</title>
+<link rel="stylesheet" href="anim.css">
+<style>
+  /* стили только для витрины (d-…). В приложение их переносить не нужно. */
+  :root{--bg:#f3f6fa;--panel:#fff;--text:#1f2733;--muted:#677283;--line:#dde3ec;--sky:#cfe8fb}
+  body.theme-dark{--bg:#0f141b;--panel:#1a222d;--text:#eef2f7;--muted:#9aa6b6;--line:#34414f;--sky:#1d3147}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;padding-bottom:60px}
+  .d-top{position:sticky;top:0;z-index:50;background:var(--panel);border-bottom:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px}
+  .d-top h1{font-size:15px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .d-cnt{display:flex;align-items:center;gap:4px;font-weight:800;font-size:16px;padding:4px 8px;border-radius:12px;background:var(--bg)}
+  .d-cnt svg{width:16px;height:auto}
+  .d-cnt--fire{color:#ff8a35} .d-cnt--xp{color:#d99400}
+  .d-tools{display:flex;gap:8px;padding:8px 12px;align-items:center;flex-wrap:wrap}
+  .d-tog{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:8px 10px;font:600 13px/1 inherit;cursor:pointer}
+  .d-tog[aria-pressed="true"]{background:#3a8ad6;border-color:#3a8ad6;color:#fff}
+  .d-peak{margin-left:auto;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;min-width:0}
+  .d-peak i{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none}
+  .d-peak.on i{background:#ff8a35}
+  .d-peak span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+  section.d-sec{margin:12px;background:var(--panel);border-radius:18px;padding:14px 12px;border:1px solid var(--line)}
+  .d-sec h2{font-size:17px;margin:0 0 4px}
+  .d-sec p{margin:0 0 10px;color:var(--muted);font-size:13px}
+  .d-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 8px;margin-top:10px}
+  .d-grid--3{grid-template-columns:1fr 1fr 1fr}
+  .d-b{-webkit-appearance:none;appearance:none;border:2px solid var(--line);border-bottom-width:4px;background:var(--panel);color:var(--text);border-radius:14px;padding:9px 6px;min-height:46px;font:700 13px/1.15 inherit;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .d-b:active{transform:translateY(2px);border-bottom-width:2px;margin-bottom:2px}
+  .d-b small{display:block;font-weight:600;color:var(--muted);font-size:11px;margin-bottom:2px}
+  .d-wide{grid-column:1/-1}
+  .d-stage{position:relative;height:210px;border-radius:16px;background:var(--sky);display:flex;align-items:flex-end;justify-content:center;overflow:hidden;padding-bottom:10px}
+  .d-stage .d-ground{position:absolute;left:0;right:0;bottom:0;height:26px;background:#e9c98f}
+  body.theme-dark .d-stage .d-ground{background:#4b3d2a}
+  #bird{position:relative;--ha-m-size:150px}
+  .d-q{font-weight:800;font-size:17px;margin:14px 0 10px}
+  .d-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .d-opt{-webkit-appearance:none;appearance:none;border:2px solid var(--line);box-shadow:0 4px 0 var(--line);background:var(--panel);color:var(--text);border-radius:16px;min-height:56px;font:700 22px/1.2 inherit;cursor:pointer;padding:8px 30px;-webkit-tap-highlight-color:transparent}
+  .d-opt:active{transform:translateY(4px);box-shadow:none}
+  .d-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+  .d-tile{-webkit-appearance:none;appearance:none;border:2px solid var(--line);box-shadow:0 4px 0 var(--line);background:var(--panel);color:var(--text);border-radius:14px;min-height:46px;font:700 17px/1.2 inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .d-row{min-height:54px;border-bottom:2px solid var(--line);display:flex;flex-wrap:wrap;gap:6px;padding:6px 0;direction:rtl;align-items:center}
+  .d-bank{min-height:54px;display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 0;direction:rtl}
+  .d-chip{-webkit-appearance:none;appearance:none;border:2px solid var(--line);box-shadow:0 3px 0 var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:6px 12px;font:700 20px/1.2 inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .d-line{display:flex;align-items:center;gap:12px;margin-top:12px}
+  .d-h3{font-weight:800;font-size:13px;color:var(--muted);margin:16px 0 6px;text-transform:uppercase;letter-spacing:.4px}
+  .d-path{display:flex;justify-content:space-around;align-items:center;padding:22px 0 16px}
+  .d-node{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#fff;background:#3cae5c;box-shadow:0 5px 0 #2c8a46}
+  .d-node--cur{background:#3a8ad6;box-shadow:0 5px 0 #2b6fb3;font-size:13px}
+  .d-node.ha-locked{background:var(--line);box-shadow:0 5px 0 #b9c2cf;color:transparent}
+  .d-node.ha-unlocked{background:#ff8a35;box-shadow:0 5px 0 #d96c1c}
+  .d-home{position:relative;height:170px;border-radius:16px;background:var(--sky);display:flex;align-items:flex-end;gap:6px;padding:0 12px 10px;overflow:hidden}
+  .d-home b{position:relative;font-size:18px;padding-bottom:26px}
+  #homeBird{position:relative;--ha-m-size:120px}
+  .d-scene{position:relative;height:200px;border-radius:16px;background:#f6e7cf;overflow:hidden}
+  body.theme-dark .d-scene{background:#3a3226}
+  .d-room{position:absolute;left:0;top:0;right:0;bottom:0}
+  .d-room::before{content:"";position:absolute;left:0;right:0;bottom:0;height:46px;background:#d9b98a}
+  body.theme-dark .d-room::before{background:#2a2419}
+  .d-shelf{position:absolute;left:14px;top:26px;width:150px;display:flex;justify-content:space-around;border-bottom:8px solid #a8703f;padding-bottom:2px}
+  .d-item{position:relative;-webkit-appearance:none;appearance:none;border:0;background:transparent;font-size:32px;line-height:1;padding:4px;cursor:pointer;width:44px;height:44px;-webkit-tap-highlight-color:transparent}
+  .d-item .ha-check{right:-4px;top:auto;bottom:-2px;margin:0;width:18px;height:18px;background:#3cae5c;color:#fff}
+  .d-item .ha-check .ha-ic{width:12px;height:12px}
+  .d-host{position:absolute;right:26px;bottom:30px;width:74px;height:74px;border-radius:50%;background:#dfe9f5;overflow:hidden}
+  .d-basket{position:absolute;left:18px;bottom:8px;background:var(--panel);color:var(--text);border-radius:12px;padding:6px 10px;font-weight:800;font-size:15px}
+  .d-voice{display:flex;align-items:center;gap:14px;margin-top:38px;min-height:60px}
+  .d-mic{flex:none;width:60px;height:60px;border-radius:50%;border:0;background:#e5484d;box-shadow:0 4px 0 #bd3338;color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .d-said{font-size:22px;font-weight:700;min-height:30px;direction:rtl;flex:1;text-align:right}
+  .d-screens{position:relative;height:90px;border-radius:14px;background:var(--bg);overflow:hidden}
+  .d-screen{position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
+  .d-loadbox{border-radius:14px;background:var(--bg);min-height:40px;margin-top:8px}
+  .d-note{font-size:12px;color:var(--muted);margin:10px 12px}
+</style>
+</head>
+<body>
+
+<div class="d-top">
+  <h1>Hirbis · анимации</h1>
+  <div class="d-cnt d-cnt--fire" id="fireBox"><span id="fireIc"></span><span id="cStreak">7</span></div>
+  <div class="d-cnt d-cnt--xp" id="xpBox"><span id="xpIc"></span><span id="cXp">120</span></div>
+</div>
+<div class="d-tools">
+  <button class="d-tog" id="tTheme" aria-pressed="false">Тёмная тема</button>
+  <button class="d-tog" id="tRm" aria-pressed="false">Меньше движения</button>
+  <div class="d-peak" id="peak"><i></i><span>peak: —</span></div>
+</div>
+
+<!-- ───────── A ───────── -->
+<section class="d-sec">
+  <h2>A · Маскот Хибри</h2>
+  <p>HAnim.mascot(el, mood). Он сам моргает раз в 3–5 секунд и иногда поворачивает голову.</p>
+  <div class="d-stage"><div class="d-ground"></div><div id="bird"></div></div>
+  <div class="d-grid d-grid--3" id="moods"></div>
+</section>
+
+<!-- ───────── B ───────── -->
+<section class="d-sec">
+  <h2>B · Урок</h2>
+  <p>Нажимай ответы сами — «спасибо» это תּוֹדָה. Полоска растёт, считает серию и меняет цвет.</p>
+  <div id="pb"></div>
+  <div class="d-q">Как сказать «спасибо»?</div>
+  <div class="d-opts" id="opts">
+    <button class="d-opt" data-ok="1" dir="rtl">תּוֹדָה</button>
+    <button class="d-opt" dir="rtl">שָׁלוֹם</button>
+    <button class="d-opt" dir="rtl">כֵּן</button>
+    <button class="d-opt" dir="rtl">לֹא</button>
+  </div>
+  <div class="d-grid">
+    <button class="d-b" data-run="correct"><small>12</small>Правильно</button>
+    <button class="d-b" data-run="wrong"><small>13</small>Ошибка</button>
+    <button class="d-b" data-run="bannerOk"><small>14</small>Плашка «верно»</button>
+    <button class="d-b" data-run="bannerBad"><small>14</small>Плашка «ошибка»</button>
+    <button class="d-b" data-run="progress"><small>15</small>Прогресс +1 подряд</button>
+    <button class="d-b" data-run="progressReset"><small>15</small>Сбросить полоску</button>
+  </div>
+
+  <div class="d-h3">16 · Найди пары (нажимай плитки)</div>
+  <div class="d-tiles" id="tiles"></div>
+  <div class="d-grid">
+    <button class="d-b" data-run="pairMatch"><small>16</small>Пара совпала</button>
+    <button class="d-b" data-run="pairWrong"><small>16</small>Пара — ошибка</button>
+  </div>
+
+  <div class="d-h3">17 · Собери фразу (нажимай слова)</div>
+  <div class="d-row" id="row"></div>
+  <div class="d-bank" id="bank"></div>
+  <div class="d-grid"><button class="d-b d-wide" data-run="chips"><small>17</small>Собрать и разобрать автоматически</button></div>
+
+  <div class="d-h3">18 · Блиц</div>
+  <div class="d-line"><div id="blitz"></div>
+    <button class="d-b" style="flex:1" data-run="blitz"><small>18</small>Таймер 8 секунд</button></div>
+
+  <div class="d-grid d-grid--3">
+    <button class="d-b" data-run="combo5"><small>19</small>Огонь 5х</button>
+    <button class="d-b" data-run="combo10"><small>19</small>Огонь 10х</button>
+    <button class="d-b" data-run="combo15"><small>19</small>Огонь 15х</button>
+  </div>
+  <div class="d-grid">
+    <button class="d-b" data-run="lessonEnd"><small>20</small>Конец урока</button>
+    <button class="d-b" data-run="perfect"><small>21</small>Идеальный урок ★</button>
+  </div>
+</section>
+
+<!-- ───────── C ───────── -->
+<section class="d-sec">
+  <h2>C · Дорожка и главная</h2>
+  <div class="d-path">
+    <div class="d-node">✓</div>
+    <div class="d-node d-node--cur" id="nodeCur">Старт</div>
+    <div class="d-node ha-locked" id="nodeLock">3</div>
+  </div>
+  <div class="d-grid">
+    <button class="d-b" data-run="node"><small>22</small>Узел: кольцо +25%</button>
+    <button class="d-b" data-run="unlock"><small>23</small>Открыть новый урок</button>
+    <button class="d-b" data-run="chest"><small>24</small>Сундук</button>
+    <button class="d-b" data-run="medalGold"><small>25</small>Медаль 🥇</button>
+    <button class="d-b" data-run="medalSilver"><small>25</small>Медаль 🥈</button>
+    <button class="d-b" data-run="medalBronze"><small>25</small>Медаль 🥉</button>
+  </div>
+  <div class="d-h3">26 · Главный экран</div>
+  <div class="d-home" id="home"><div id="homeBird"></div><b>Шалом!</b></div>
+  <div class="d-grid">
+    <button class="d-b" data-run="home"><small>26</small>Хибри здоровается</button>
+    <button class="d-b" data-run="flipFire"><small>27</small>Серия +1 (табло)</button>
+    <button class="d-b d-wide" data-run="flipXp"><small>27</small>Очки +40 (табло)</button>
+  </div>
+</section>
+
+<!-- ───────── D ───────── -->
+<section class="d-sec">
+  <h2>D · Серия и мотивация</h2>
+  <div class="d-grid">
+    <button class="d-b" data-run="streak"><small>28</small>Серия продлена</button>
+    <button class="d-b" data-run="streakFirst"><small>28</small>«Вы начали серию!»</button>
+    <button class="d-b" data-run="freeze"><small>29</small>Заморозка использована</button>
+    <button class="d-b" data-run="risk"><small>30</small>Серия под угрозой</button>
+    <button class="d-b" data-run="alarm"><small>31</small>Напоминание-будильник</button>
+    <button class="d-b" data-run="gift"><small>32</small>Помочь другу</button>
+  </div>
+</section>
+
+<!-- ───────── E ───────── -->
+<section class="d-sec">
+  <h2>E · Квесты</h2>
+  <p>Нажимай продукты — они летят в корзину.</p>
+  <div class="d-scene" id="scene">
+    <div class="d-room" id="room">
+      <div class="d-shelf">
+        <button class="d-item">🥙</button><button class="d-item">🍅</button><button class="d-item">🧃</button>
+      </div>
+      <div class="d-host" id="host"></div>
+      <div class="d-basket" id="basket">🧺 <span id="basketN">0</span></div>
+    </div>
+  </div>
+  <div class="d-grid">
+    <button class="d-b" data-run="doors"><small>33</small>Двери</button>
+    <button class="d-b" data-run="speech"><small>34</small>Персонаж говорит</button>
+    <button class="d-b" data-run="found"><small>35</small>Предмет найден</button>
+    <button class="d-b" data-run="foundReset"><small>35</small>Вернуть предметы</button>
+  </div>
+  <div class="d-voice"><button class="d-mic" id="mic" aria-label="Говорить"></button><div class="d-said" id="said"></div></div>
+  <div class="d-grid">
+    <button class="d-b" data-run="voice"><small>36</small>Голос: запись и текст</button>
+    <button class="d-b" data-run="questEnd"><small>37</small>Конец квеста</button>
+    <button class="d-b" data-run="call"><small>38</small>Сценка: звонок</button>
+    <button class="d-b" data-run="chat"><small>38</small>Сценка: переписка</button>
+  </div>
+</section>
+
+<!-- ───────── F ───────── -->
+<section class="d-sec">
+  <h2>F · Общие</h2>
+  <div class="d-screens"><div class="d-screen" id="scrA">Экран 1 · Главная</div><div class="d-screen" id="scrB" hidden>Экран 2 · Урок</div></div>
+  <div class="d-grid">
+    <button class="d-b" data-run="screenFwd"><small>39</small>Переход вперёд</button>
+    <button class="d-b" data-run="screenBack"><small>39</small>Переход назад</button>
+  </div>
+  <div class="d-h3">40 · Нажатие кнопки (класс ha-btn)</div>
+  <button class="ha-btn" id="pressMe">НАЖМИ И ПОДЕРЖИ</button>
+  <div class="d-grid">
+    <button class="d-b d-wide" data-run="press"><small>40</small>Нажать её автоматически</button>
+    <button class="d-b" data-run="toastTop"><small>41</small>Тост сверху</button>
+    <button class="d-b" data-run="toastBottom"><small>41</small>Тост снизу</button>
+    <button class="d-b d-wide" data-run="tip" id="tipBtn"><small>41</small>Подсказка у кнопки</button>
+    <button class="d-b" data-run="loading"><small>42</small>Загрузка (экран)</button>
+    <button class="d-b" data-run="loadingIn"><small>42</small>Загрузка (в блоке)</button>
+  </div>
+  <div class="d-loadbox" id="loadbox"></div>
+  <div class="d-grid">
+    <button class="d-b" data-run="confSmall"><small>43</small>Конфетти короткое</button>
+    <button class="d-b" data-run="confBig"><small>43</small>Конфетти большое</button>
+  </div>
+</section>
+<div class="d-note">Иврит на этой странице — только для показа анимаций. Тексты уроков проверяет знаток.</div>
+
+<script src="anim.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var P = HAnim.play;
+
+  /* шапка */
+  $("fireIc").innerHTML = HAnim.svg.flame();
+  $("xpIc").innerHTML = HAnim.svg.star();
+  $("tTheme").onclick = function () {
+    var on = document.body.classList.toggle("theme-dark");
+    this.setAttribute("aria-pressed", on);
+  };
+  $("tRm").setAttribute("aria-pressed", HAnim.reduced);
+  $("tRm").onclick = function () {
+    HAnim.setReduced(!HAnim.reduced);
+    this.setAttribute("aria-pressed", HAnim.reduced);
+  };
+  /* событие peak — сюда в приложении вешается звук */
+  var pk = $("peak"), pkT;
+  window.addEventListener("hanim:peak", function (e) {
+    pk.classList.add("on"); pk.lastElementChild.textContent = "peak: " + e.detail.name;
+    clearTimeout(pkT); pkT = setTimeout(function () { pk.classList.remove("on"); }, 250);
+  });
+
+  /* A · маскот */
+  var bird = HAnim.mascot($("bird"), "fly");
+  [["idle", "1 · idle"], ["happy", "2 · happy"], ["cheer", "3 · cheer"], ["sad", "4 · sad"], ["think", "5 · think"], ["wave", "6 · wave"],
+   ["sleep", "7 · sleep"], ["fly", "8 · fly-in"], ["flyout", "8 · fly-out"], ["dance", "9 · dance"], ["point", "10 · point"], ["surprised", "11 · surprised"]
+  ].forEach(function (m) {
+    var b = document.createElement("button");
+    b.className = "d-b"; b.textContent = m[1]; b.setAttribute("data-mood", m[0]);
+    b.onclick = function () { HAnim.mascot($("bird"), m[0]); };
+    $("moods").appendChild(b);
+  });
+
+  /* B · урок */
+  var opts = [].slice.call(document.querySelectorAll("#opts .d-opt"));
+  var okOpt = opts[0], streak = 0, value = 0, busy = false;
+  function resetOpts() { opts.forEach(HAnim.clear); }
+  function step(ok) {
+    streak = ok ? streak + 1 : 0;
+    if (ok) value = Math.min(1, value + .1);
+    return P("progress", { el: $("pb"), value: value, streak: streak });
+  }
+  async function answer(b) {
+    if (busy) return; busy = true; resetOpts();
+    var ok = b === okOpt;
+    if (ok) { P("correct", { el: b }); HAnim.mascot($("bird"), "happy"); }
+    else { P("wrong", { el: b, correctEl: okOpt }); HAnim.mascot($("bird"), "sad"); }
+    step(ok);
+    if (ok && (streak === 5 || streak === 10 || streak === 15)) P("combo", { level: streak });
+    await P("banner", ok ? { ok: true } : { ok: false, answer: "תּוֹדָה — спасибо", onReport: function () { P("toast", { text: "Спасибо! Проверим это задание", icon: "🚩" }); } });
+    resetOpts(); HAnim.mascot($("bird"), "idle"); busy = false;
+  }
+  opts.forEach(function (b) { b.onclick = function () { answer(b); }; });
+  P("progress", { el: $("pb"), value: 0, streak: 0 });
+
+  /* пары */
+  var PAIRS = [["שָׁלוֹם", "привет"], ["כֵּן", "да"], ["מַיִם", "вода"]], picked = null;
+  PAIRS.forEach(function (p, i) {
+    [p[1], p[0]].forEach(function (t, j) {
+      var b = document.createElement("button");
+      b.className = "d-tile"; b.textContent = t; b.dataset.p = i; if (j) b.dir = "rtl";
+      b.style.order = j ? [2, 0, 1][i] * 2 + 1 : i * 2;
+      b.onclick = function () {
+        if (b.classList.contains("ha-done")) return;
+        if (picked === b) { P("pairPick", { el: b, on: false }); picked = null; return; }
+        if (!picked) { picked = b; P("pairPick", { el: b }); return; }
+        var a = picked; picked = null;
+        if (a.dataset.p === b.dataset.p) P("pairMatch", { a: a, b: b }); else P("pairWrong", { a: a, b: b });
+      };
+      $("tiles").appendChild(b);
+    });
+  });
+  function tiles() { return [].slice.call(document.querySelectorAll(".d-tile")); }
+  function resetTiles() { tiles().forEach(HAnim.clear); picked = null; }
+
+  /* кирпичики */
+  ["אֲנִי", "רוֹצֶה", "פִּיתָה", "בְּבַקָּשָׁה"].forEach(function (w) {
+    var c = document.createElement("button");
+    c.className = "d-chip"; c.textContent = w; c.dir = "rtl";
+    c.onclick = function () { P("chipMove", { el: c, to: c.parentNode === $("bank") ? $("row") : $("bank") }); };
+    $("bank").appendChild(c);
+  });
+
+  /* E · сцена */
+  $("host").innerHTML = HAnim.svg.avatar("david");
+  $("mic").innerHTML = '<svg viewBox="0 0 24 24" width="30" height="30"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0012 0M12 17v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  var items = [].slice.call(document.querySelectorAll(".d-item")), basket = 0;
+  function find(it) {
+    if (it.classList.contains("ha-found") || it._busy) return Promise.resolve();
+    it._busy = true;
+    return P("found", { el: it, to: $("basket"), html: it.firstChild.textContent }).then(function () {
+      it._busy = false; $("basketN").textContent = ++basket;
+    });
+  }
+  items.forEach(function (it) { it.onclick = function () { find(it); }; });
+  $("mic").onclick = function () { run.voice(); };
+  HAnim.mascot($("homeBird"), "idle");
+  P("homeSky", { el: $("home") });
+  P("nodePulse", { el: $("nodeCur"), progress: .25 });
+
+  var nodeP = .25, blitzP = null, loadP = null, sDay = 7, xpN = 120;
+  var run = {
+    correct: function () { resetOpts(); return P("correct", { el: okOpt }); },
+    wrong: function () { resetOpts(); return P("wrong", { el: opts[1], correctEl: okOpt }); },
+    bannerOk: function () { return P("banner", { ok: true }); },
+    bannerBad: function () { return P("banner", { ok: false, answer: "תּוֹדָה — спасибо" }); },
+    progress: function () { return step(true); },
+    progressReset: function () { streak = 0; value = 0; return P("progress", { el: $("pb"), value: 0, streak: 0 }); },
+    pairMatch: async function () {
+      resetTiles(); var t = tiles(), a = t[0], b = t.filter(function (x) { return x !== a && x.dataset.p === a.dataset.p; })[0];
+      await P("pairPick", { el: a }); await P("pairPick", { el: b }); await P("pairMatch", { a: a, b: b });
+    },
+    pairWrong: async function () {
+      resetTiles(); var t = tiles(), a = t[0], b = t.filter(function (x) { return x.dataset.p !== a.dataset.p; })[0];
+      await P("pairPick", { el: a }); await P("pairPick", { el: b }); await P("pairWrong", { a: a, b: b });
+    },
+    chips: async function () {
+      var c = [].slice.call(document.querySelectorAll(".d-chip"));
+      for (var i = 0; i < c.length; i++) await P("chipMove", { el: c[i], to: $("row") });
+      await new Promise(function (r) { setTimeout(r, 500); });
+      for (i = c.length - 1; i >= 0; i--) await P("chipMove", { el: c[i], to: $("bank") });
+    },
+    blitz: function () { if (blitzP) blitzP.stop(); blitzP = P("blitz", { el: $("blitz"), seconds: 8 }); return blitzP; },
+    combo5: function () { return P("combo", { level: 5 }); },
+    combo10: function () { return P("combo", { level: 10 }); },
+    combo15: function () { return P("combo", { level: 15 }); },
+    lessonEnd: function () {
+      var total = (xpN += 40);
+      return P("lessonEnd", { xp: 40, streak: sDay, time: "1:26", accuracy: 92, counterEl: $("xpBox"), total: null })
+        .then(function () { return P("flip", { el: $("cXp"), to: total }); });
+    },
+    perfect: function () { return P("perfect", { xp: 40 }); },
+    node: function () { nodeP = nodeP >= 1 ? 0 : nodeP + .25; return P("nodePulse", { el: $("nodeCur"), progress: nodeP }); },
+    unlock: function () {
+      var n = $("nodeLock");
+      if (n.classList.contains("ha-unlocked")) { n.classList.remove("ha-unlocked"); n.classList.add("ha-locked"); return; }
+      return P("unlock", { el: n });
+    },
+    chest: function () { return P("chest", { rewards: [{ icon: "❄️", text: "Заморозка" }, { icon: "⭐", text: "+20 очков" }] }); },
+    medalGold: function () { return P("medal", { type: "gold", title: "Глава A1 пройдена!" }); },
+    medalSilver: function () { return P("medal", { type: "silver", title: "Глава A1 пройдена!" }); },
+    medalBronze: function () { return P("medal", { type: "bronze", title: "Глава A1 пройдена!" }); },
+    home: function () { HAnim.mascot($("homeBird"), "wave"); return P("homeSky", { el: $("home") }); },
+    flipFire: function () { return P("flip", { el: $("cStreak"), to: ++sDay }); },
+    flipXp: function () { return P("flip", { el: $("cXp"), to: (xpN += 40) }); },
+    streak: function () { var d = ++sDay; return P("streak", { day: d, week: [1, 1, 1, 0, 0, 0, 0], today: 3 }).then(function () { return P("flip", { el: $("cStreak"), to: d }); }); },
+    streakFirst: function () { return P("streak", { day: 1, first: true }); },
+    freeze: function () { return P("freeze", { day: sDay }); },
+    risk: function () { return P("streakRisk", { day: sDay }); },
+    alarm: function () { return P("alarm", {}); },
+    gift: function () { return P("gift", { name: "Давид" }); },
+    doors: function () { return P("doors", { el: $("scene"), inner: $("room") }); },
+    speech: function () { return P("speech", { el: $("host"), text: "שָׁלוֹם! מָה אַתָּה רוֹצֶה?" }); },
+    found: function () { var it = items.filter(function (x) { return !x.classList.contains("ha-found"); })[0]; if (!it) { run.foundReset(); it = items[0]; } return find(it); },
+    foundReset: function () { items.forEach(HAnim.clear); basket = 0; $("basketN").textContent = 0; },
+    voice: function () { return P("voice", { el: $("mic"), ms: 1800, text: "אֲנִי רוֹצֶה פִּיתָה", out: $("said") }); },
+    questEnd: function () { return P("questEnd", { stars: 3, title: "Квест «Шаурма» пройден!", next: "Глава 4 открыта" }); },
+    call: function () { return P("call", { name: "Мама Рина", who: "tzila" }); },
+    chat: function () {
+      return P("chat", { name: "Давид", messages: [
+        { text: "Шалом! Ты уже дома?" }, { me: true, text: "Да, только зашёл" },
+        { text: "Сабаба. В пятницу шабат у моих — приходи!" }, { me: true, text: "Тода! Буду 🙂" }] });
+    },
+    screenFwd: function () { return P("screen", { from: $("scrA"), to: $("scrB"), dir: "forward" }); },
+    screenBack: function () { return P("screen", { from: $("scrB"), to: $("scrA"), dir: "back" }); },
+    press: function () { return P("press", { el: $("pressMe") }); },
+    toastTop: function () { return P("toast", { text: "Заморозка получена!", icon: "❄️", pos: "top" }); },
+    toastBottom: function () { return P("toast", { text: "Прогресс сохранён", icon: "✅", pos: "bottom" }); },
+    tip: function () { return P("tip", { el: $("tipBtn"), text: "Нажми сюда, чтобы услышать слово" }); },
+    loading: function () { return P("loading", { ms: 2200 }); },
+    loadingIn: function () { if (loadP) loadP.stop(); loadP = P("loading", { el: $("loadbox"), ms: 2500, text: "Готовим урок" }); return loadP; },
+    confSmall: function () { return HAnim.confetti("small"); },
+    confBig: function () { return HAnim.confetti("big"); }
+  };
+  window.demoRun = run;
+  [].forEach.call(document.querySelectorAll("[data-run]"), function (b) {
+    b.addEventListener("click", function () {
+      var r = run[b.getAttribute("data-run")]();
+      if (r && r.catch) r.catch(function (e) { console.error(e); });
+    });
+  });
+})();
+</script>
+</body>
+</html>
