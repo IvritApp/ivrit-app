@@ -15,7 +15,7 @@
  * │ pairWrong    │ пара не совпала {a, b}                                     │ 0,45 с       │
  * │ chipMove     │ «Собери фразу»: слово летит {el, to}                       │ 0,32 с       │
  * │ blitz        │ таймер блица {el, seconds} → .stop()                       │ seconds      │
- * │ combo        │ огонь 5х/10х/15х {level}                                   │ 2,7–3,4 с    │
+ * │ combo        │ огонь 5х/10х/15х {level}                                   │ 2,7–5,8 с    │
  * │ lessonEnd    │ конец урока {xp, streak, time, accuracy, counterEl, total} │ до нажатия   │
  * │ perfect      │ идеальный урок {xp}                                        │ 2,3 с        │
  * │ nodePulse    │ текущий узел дорожки {el, progress 0..1}                   │ 0,6 с + цикл │
@@ -382,7 +382,7 @@
      HAnim.fire(el, {colors:[внешний, средний, ядро], sides:true}) → {stop(), pulse()} */
   H.fire = function (host, o) {
     o = o || {};
-    if (!host || H.reduced) return { stop: function () {}, pulse: function () {} };
+    if (!host || H.reduced) return { stop: function () {}, pulse: function () {}, colors: function () {} };
     var cols = o.colors || ["#ff8a35", "#ffcf3f", "#fff3c0"], w = o.width || host.clientWidth || 150;
     var cw = Math.round(w * 2.5), ch = Math.round(w * 2.3), dpr = Math.min(W.devicePixelRatio || 1, 2);
     var cv = el("canvas", "ha-fire-cv");
@@ -391,7 +391,7 @@
     host.innerHTML = ""; host.classList.add("ha-fire"); host.style.height = w * 1.25 + "px"; host.appendChild(cv);
     var ctx = cv.getContext("2d"), live = true, t0 = performance.now(), last = t0, baseY = ch - w * .12, N = 26;
     /* каждый язык: [сдвиг по x, размер, фаза, задержка появления] + пружины: s — рост, b — наклон */
-    var F = (o.sides ? [[-.52, .56, 2.1, 140], [.52, .56, 4.2, 220], [0, 1, 0, 0]] : [[0, 1, 0, 0]]).map(function (e) {
+    var F = (o.flames || (o.sides ? [[-.52, .56, 2.1, 140], [.52, .56, 4.2, 220], [0, 1, 0, 0]] : [[0, 1, 0, 0]])).map(function (e) {
       return { x: e[0], z: e[1], ph: e[2], dl: e[3], s: 0, vs: 0, b: 0, vb: 0 };
     });
     var LAY = [[1, 0, 0], [.6, .05, .5], [.33, .09, 1]];      /* слой: размер, подъём основания, отставание */
@@ -442,6 +442,7 @@
     return {
       el: cv,
       stop: function () { live = false; },
+      colors: function (c) { cols = c; },
       pulse: function (v) { F.forEach(function (f) { f.vs += v || 5; }); }     /* «вздрогнуть» в такт */
     };
   };
@@ -611,8 +612,87 @@
     };
     return p;
   };
+  /* 15х — большое представление (≈5,8 с, нажатие по экрану — пропустить):
+     весь экран гаснет → костёр из пяти языков → счёт 11…15, огонь меняет цвет, из темноты вылезает
+     толпа Хибри → удар: «15х» вылетает из пламени, вспышка, все Хибри в шоке → салют, корона
+     из звёзд, толпа пляшет, «ТЫ ЛЕГЕНДА!» */
+  async function comboMega(o, pk, lv) {
+    var CC = [["#ff8a35", "#ffcf3f", "#fff3c0"], ["#ff6a2b", "#ffb53a", "#ffefb0"], ["#f0503a", "#ffa63a", "#ffe9a8"], ["#d8479a", "#ff9ad0", "#ffe6f3"], ["#7a5ce0", "#b9a4ff", "#ffffff"]];
+    var CROWD = [[-6, 108, 0], [10, 86, 1], [24, 124, 0], [42, 94, 1], [56, 116, 0], [74, 88, 1], [85, 110, 1]];   /* слева %, размер, зеркально */
+    var w = ov("ha-combo ha-combo--15 ha-combo--mega",
+      '<div class="ha-combo-night"></div><div class="ha-combo-flash"></div><div class="ha-combo-stage"><div class="ha-combo-rays"></div><div class="ha-combo-rays ha-combo-rays--2"></div>' +
+      '<i class="ha-combo-ring"></i><i class="ha-combo-ring"></i><i class="ha-combo-ring"></i><i class="ha-combo-ring"></i><div class="ha-combo-fl"></div>' +
+      '<div class="ha-combo-crown">' + [0, 1, 2, 3, 4].map(function () { return "<i>" + starSVG() + "</i>"; }).join("") + '</div></div>' +
+      '<div class="ha-combo-num"><span class="ha-combo-echo"></span><span class="ha-combo-echo"></span><b>' + (lv - 4) + 'х</b></div><div class="ha-combo-tx">' + esc(o.text || "ВАУ! ОГОНЬ!") + '</div>' +
+      '<div class="ha-combo-crowd">' + CROWD.map(function (c) { return '<i style="left:' + c[0] + '%"></i>'; }).join("") + "</div>");
+    var stage = q(w, ".ha-combo-stage"), num = q(w, ".ha-combo-num"), numB = q(num, "b"), tx = q(w, ".ha-combo-tx"), body = q(w, ".ha-ov-body");
+    var rings = w.querySelectorAll(".ha-combo-ring"), rays = w.querySelectorAll(".ha-combo-rays"), seats = w.querySelectorAll(".ha-combo-crowd i");
+    var ring = function (r, i) { go(r, [{ transform: "scale(.3)", opacity: .9 }, { transform: "scale(" + (2.6 + i * .6) + ")", opacity: 0 }], { duration: 700, fill: "both" }); };
+    var dead = false, fire = { stop: function () {} };
+    var skip = new Promise(function (r) { w.addEventListener("click", function () { dead = true; r(); }, { once: true }); });
+    async function step(ms) { await wait(ms); if (dead) throw 0; }
+    var show = (async function () {
+      /* 1 · темнота */
+      go(q(w, ".ha-combo-night"), [{ opacity: 0 }, { opacity: 1 }], { duration: 320, fill: "both" });
+      await step(300);
+      /* 2 · костёр и счёт; Хибри по одному вылезают снизу */
+      fire = H.fire(q(w, ".ha-combo-fl"), { colors: CC[0], width: stage.clientWidth,
+        flames: [[-.76, .4, 1.3, 260], [.76, .4, 3.3, 320], [-.44, .62, 2.1, 120], [.44, .62, 4.2, 180], [0, 1.12, 0, 0]] });
+      go(num, [{ transform: "scale(.3)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 300, easing: SPRING, fill: "both" });
+      seats.forEach(function (st, i) {
+        H.mascot(st, "idle", { size: CROWD[i][1], flip: !!CROWD[i][2] });
+        go(st, [{ transform: "translateY(130%)" }, { transform: "translateY(0)" }], { duration: 480, delay: 150 + [3, 0, 5, 1, 6, 2, 4][i] * 170, easing: SPRING, fill: "both" });
+      });
+      await step(450);
+      for (var i = 0; i < 5; i++) {
+        numB.textContent = (lv - 4 + i) + "х";
+        fire.colors(CC[i]); fire.pulse(4 + i);
+        pk({ level: lv, step: lv - 4 + i });
+        if (i < 4) {
+          go(num, [{ transform: "scale(1.4)" }, { transform: "scale(1)" }], { duration: 220 });
+          ring(rings[i], 0);
+          await step(270);
+        }
+      }
+      /* 3 · удар: «15х» вылетает из пламени, вспышка, все в шоке */
+      w.querySelectorAll(".ha-combo-echo").forEach(function (e, i) {
+        e.textContent = lv + "х";
+        go(e, [{ transform: "scale(1)", opacity: .55 }, { transform: "scale(" + (2.4 + i * 1.2) + ")", opacity: 0 }], { duration: 800, delay: 180 + i * 120, fill: "both" });
+      });
+      go(q(w, ".ha-combo-flash"), [{ opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 0 }], { duration: 800, fill: "both" });
+      go(num, [{ transform: "translateY(-190px) scale(.1) rotate(-20deg)" }, { transform: "translateY(0) scale(1.45) rotate(5deg)", offset: .55 }, { transform: "translateY(0) scale(.94) rotate(-2deg)", offset: .8 }, { transform: "translateY(0) scale(1) rotate(0deg)" }], { duration: 620, easing: "cubic-bezier(.3,0,.2,1)" });
+      go(body, [{ transform: "translate(0,0)" }, { transform: "translate(-12px,6px)" }, { transform: "translate(11px,-6px)" }, { transform: "translate(-8px,4px)" }, { transform: "translate(6px,-3px)" }, { transform: "translate(-3px,1px)" }, { transform: "translate(0,0)" }], { duration: 480 });
+      fire.pulse(10);
+      go(rays[0], [{ opacity: 0 }, { opacity: .55 }], { duration: 400, fill: "both" });
+      go(rays[1], [{ opacity: 0 }, { opacity: .32 }], { duration: 400, fill: "both" });
+      rings.forEach(function (r, i) { setTimeout(function () { ring(r, i); }, i * 140); });
+      seats.forEach(function (st) { H.mascot(st, "surprised", { hold: true }); });
+      H.confetti("big");
+      go(tx, [{ opacity: 0, transform: "translateY(18px) scale(.7)" }, { opacity: 1, transform: "none" }], { duration: 420, delay: 250, easing: SPRING, fill: "both" });
+      w.querySelectorAll(".ha-combo-crown i").forEach(function (s, i) {
+        go(s, [{ transform: "scale(0) rotate(-140deg)", opacity: 0 }, { transform: "scale(1) rotate(0deg)", opacity: 1 }], { duration: 440, delay: 380 + i * 110, easing: SPRING, fill: "both" });
+      });
+      /* 4 · салют, толпа пляшет */
+      await step(450);
+      H.confetti({ size: "small", x: .22, y: .2, count: 44, colors: ["#ffcf3f", "#fff3c0", "#ff8a35"] });
+      await step(350);
+      H.confetti({ size: "small", x: .8, y: .26, count: 44, colors: ["#b9a4ff", "#ffffff", "#ff9ad0"] });
+      await step(300);
+      seats.forEach(function (st, i) { setTimeout(function () { if (!dead) H.mascot(st, i % 3 === 1 ? "happy" : "dance", { then: "dance" }); }, i * 70); });
+      fire.pulse(6);
+      await step(1100);
+      tx.textContent = o.text2 || "ТЫ ЛЕГЕНДА!";
+      go(tx, [{ transform: "scale(2.2)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: 380, easing: SPRING, fill: "both" });
+      fire.pulse(7); ring(rings[0], 1); pk({ level: lv, step: "final" });
+      await step(o.hold || 1500);
+    })().catch(function () {});
+    await Promise.race([show, skip]);
+    dead = true; fire.stop();
+    await closeOv(w);
+  }
   A.combo = async function (o, pk) {
     var lv = o.level || 5, tier = lv >= 15 ? 3 : lv >= 10 ? 2 : 1;
+    if (tier === 3 && !H.reduced && !o.simple) return comboMega(o, pk, lv);
     var side = function (k) { return '<div class="ha-combo-side ha-combo-side--' + k + '">' + flameSVG() + "</div>"; };
     var w = ov("ha-ov--clear ha-combo ha-combo--" + [5, 10, 15][tier - 1],
       '<div class="ha-combo-flash"></div><div class="ha-combo-stage"><div class="ha-combo-rays"></div><i class="ha-combo-ring"></i><i class="ha-combo-ring"></i><i class="ha-combo-ring"></i>' +
