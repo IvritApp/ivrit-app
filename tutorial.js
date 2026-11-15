@@ -7,7 +7,7 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const fn = () => (typeof friendName === "function" ? friendName() : "Давид");
   const slides = () => [
-    { pic: `<img src="assets/udod.png" alt="Хибри" class="tu-bird">`, h: "Шалом! Я Хибри 👋",
+    { pic: window.HAnim ? `<div class="tu-bird" id="tuBird"></div>` : `<img src="assets/udod.png" alt="Хибри" class="tu-bird">`, h: "Шалом! Я Хибри 👋",
       p: `Здесь ты учишься <b>говорить</b> на иврите — как живут в Израиле. Ты прилетаешь к ${fn() === "Циля" ? "Циле" : "Давиду"}, и каждый уровень — новая глава вашей истории.`,
       list: ["📚 1 уровень = 7 коротких уроков", "🎬 потом — квест: живая сцена", "🏁 10 уровней — и экзамен A1"] },
     { pic: `<div class="tu-icons"><span>👆</span><span>🔊</span><span>🧩</span><span>⚡</span></div>`, h: "Уроки — это мини-игры",
@@ -41,6 +41,8 @@
           ${s.mic ? `<div class="tu-mic"><button class="q-mic" id="tuMic" type="button"><span>🎤</span><b>Проверить: скажи «שָׁלוֹם»</b></button><div class="tu-mic-res" id="tuMicRes"></div></div>` : ""}
           <ul>${s.list.map(x => `<li>${x}</li>`).join("")}</ul></div>
         <div class="tu-nav">${i ? `<button class="btn ghost" id="tuBack">Назад</button>` : ""}<button class="btn blue" id="tuNext">${s.last ? "Поехали! 🚀" : "Дальше"}</button></div></div>`;
+      const tb = box.querySelector("#tuBird");            // новый живой Хибри машет крылом
+      if (tb && window.HAnim) HAnim.mascot(tb, "wave", { size: 120 });
       box.querySelector("#tuSkip").onclick = close;
       box.querySelector("#tuNext").onclick = () => { if (S[i].last) close(); else { i++; render(); } if (typeof playSound === "function") playSound("pop"); };
       const b = box.querySelector("#tuBack"); if (b) b.onclick = () => { i--; render(); };

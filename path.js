@@ -37,8 +37,12 @@ function updateMedals() {                       // запоминаем лучш
   if (!course) return;
   const m = store.get("medals", {});
   const rank = { bronze: 1, silver: 2, gold: 3 };
-  course.chapters.forEach(ch => { const md = chapterMedal(ch); if (md && (!m[ch.id] || rank[md] > rank[m[ch.id]])) m[ch.id] = md; });
+  let won = null;                                 // новая (или лучшая, чем была) медаль
+  course.chapters.forEach(ch => { const md = chapterMedal(ch); if (md && (!m[ch.id] || rank[md] > rank[m[ch.id]])) { m[ch.id] = md; won = { type: md, ch: ch }; } });
   store.set("medals", m);
+  // медаль падает сверху, крутится, конфетти (anim.js)
+  if (won && window.HAnim) setTimeout(() => HAnim.play("medal", { type: won.type, title: (won.ch.title || "Глава") + " — пройдена!",
+    text: MEDAL[won.type][1] + " медаль — твоя!", onPeak: () => { if (typeof playSound === "function") playSound("finish"); } }).catch(() => {}), 500);
 }
 
 function doneLessons() { return store.get("done", []); }
@@ -147,6 +151,19 @@ function renderPath() {
       : `<button class="p-soon p-lvl-go${i === lvlIdx ? " sel" : ""}${levelOpen(ch, i) ? "" : " locked"}" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${i === lvlIdx ? "сейчас" : levelGold(l) ? "🏅" : levelDone(l) ? "✓" : levelOpen(ch, i) ? "›" : "🔒"}</span></button>`).join("")}
     <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после ${ch.levels.length} уровней</span></div>
     <div class="p-soon next"><b>Дальше — глава ${ch.next}</b><span>🔒</span></div>`;
+
+  // Анимации дорожки (anim.js): кольцо прогресса уровня вокруг текущего узла; если открылся новый урок — ломается замок
+  if (window.HAnim && !testMode()) {
+    const curId = nextIdx >= 0 ? lvl.lessons[nextIdx] : null;
+    const curBtn = curId ? pathView.querySelector(`.p-node[data-lesson="${curId}"]`) : null;
+    if (curBtn) {
+      HAnim.play("nodePulse", { el: curBtn, progress: nextIdx / lvl.lessons.length });
+      const was = store.get("pathCur", null);
+      if (was && was !== curId && done.includes(was)) setTimeout(() => { if (curBtn.isConnected) HAnim.play("unlock", { el: curBtn, lockedClass: "p-was-locked", openClass: "p-just-open",
+        onPeak: () => { if (typeof playSound === "function") playSound("pop"); } }); }, 450);
+    }
+    if (curId) store.set("pathCur", curId);
+  }
 
   pathView.querySelectorAll(".p-node").forEach(b => b.onclick = () => {
     if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий урок"); vibrate("warning"); return; }

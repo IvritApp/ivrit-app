@@ -16,7 +16,7 @@
  * │ chipMove     │ «Собери фразу»: слово летит {el, to}                       │ 0,32 с       │
  * │ blitz        │ таймер блица {el, seconds} → .stop()                       │ seconds      │
  * │ combo        │ огонь 5х/10х/15х {level}                                   │ 2,7–5,8 с    │
- * │ lessonEnd    │ конец урока {xp, streak, time, accuracy, counterEl, total} │ до нажатия   │
+ * │ lessonEnd    │ конец урока {xp, streak, time, accuracy, counterEl, cards} │ до нажатия   │
  * │ perfect      │ идеальный урок {xp}                                        │ 2,3 с        │
  * │ nodePulse    │ текущий узел дорожки {el, progress 0..1}                   │ 0,6 с + цикл │
  * │ unlock       │ открыть урок/уровень {el}                                  │ 1,2 с        │
@@ -739,6 +739,7 @@
     setTimeout(function () { pk({ stage: "cheer" }); }, H.reduced ? 0 : 450);
     await Promise.race([wait(1900), tap(a)]);
     await closeOv(a);
+    if (o.cards === false) return;          /* только праздник, без карточек итогов */
     /* 2 · итоги: три карточки по очереди */
     var useAcc = o.accuracy != null && (o.time == null || o.accuracy === 100 || o.third === "accuracy") && o.third !== "time";
     var secs = 0;

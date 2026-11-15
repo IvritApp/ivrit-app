@@ -25,11 +25,11 @@ function nextPraise() {
 }
 
 // --- Серия правильных ответов (огоньки) и очки ---
-// 5 подряд — оранжевый огонёк, 10 — синий, 15 — фиолетовый. Чем ярче огонь, тем больше очков за ответ.
+// 5 подряд — оранжевый огонёк, 10 — красный, 15 — фиолетовый. Чем ярче огонь, тем больше очков за ответ.
 const FIRE = [
   { from: 0,  name: "",                    points: 10, outer: "#c9d3de", inner: "#eef2f6" },
   { from: 5,  name: "Огонь",               points: 15, outer: "#ff8a35", inner: "#ffd166" },
-  { from: 10, name: "Огонь",               points: 20, outer: "#2f86e0", inner: "#a8e0ff" },
+  { from: 10, name: "Огонь",               points: 20, outer: "#f0503a", inner: "#ffb23f" },
   { from: 15, name: "Огонь",               points: 30, outer: "#8b45f0", inner: "#e2c6ff" }
 ];
 // Фиолетовый «Огонь 15х» можно получить только на контрольной (у такого урока в файле "exam": true)
@@ -282,14 +282,24 @@ const GIFTS = ["fig", "passion", "pita", "shawarma", "olive"];   // инжир, 
 const IDLE_MS = 7000;         // через сколько миллисекунд без действий удод «скучает» (7000 = 7 сек)
 const IDLE_AGAIN_MS = 25000;  // если человек так и не нажал ничего — повторить не раньше, чем через 25 сек
 let birdBusy = false, idleTimer = null, waveTimer = null, tripTimer = null;
+// Новый живой Хибри (anim.js): рисуется кодом вместо двух картинок. Если anim.js не загрузился — остаются картинки.
+let homeM = null;
+if (window.HAnim) {
+  rig.querySelectorAll("img").forEach(i => { i.style.display = "none"; });
+  const slot = document.createElement("div"); slot.className = "hb-slot";
+  rig.insertBefore(slot, carry);
+  homeM = HAnim.mascot(slot, "idle", { size: 170 });
+}
 
 function birdWave() {
   if (birdBusy) return;
+  if (homeM) { homeM.set("wave", { size: 170 }); clearTimeout(birdWave.t); birdWave.t = setTimeout(() => { if (homeM.mood === "wave") homeM.set("idle", { size: 170 }); }, 2300); return; }
   rig.classList.remove("waving"); void rig.offsetWidth; rig.classList.add("waving");
 }
 function say(text, ms = 2600) {
   bubble.textContent = text;
   bubble.classList.add("show");
+  if (homeM) homeM.talk(Math.min(ms, 1600));          // клюв «говорит»
   clearTimeout(say.t); say.t = setTimeout(() => bubble.classList.remove("show"), ms);
 }
 // Улететь и вернуться (с подарком в лапках или без)
@@ -428,6 +438,7 @@ function startLesson(id) {
   step = 0; mistakes = 0; lessonPoints = 0;
   combo = 0; store.set("combo", 0);      // каждый урок — новая серия
   bar.style.width = "0%";
+  bar.classList.remove("hot", "max", "run");
   updateCombo(false);
   screen.textContent = "Загрузка…";
   setIconHero(id);
@@ -693,7 +704,8 @@ function showMatchPairs(ex) {
         pick = { b, w, side }; b.classList.add("sel"); playSound("pop"); return;
       }
       if (pick.w === w) {                          // пара!
-        [pick.b, b].forEach(x => { x.classList.remove("sel"); x.classList.add("ok"); x.disabled = true; });
+        [pick.b, b].forEach(x => { x.classList.remove("sel"); x.classList.add("ok"); x.disabled = true;
+          if (window.HAnim) HAnim.sparkle(x, { corners: true, count: 4 }); });
         playSound("pop"); vibrate("success");
         pick = null; left--;
         if (left === 0) setTimeout(() => checkAnswer(document.createElement("button"), !hadError, ex,
@@ -776,6 +788,11 @@ function checkAnswer(btn, isRight, ex, word, wrongDetail) {
   });
 
   hostAct(isRight ? "cheer" : "oops", isRight ? 1300 : 1500);
+  // анимация кнопки ответа (anim.js): зелёная вспышка с блёстками / красная тряска
+  if (window.HAnim && btn && btn.isConnected && btn.classList.contains("option")) {
+    if (isRight) HAnim.play("correct", { el: btn });
+    else HAnim.play("wrong", { el: btn, correctEl: document.querySelector(".option[data-right]") });
+  }
   if (isRight) {
     const before = fireLevel(combo);
     combo++; store.set("combo", combo);
@@ -784,19 +801,22 @@ function checkAnswer(btn, isRight, ex, word, wrongDetail) {
     lessonPoints += pts;
     store.set(todayKey(), store.get(todayKey(), 0) + pts);
     updateCombo(true);
+    streakBar(combo);
     playSound("right");
     vibrate("success");
     showFeedback(true, nextPraise(), `+${pts} очков`);
     if (level > before) {                       // новый огонёк: 5, 10 или 15 подряд
-      setTimeout(() => showMilestone(level), 350);
-      setTimeout(goNext, AUTO_NEXT_MS + 1700);
-    } else {
+      // большой огонь; к следующему заданию идём, когда он догорит
+      // с новой плашкой дальше идём по кнопке «ДАЛЕЕ»; без anim.js — сами, когда огонь догорит
+      setTimeout(() => { Promise.resolve(showMilestone(level)).then(() => { if (!window.HAnim) setTimeout(goNext, 250); }); }, 350);
+    } else if (!window.HAnim) {
       setTimeout(goNext, AUTO_NEXT_MS);
     }
   } else {
     const lost = combo;
     combo = 0; store.set("combo", 0);
     updateCombo(false);
+    streakBar(0);
     if (lost >= 5) showToast(`Серия из ${lost} прервалась — начнём новую!`);
     btn.classList.add("wrong");
     mistakes++;
@@ -805,12 +825,17 @@ function checkAnswer(btn, isRight, ex, word, wrongDetail) {
     vibrate("error");
     flashRed();
     showFeedback(false, wrongDetail ? "Не страшно!" : "Правильный ответ:", wrongDetail || `${word.ru} — ${word.he} (${word.tr})`);
-    if (WRONG_AUTO) setTimeout(goNext, 2500);
+    if (WRONG_AUTO && !window.HAnim) setTimeout(goNext, 2500);
   }
 }
 
 // Панель снизу: зелёная или красная
 function showFeedback(good, title, detail) {
+  if (window.HAnim) {                        // новая плашка (anim.js): выезжает снизу, кнопка «ДАЛЕЕ» / «ПОНЯТНО», флажок
+    HAnim.play("banner", { ok: good, text: title, answer: detail, button: good ? "ДАЛЕЕ" : "ПОНЯТНО", onReport: reportTask })
+      .then(goNext).catch(() => {});
+    return;
+  }
   feedback.className = good ? "good" : "bad";
   feedback.innerHTML = `
     <div class="title">${good ? "✓ " : "✗ "}${title}</div>
@@ -822,7 +847,25 @@ function showFeedback(good, title, detail) {
   // маленькая пауза, чтобы браузер успел «увидеть» начальное положение — тогда панель выезжает плавно
   requestAnimationFrame(() => requestAnimationFrame(() => feedback.classList.add("show")));
 }
-function hideFeedback() { feedback.classList.remove("show"); }
+function hideFeedback() { feedback.classList.remove("show"); const b = document.querySelector(".ha-banner"); if (b) b.remove(); }
+// Флажок «пожаловаться» на плашке: запоминаем задание (уходит на сервер вместе с прогрессом — потом можно посмотреть)
+function reportTask() {
+  const ex = queue[step] || {}, list = store.get("reports", []);
+  list.push({ lesson: lesson && lesson.id, n: step, type: ex.type, word: ex.word || ex.answer || "", at: Date.now() });
+  store.set("reports", list.slice(-50));
+  showToast("Спасибо! Отметили это задание 🚩");
+}
+// Полоска урока: подпись «2 / 5 / 10 ПОДРЯД», на длинной серии меняет цвет и по ней бежит блик
+function streakBar(n) {
+  bar.classList.toggle("hot", n >= 5 && n < 10);
+  bar.classList.toggle("max", n >= 10);
+  if (n >= 5) { bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run"); }
+  if (n === 2 || n === 5 || n === 10) {
+    const top = document.querySelector("#lesson .topbar"), l = document.createElement("div");
+    l.className = "streak-label"; l.textContent = n + " ПОДРЯД";
+    top.appendChild(l); setTimeout(() => l.remove(), 1200);
+  }
+}
 
 // Значок серии рядом с полоской прогресса
 function updateCombo(bump) {
@@ -835,6 +878,17 @@ function updateCombo(bump) {
 // Большой огонь посреди экрана на 5, 10, 15 подряд: влетает с прокруткой, горит, летят искры, число крутится
 function showMilestone(level) {
   const f = FIRE[level];
+  if (window.HAnim) {                      // новый живой огонь (anim.js); на 15х — большое представление
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred("heavy");
+    return HAnim.play("combo", {
+      level: f.from, text: f.from < 15 ? `ОГОНЬ! +${f.points} за ответ` : undefined,
+      onPeak: (d) => {                     // звук — точно в такт анимации
+        if (d.step === "final") playSound("finish");
+        else if (d.step && d.step < f.from) playSound("pop");
+        else playSound("combo");
+      }
+    }).catch(() => {});
+  }
   const embers = Array.from({ length: 10 }, () =>
     `<i style="--x:${Math.round(Math.random() * 90 - 45)}px;--d:${(Math.random() * 0.9).toFixed(2)}s;--s:${(4 + Math.random() * 5).toFixed(1)}px;background:${f.inner}"></i>`).join("");
   milestone.innerHTML = `
@@ -854,6 +908,7 @@ function showMilestone(level) {
   playSound("combo");
   if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred("heavy");
   setTimeout(() => milestone.classList.remove("show"), 1900);
+  return new Promise(r => setTimeout(r, 1900));
 }
 
 // Рисунок огонька нужного цвета (вектор — чёткий в любом размере)
@@ -877,6 +932,7 @@ function flashRed() {
 function showFinish() {
   bar.style.width = "100%";
   markDone(lesson.id);
+  window.streakHold = !!window.HAnim;                     // экран серии покажем сами — после праздника (см. конец функции)
   if (typeof streakDone === "function") streakDone();     // день засчитан в серию
   // Идеальный урок (ни одной ошибки) — золотой, очки за урок ×2
   const perfect = mistakes === 0;
@@ -905,7 +961,7 @@ function showFinish() {
           </g>
           <g fill="#5e7f3f"><circle cx="92" cy="94" r="5"/><circle cx="248" cy="94" r="5"/></g>
         </svg>
-        <img class="bird" src="assets/udod.png" alt="Удод">
+        ${window.HAnim ? `<div class="bird" id="finBird"></div>` : `<img class="bird" src="assets/udod.png" alt="Удод">`}
       </div>
 
       <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный урок! 🏆" : "Урок пройден!"}</h2>
@@ -928,6 +984,15 @@ function showFinish() {
   screen.classList.remove("slide-out");
   screen.classList.add("slide-in");
   setTimeout(() => playSound("finish"), 900);   // фанфара — когда удод сел на ветку
+  // Праздник (anim.js): Хибри ликует на весь экран → «идеальный урок ×2» → экран серии дня
+  if (window.HAnim) {
+    const fb = document.getElementById("finBird");
+    if (fb) { const m = HAnim.mascot(fb, "idle", { size: 120 }); setTimeout(() => { if (fb.isConnected) m.set("happy", { size: 120 }); }, 2300); }
+    HAnim.play("lessonEnd", { cards: false, title: perfect ? "Идеальный урок!" : "Урок пройден!" })
+      .then(() => perfect ? HAnim.play("perfect", { xp: lessonPoints / 2, onPeak: () => playSound("combo") }) : null)
+      .then(() => { window.streakHold = false; return window.streakShow ? streakShow() : null; })
+      .catch(() => { window.streakHold = false; });
+  }
 
   // Бонусная фраза берётся из файла content/<язык>/bonus.json
   fetch(`content/${COURSE_LANG}/bonus.json`)
@@ -1117,7 +1182,31 @@ function askTranslit(then) {
 }
 applySettings();
 // Серия дней: при открытии проверяем пропуски (заморозки тратятся сами)
-if (typeof streakCheck === "function") { const m = streakCheck(); if (m) setTimeout(() => showToast(m), 900); updateToday(); }
+// «Серия под угрозой»: после 19:30, если серия есть, а сегодня ещё не занимался. Раз в день, только на главном экране.
+const RISK_FROM = 19 * 60 + 30;             // 19:30 по времени телефона
+function streakRiskCheck() {
+  if (!window.HAnim || typeof streakInfo !== "function" || !profile) return;
+  const now = new Date(), i = streakInfo();
+  if (now.getHours() * 60 + now.getMinutes() < RISK_FROM) return;
+  if (i.count < 1 || i.todayDone) return;
+  if (store.get("riskShown", "") === todayKey()) return;
+  if (homeView.hidden || document.querySelector(".ha-ov")) return;
+  store.set("riskShown", todayKey());
+  HAnim.play("streakRisk", { day: i.count }).then(k => { if (k === "go") showPath(); }).catch(() => {});
+}
+setTimeout(streakRiskCheck, 2500);
+setInterval(streakRiskCheck, 5 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(streakRiskCheck, 800); });
+
+if (typeof streakCheck === "function") {
+  const m = streakCheck();
+  if (m) setTimeout(() => {
+    // заморозка спасла серию — показываем экран со льдом (anim.js), иначе обычное сообщение
+    if (window.HAnim && m.startsWith("❄️") && typeof streakInfo === "function") HAnim.play("freeze", { day: streakInfo().count, text: m.replace("❄️ ", "") });
+    else showToast(m);
+  }, 900);
+  updateToday();
+}
 
 
 // =====================================================

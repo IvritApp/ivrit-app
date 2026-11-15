@@ -52,11 +52,29 @@
     let extra = "";
     if (s.count % FREEZE_EVERY === 0 && s.freezes < MAX_FREEZES) { s.freezes++; extra = " · +1 заморозка ❄️"; }
     put(s);
-    setTimeout(() => {
+    if (window.HAnim) {
+      // новый экран «Серия продлена» (anim.js). После урока его показывает app.js (после праздника),
+      // в остальных случаях (квест) — сам через полторы секунды.
+      window.streakPending = { day: s.count, extra: extra };
+      setTimeout(() => { if (window.streakPending && !window.streakHold) show(); }, 1500);
+    } else setTimeout(() => {
       if (typeof showToast === "function") showToast(`🔥 Серия: ${s.count} ${daysWord(s.count)}!${extra}`);
       if (typeof playSound === "function") playSound("combo");
     }, 1200);
     if (typeof updateToday === "function") updateToday();
+  }
+
+  // Экран «Серия продлена»: большой огонь, число дня, неделя с галочками
+  function show() {
+    const p = window.streakPending;
+    window.streakPending = null;
+    if (!p || !window.HAnim) return Promise.resolve();
+    const s = get(), t = today(), idx = (new Date().getDay() + 6) % 7;       // пн = 0
+    const week = Array.from({ length: 7 }, (_, i) => i <= idx && s.days.includes(addDays(t, i - idx)));
+    return HAnim.play("streak", { day: p.day, first: p.day === 1, week: week, today: idx,
+      onPeak: () => { if (typeof playSound === "function") playSound("combo"); } })
+      .then(() => { if (p.extra && typeof showToast === "function") showToast("Новая заморозка ❄️ — за 7 дней серии!"); })
+      .catch(() => {});
   }
 
   function daysWord(n) {
@@ -102,6 +120,7 @@
 
   window.streakCheck = check;
   window.streakDone = done;
+  window.streakShow = show;
   window.streakInfo = info;
   window.openStreak = open;
   window.daysWord = daysWord;
