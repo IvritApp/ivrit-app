@@ -171,6 +171,22 @@
 @keyframes ha-m-leg{0%,100%{transform:rotate(38deg)}50%{transform:rotate(-38deg)}}
 @keyframes ha-m-wind{0%{transform:translateX(34px);opacity:0}30%{opacity:1}100%{transform:translateX(-30px);opacity:0}}
 
+/* клюв открывается */
+.ha-m-jaw,.ha-m-beakup{transition:transform .16s var(--ha-out)}
+.ha-m-mouth{opacity:0;transition:opacity .1s}
+.ha-m--happy .ha-m-jaw,.ha-m--cheer .ha-m-jaw,.ha-m--surprised .ha-m-jaw{transform:rotate(32deg)}
+.ha-m--happy .ha-m-beakup,.ha-m--cheer .ha-m-beakup,.ha-m--surprised .ha-m-beakup{transform:rotate(-17deg)}
+.ha-m--happy .ha-m-mouth,.ha-m--cheer .ha-m-mouth,.ha-m--surprised .ha-m-mouth{opacity:1}
+.ha-m--talk .ha-m-torso{animation:ha-m-breath 2.6s ease-in-out infinite}
+.ha-m--talk{--fan:.7}
+.ha-m--talk .ha-m-head{animation:ha-m-tilt 1.6s ease-in-out infinite}
+.ha-m--talk .ha-m-jaw,.ha-m--dance .ha-m-jaw,.ha-m.ha-m-talk .ha-m-jaw{animation:ha-m-jaw .3s ease-in-out infinite alternate}
+.ha-m--talk .ha-m-beakup,.ha-m--dance .ha-m-beakup,.ha-m.ha-m-talk .ha-m-beakup{animation:ha-m-bup .3s ease-in-out infinite alternate}
+.ha-m--talk .ha-m-mouth,.ha-m--dance .ha-m-mouth,.ha-m.ha-m-talk .ha-m-mouth{animation:ha-m-mth .3s ease-in-out infinite alternate}
+@keyframes ha-m-jaw{from{transform:rotate(2deg)}to{transform:rotate(32deg)}}
+@keyframes ha-m-bup{from{transform:rotate(0deg)}to{transform:rotate(-16deg)}}
+@keyframes ha-m-mth{from{opacity:0}to{opacity:1}}
+
 .ha-m.ha-m-blink .ha-m-eyeopen{transform:scaleY(.08)}
 
 /* ═════════ СОСТОЯНИЯ КНОПОК И ПЛИТОК ═════════ */

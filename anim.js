@@ -3,7 +3,7 @@
  * ┌──────────────┬───────────────────────────────────────────────────────────┬──────────────┐
  * │ ИМЯ          │ ГДЕ ВЫЗЫВАТЬ  →  HAnim.play("имя", {параметры})            │ ДЛИТЕЛЬНОСТЬ │
  * ├──────────────┼───────────────────────────────────────────────────────────┼──────────────┤
- * │ МАСКОТ: HAnim.mascot(el, mood) — idle think sleep wave dance point sad surprised run     │
+ * │ МАСКОТ: HAnim.mascot(el, mood) — idle talk think sleep wave dance point sad surprised run│
  * │   (идут по кругу) · happy 1,0 с · cheer 1,9 с · fly 1,3 с · flyout 0,9 с (потом idle)    │
  * ├──────────────┼───────────────────────────────────────────────────────────┼──────────────┤
  * │ correct      │ ответ верный {el}                                          │ 0,42 с       │
@@ -186,7 +186,7 @@
           '<ellipse cx="70" cy="95" rx="8" ry="5" fill="#ff5d8f" opacity=".45"/><ellipse cx="130" cy="95" rx="8" ry="5" fill="#ff5d8f" opacity=".45"/>' +
           eye(83, 1.5) + eye(117, -1.5) +
           '<path class="ha-m-brow" d="M72 66L91 60M128 66L109 60" stroke="' + K + '" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-          '<path class="ha-m-beak" d="M93 90Q100 86 107 90 107 104 97 116 99 102 93 90Z" fill="#3a3140"/>' +
+          '<g transform="translate(100 90)"><g class="ha-m-beak"><path class="ha-m-mouth" d="M-6 1L6 1 5 12 0 23-4 14Z" fill="#e5484d"/><g class="ha-m-jaw"><path d="M-5 1Q0-1 5 1 5 12-1 21-1 10-5 1Z" fill="#2a2230"/></g><g class="ha-m-beakup"><path d="M-7 0Q0-4 7 0 7 14-3 26-1 12-7 0Z" fill="#3a3140"/></g></g></g>' +
         "</g></g></g>" +
       "</g></g></g></g>" +
       '<g class="ha-m-zzz" fill="#3a8ad6" font-family="Arial,sans-serif" font-weight="700"><text x="146" y="52" font-size="22">z</text><text x="161" y="36" font-size="17">z</text><text x="173" y="23" font-size="13">z</text></g>' +
@@ -225,6 +225,12 @@
         } else c.done = Promise.resolve();
         return c;
       };
+      /* клюв «говорит» ms миллисекунд поверх любого настроения: HAnim.mascot(el).talk(1500) */
+      c.talk = function (ms) {
+        w.classList.add("ha-m-talk"); clearTimeout(c.tt);
+        c.tt = setTimeout(function () { w.classList.remove("ha-m-talk"); }, ms || 1200);
+        return c;
+      };
       c.destroy = function () { clearTimeout(c.timer); clearTimeout(c.bt); w.remove(); host._haM = null; };
       (function blink() {                      /* моргает раз в 3–5 с, иногда смотрит в сторону */
         c.bt = setTimeout(function () {
@@ -242,6 +248,7 @@
         }, 3000 + Math.random() * 2000);
       })();
     }
+    if (mood == null && c.mood) return c;
     return c.set(mood || "idle", o);
   };
 

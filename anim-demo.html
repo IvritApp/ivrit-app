@@ -265,7 +265,7 @@
 
   /* A · маскот */
   var bird = HAnim.mascot($("bird"), "fly");
-  [["idle", "1 · idle"], ["happy", "2 · happy"], ["cheer", "3 · cheer"], ["sad", "4 · sad"], ["think", "5 · think"], ["wave", "6 · wave"],
+  [["idle", "1 · idle"], ["talk", "говорит"], ["happy", "2 · happy"], ["cheer", "3 · cheer"], ["sad", "4 · sad"], ["think", "5 · think"], ["wave", "6 · wave"],
    ["sleep", "7 · sleep"], ["fly", "8 · fly-in"], ["flyout", "8 · fly-out"], ["dance", "9 · dance"], ["point", "10 · point"], ["surprised", "11 · surprised"]
   ].forEach(function (m) {
     var b = document.createElement("button");
@@ -393,7 +393,7 @@
     alarm: function () { return P("alarm", {}); },
     gift: function () { return P("gift", { name: "Давид" }); },
     doors: function () { return P("doors", { el: $("scene"), inner: $("room") }); },
-    speech: function () { return P("speech", { el: $("host"), text: "שָׁלוֹם! מָה אַתָּה רוֹצֶה?" }); },
+    speech: function () { HAnim.mascot($("bird")).talk(2200); return P("speech", { el: $("host"), text: "שָׁלוֹם! מָה אַתָּה רוֹצֶה?" }); },
     found: function () { var it = items.filter(function (x) { return !x.classList.contains("ha-found"); })[0]; if (!it) { run.foundReset(); it = items[0]; } return find(it); },
     foundReset: function () { items.forEach(HAnim.clear); basket = 0; $("basketN").textContent = 0; },
     voice: function () { return P("voice", { el: $("mic"), ms: 1800, text: "אֲנִי רוֹצֶה פִּיתָה", out: $("said") }); },
