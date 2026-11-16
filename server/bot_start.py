@@ -20,6 +20,18 @@ import json, os, sqlite3, sys, time, urllib.error, urllib.request
 DB = os.environ.get("PLAYERS_DB", "/var/lib/hirbis/players.db")
 TOKEN_FILE = os.environ.get("BOT_TOKEN_FILE", "/etc/hirbis/bot.token")
 APP_URL = os.environ.get("HIRBIS_APP_URL", "https://ivritapp.github.io/ivrit-app/")
+# From a server in Russia api.telegram.org may be blocked — then put the address of our proxy abroad
+# into /etc/hirbis/tg_api (one line, e.g. https://tg.example.com) or the env var HIRBIS_TG_API.
+def _tg_api():
+    try:
+        with open("/etc/hirbis/tg_api") as f:
+            v = f.read().strip()
+            if v:
+                return v.rstrip("/")
+    except Exception:
+        pass
+    return os.environ.get("HIRBIS_TG_API", "https://api.telegram.org").rstrip("/")
+TG_API = _tg_api()
 
 BUTTON = "🐦 Учить иврит"
 MENU_TEXT = "Учить"
@@ -58,7 +70,7 @@ HELP_TEXT = ("Как это работает:\n\n"
 
 def api(token, method, payload=None, timeout=20):
     body = json.dumps(payload or {}).encode()
-    req = urllib.request.Request(f"https://api.telegram.org/bot{token}/{method}", data=body,
+    req = urllib.request.Request(f"{TG_API}/bot{token}/{method}", data=body,
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())

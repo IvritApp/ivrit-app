@@ -19,6 +19,17 @@ DB = os.environ.get("PLAYERS_DB", "/var/lib/hirbis/players.db")
 TOKEN_FILE = os.environ.get("BOT_TOKEN_FILE", "/etc/hirbis/bot.token")
 APP_URL = os.environ.get("HIRBIS_APP_URL", "https://ivritapp.github.io/ivrit-app/")
 MSK = timezone(timedelta(hours=3))
+# api.telegram.org may be blocked from a server in Russia — proxy address abroad goes into /etc/hirbis/tg_api
+def _tg_api():
+    try:
+        with open("/etc/hirbis/tg_api") as f:
+            v = f.read().strip()
+            if v:
+                return v.rstrip("/")
+    except Exception:
+        pass
+    return os.environ.get("HIRBIS_TG_API", "https://api.telegram.org").rstrip("/")
+TG_API = _tg_api()
 
 
 def day(shift=0):
@@ -59,7 +70,7 @@ def send(token, chat_id, text):
         "chat_id": chat_id, "text": text,
         "reply_markup": {"inline_keyboard": [[{"text": "Пройти урок — 3 минуты", "web_app": {"url": APP_URL}}]]},
     }).encode()
-    req = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=body,
+    req = urllib.request.Request(f"{TG_API}/bot{token}/sendMessage", data=body,
                                  headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
