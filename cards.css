@@ -98,3 +98,36 @@ body.theme-dark .cd-face:not(.cd-back) { border-color: rgba(160, 140, 255, .3); 
   .cd-card, .cd-inner { transition-duration: .15s; }
   .cd-chip, .cd-end, .cd-btns > * { animation: none; }
 }
+
+/* =====================================================
+   ЧАСТИ УРОКА (parts.js): полоски под кружком урока, точки на экране итога, выбор части
+   ===================================================== */
+.p-parts { display: flex; gap: 4px; justify-content: center; margin-top: 5px; }
+.p-parts i { width: 12px; height: 5px; border-radius: 3px; background: #dfe6ee; transform-origin: left center; }
+.p-parts i.on { background: #58cc02; animation: ptFill .45s var(--cd-spring) both; animation-delay: calc(.15s + var(--i) * .07s); }
+body.theme-dark .p-parts i:not(.on) { background: #2a3546; }
+@keyframes ptFill { from { transform: scaleX(.2); opacity: .3; } }
+
+.part-dots { display: flex; gap: 6px; justify-content: center; margin: 2px 0 10px; }
+.part-dots i { width: 26px; height: 8px; border-radius: 4px; background: var(--soft); }
+.part-dots i.on { background: #58cc02; }
+.part-dots i.now { animation: ptNow 1.1s var(--cd-spring) .5s both; box-shadow: 0 0 0 3px rgba(88, 204, 2, .25); }
+@keyframes ptNow { 0% { transform: scale(.3); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+#ptSheet { position: fixed; inset: 0; z-index: 90; background: rgba(10, 20, 35, 0); display: flex; align-items: flex-end; justify-content: center;
+  transition: background .25s; }
+#ptSheet.show { background: rgba(10, 20, 35, .45); }
+.pt-card { width: 100%; max-width: 520px; background: var(--bg); color: var(--text); border-radius: 24px 24px 0 0; padding: 18px 16px 26px;
+  transform: translateY(100%); transition: transform .35s var(--cd-out); }
+#ptSheet.show .pt-card { transform: none; }
+.pt-h { font-size: 20px; font-weight: 800; }
+.pt-sub { color: var(--hint); margin: 2px 0 14px; }
+.pt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pt-b { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px; border-radius: 16px; border: 2px solid #d9e6f2;
+  border-bottom-width: 5px; background: var(--bg); color: var(--text); font: inherit; cursor: pointer; transition: transform .1s;
+  animation: cdChip .4s var(--cd-spring) both; animation-delay: calc(.1s + var(--i) * .05s); }
+.pt-b:active { transform: translateY(3px); border-bottom-width: 2px; }
+.pt-b b { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #58cc02; color: #fff; font-size: 18px; }
+.pt-b.gold b { background: linear-gradient(145deg, #ffe066, #f5b400); }
+.pt-b span { font-size: 13px; color: var(--hint); }
+body.theme-dark .pt-b { border-color: #2a3546; }

@@ -1,0 +1,79 @@
+/* =====================================================
+   ВОРДЛ (wordle.js): сетка 6×5, ивритская клавиатура, итог со статистикой
+   ===================================================== */
+#wordle { max-width: 460px; margin: 0 auto; padding-bottom: 20px; }
+.wd-top { display: flex; align-items: center; justify-content: center; gap: 10px; position: relative; }
+.wd-title { font-size: 26px; font-weight: 900; letter-spacing: -.01em; }
+.wd-title span { font-size: 14px; font-weight: 700; color: #3cae5c; margin-left: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.wd-help { position: absolute; right: 0; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--soft); background: var(--bg); color: var(--hint);
+  font: inherit; font-weight: 800; cursor: pointer; }
+.wd-sub { color: var(--hint); font-size: 14px; margin: 4px 0 12px; min-height: 18px; }
+
+.wd-grid { display: grid; gap: 6px; justify-content: center; margin: 0 auto 8px; }
+.wd-row { display: grid; grid-template-columns: repeat(5, 54px); gap: 6px; }
+.wd-cell { width: 54px; height: 54px; display: grid; place-items: center; font-size: 30px; font-weight: 700; border-radius: 10px;
+  border: 2px solid #d9e2ec; background: var(--bg); color: var(--text); transition: border-color .15s; }
+.wd-cell.full { border-color: #9aa8b8; }
+.wd-cell.wd-ok   { background: #3cae5c; border-color: #3cae5c; color: #fff; }
+.wd-cell.wd-near { background: #f2b630; border-color: #f2b630; color: #fff; }
+.wd-cell.wd-no   { background: #8d97a8; border-color: #8d97a8; color: #fff; }
+body.theme-dark .wd-cell { border-color: #2f3b4c; }
+body.theme-dark .wd-cell.full { border-color: #66758a; }
+body.theme-dark .wd-cell.wd-no { background: #3a4556; border-color: #3a4556; }
+
+.wd-flip { animation: wdFlip .5s ease-in-out both; }
+@keyframes wdFlip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+.wd-win { animation: wdWin .6s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes wdWin { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px); } 70% { transform: translateY(3px); } }
+.wd-shake { animation: wdShake .4s ease; }
+@keyframes wdShake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+
+.wd-hint { min-height: 30px; margin: 4px 0 6px; font-size: 15px; }
+.wd-hint-b { border: none; background: var(--soft); color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; }
+
+.wd-kb { display: flex; flex-direction: column; gap: 6px; margin: 4px auto 0; }
+.wd-kr { display: flex; gap: 5px; justify-content: center; }
+.wd-k { flex: 1; max-width: 40px; height: 48px; border: none; border-radius: 9px; font: inherit; font-size: 21px; font-weight: 700; cursor: pointer;
+  background: var(--soft); color: var(--text); border-bottom: 3px solid rgba(0, 0, 0, .12); touch-action: manipulation; transition: transform .08s; }
+.wd-k:active { transform: translateY(2px); border-bottom-width: 1px; }
+.wd-k.wd-del { max-width: 52px; font-size: 18px; }
+.wd-k.wd-ok { background: #3cae5c; color: #fff; }
+.wd-k.wd-near { background: #f2b630; color: #fff; }
+.wd-k.wd-no { background: #8d97a8; color: #fff; opacity: .7; }
+.wd-enter { margin-top: 10px !important; }
+
+.wd-res { margin-top: 6px; }
+.wd-res.fresh { animation: cdEndIn .5s cubic-bezier(.22, 1, .36, 1) both; }
+.wd-bird { height: 100px; display: flex; justify-content: center; align-items: flex-end; }
+.wd-word { font-size: 44px; font-weight: 700; line-height: 1.1; }
+.wd-tr { color: var(--hint); font-size: 18px; margin: 2px 0; }
+.wd-ru { font-size: 20px; font-weight: 800; }
+.wd-pts { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px; background: #e6f6dd; color: #2e8a3e; font-weight: 800; }
+.wd-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 16px 0 10px; }
+.wd-stats div { display: flex; flex-direction: column; }
+.wd-stats b { font-size: 24px; font-variant-numeric: tabular-nums; }
+.wd-stats span { font-size: 12px; color: var(--hint); }
+.wd-dist { display: flex; flex-direction: column; gap: 4px; max-width: 320px; margin: 0 auto; }
+.wd-dr { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.wd-dr i { width: 12px; font-style: normal; color: var(--hint); }
+.wd-dr b { width: var(--w); min-width: 22px; text-align: right; padding: 2px 6px; border-radius: 4px; background: #8d97a8; color: #fff;
+  transform-origin: left; animation: wdBar .6s cubic-bezier(.22, 1, .36, 1) .2s both; }
+.wd-dr b.me { background: #3cae5c; }
+@keyframes wdBar { from { transform: scaleX(0); } }
+.wd-next { margin: 14px 0 0; color: var(--hint); font-size: 14px; }
+
+/* «Как играть» — та же выезжающая снизу карточка, что и выбор части урока */
+#wdHow { position: fixed; inset: 0; z-index: 90; background: rgba(10, 20, 35, 0); display: flex; align-items: flex-end; justify-content: center; transition: background .25s; }
+#wdHow.show { background: rgba(10, 20, 35, .45); }
+#wdHow .pt-card { text-align: left; }
+#wdHow.show .pt-card { transform: none; }
+#wdHow p { margin: 8px 0; line-height: 1.45; }
+.wd-ex { display: flex; gap: 5px; justify-content: center; margin: 10px 0; }
+.wd-ex .wd-cell { width: 42px; height: 42px; font-size: 22px; }
+
+/* Карточка на главной */
+.card.wordle-card .icon { background: #e6f6dd; font-size: 22px; }
+.card.wordle-card.done .desc::after { content: " · сегодня ✓"; color: #3cae5c; font-weight: 700; }
+
+@media (max-width: 360px) { .wd-row { grid-template-columns: repeat(5, 48px); } .wd-cell { width: 48px; height: 48px; font-size: 26px; } .wd-k { height: 44px; font-size: 19px; } }
+@media (prefers-reduced-motion: reduce) { .wd-flip, .wd-win, .wd-shake, .wd-dr b { animation: none; } }

@@ -40,8 +40,9 @@
     document.body.classList.toggle("has-tabbar", show);
     bar.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tab === (sec.hidden ? "learn" : "friends")));
     const badge = bar.querySelector(".tb-badge");
-    if (badge.textContent !== String(incomingCount)) badge.textContent = incomingCount;
-    if (badge.hidden !== !incomingCount) badge.hidden = !incomingCount;
+    const n = incomingCount + (window.chatUnread ? window.chatUnread.total || 0 : 0);   // заявки + непрочитанные сообщения (social.js)
+    if (badge.textContent !== String(n)) badge.textContent = n;
+    if (badge.hidden !== !n) badge.hidden = !n;
   }
   // следим только за экранами (body > section), а не за всей страницей
   const mo = new MutationObserver(updateBar);
@@ -68,7 +69,9 @@
     incomingCount = d.incoming.length; updateBar();
     const row = (x, right) => `<div class="fr-row" data-h="${esc(x.handle)}">${head(x.avatar, x.gender, 46)}
       <div class="fr-who"><b>${esc(x.name || "@" + x.handle)}</b><span>@${esc(x.handle)}</span></div>${right || ""}</div>`;
-    const stat = x => `<div class="fr-stat">🔥 ${x.streak}<small>⭐ ${x.points}</small></div>`;
+    const un = (h) => (window.chatUnread && window.chatUnread.by && window.chatUnread.by[h]) || 0;
+    const stat = x => `<div class="fr-stat">🔥 ${x.streak}<small>⭐ ${x.points}</small></div>
+      <button class="fr-chat" data-chat="${esc(x.handle)}" aria-label="Написать">💬${un(x.handle) ? `<i>${un(x.handle)}</i>` : ""}</button>`;
     body.innerHTML = `
       ${row(d.me, `<div class="fr-stat">Мой профиль ›</div>`).replace('class="fr-row"', 'class="fr-row fr-me"')}
 
@@ -85,10 +88,15 @@
       ${d.outgoing.length ? `<div class="fr-h">Ждут ответа</div>
         ${d.outgoing.map(x => row(x, `<button class="fr-x" data-rm="${esc(x.handle)}" title="Отменить">✕</button>`)).join("")}` : ""}
 
-      <div class="fr-h">Команды</div>
-      <div class="fr-soon"><b>🏆 Команды и соревнования — скоро</b>
-        <span>Собери команду из друзей: общий огонёк серии, командные задания и соревнования — кто первый пройдёт, получит бонусы.</span></div>`;
+      <div class="fr-h">Команда</div>
+      <div id="frTeam"><p class="fr-note">Загружаю…</p></div>`;
     body.querySelectorAll(".fr-row").forEach(r => r.onclick = (e) => { if (!e.target.closest("button")) openProfile(r.dataset.h); });
+    // чат с другом и команда (social.js)
+    body.querySelectorAll("[data-chat]").forEach(b => b.onclick = () => {
+      const x = d.friends.find(f => f.handle === b.dataset.chat);
+      if (window.openChat) openChat({ with: b.dataset.chat, title: (x && x.name) || "@" + b.dataset.chat, sub: "@" + b.dataset.chat, ava: x ? head(x.avatar, x.gender, 40) : "" });
+    });
+    if (window.loadTeam) loadTeam(body.querySelector("#frTeam"), d);
     body.querySelectorAll("[data-acc]").forEach(b => b.onclick = () => act("/friends/accept", b.dataset.acc, "Теперь вы друзья 🎉"));
     body.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => act("/friends/remove", b.dataset.rm, "Готово"));
     const find = async () => {
@@ -182,7 +190,7 @@
   updateBar();
 
   // ---------- открыто окно (настройки, серия, админка, профиль) → страница под ним стоит на месте ----------
-  const OVL = "#settings, #streakSheet, .sy-wrap, #frProfile";
+  const OVL = "#settings, #streakSheet, .sy-wrap, #frProfile, #frChat";
   let locked = false, savedY = 0;
   function lockScroll() {
     const open = [...document.querySelectorAll(OVL)].some(e => e.classList.contains("show"));
@@ -200,4 +208,9 @@
 
   window.showFriends = showFriends;
   window.openProfile = openProfile;
+  // для social.js (чат и команды)
+  window.hirbisApi = api;
+  window.hirbisHead = head;
+  window.hirbisAgreed = () => !!initData && agreed();
+  window.updateTabBar = updateBar;
 })();

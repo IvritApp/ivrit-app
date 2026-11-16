@@ -68,7 +68,8 @@ function autoIntro() {
   if (lvl.intro !== "taxi" || store.get("taxiSeen", false) || autoIntro.tried) return false;
   autoIntro.tried = true;
   // после такси — сразу карточки слов (если их ещё не смотрели), иначе первый урок
-  showTaxi(() => (window.cardsNeeded && cardsNeeded(lvl)) ? startCards(lvl.id) : startLesson(lvl.lessons[0]));
+  showTaxi(() => (window.cardsNeeded && cardsNeeded(lvl)) ? startCards(lvl.id)
+    : window.startLessonPart ? startLessonPart(lvl.lessons[0]) : startLesson(lvl.lessons[0]));
   return true;
 }
 
@@ -161,7 +162,7 @@ function renderPath() {
     const curId = nextIdx >= 0 ? lvl.lessons[nextIdx] : null;
     const curBtn = curId ? pathView.querySelector(`.p-node[data-lesson="${curId}"]`) : null;
     if (curBtn) {
-      HAnim.play("nodePulse", { el: curBtn, progress: nextIdx / lvl.lessons.length });
+      HAnim.play("nodePulse", { el: curBtn, progress: 0 });   // кольцо = части урока (заполняет parts.js)
       const was = store.get("pathCur", null);
       if (was && was !== curId && done.includes(was)) setTimeout(() => { if (curBtn.isConnected) HAnim.play("unlock", { el: curBtn, lockedClass: "p-was-locked", openClass: "p-just-open",
         onPeak: () => { if (typeof playSound === "function") playSound("pop"); } }); }, 450);
@@ -172,9 +173,12 @@ function renderPath() {
   pathView.querySelectorAll(".p-node").forEach(b => b.onclick = () => {
     if (b.classList.contains("locked")) { showToast(needCards ? "Сначала посмотри карточки слов 📇" : "Сначала пройди предыдущий урок"); vibrate("warning"); return; }
     const id = b.dataset.lesson;
-    if (+b.dataset.k === 0 && lvl.intro === "taxi" && !store.get("taxiSeen", false)) showTaxi(() => startLesson(id));
-    else startLesson(id);
+    // урок из частей (parts.js): следующая непройденная часть; пройденный урок — выбрать часть для повтора
+    const go = () => window.startLessonPart ? (done.includes(id) ? partsPicker(id) : startLessonPart(id)) : startLesson(id);
+    if (+b.dataset.k === 0 && lvl.intro === "taxi" && !store.get("taxiSeen", false)) showTaxi(go);
+    else go();
   });
+  if (window.partsDecorate) partsDecorate(lvl, pathView);
   document.getElementById("p-settings").onclick = openSettings;
   if (window.cardsMount) cardsMount(lvl);
   pathView.querySelectorAll(".p-rev").forEach(b => b.onclick = () => startReview(lvl.id, +b.dataset.rev));

@@ -13,6 +13,8 @@
 #   /hapi/sync {ver, state|null}   /hapi/reset   /hapi/check {handle}
 #   /hapi/handle {handle}          — сменить основной ник (старый освобождается)
 #   /hapi/nicks/add|main|remove {handle}
+#   /hapi/chat/list {with|team, since}  /hapi/chat/send {with|team, text}  /hapi/chat/unread  /hapi/chat/report {id}
+#   /hapi/team/me  /hapi/team/create {name, emoji}  /hapi/team/join {code}  /hapi/team/leave  /hapi/team/kick {handle}  /hapi/team/top
 #   /hapi/admin/list {q}  /hapi/admin/get {handle}  /hapi/admin/set {handle, ...}  /hapi/admin/log {}
 # Команды на сервере:
 #   python3 players_api.py make-admin <ник>   |   remove-admin <ник>   |   list
@@ -50,6 +52,16 @@ def db():
                      ("rec_fail", "INTEGER DEFAULT 0"), ("rec_lock", "REAL DEFAULT 0")):
         if col not in cols:
             c.execute(f"ALTER TABLE players ADD COLUMN {col} {typ}")
+    # чат (16.11): личные сообщения друзей (receiver) и командный чат (team_id); прочитанное — chat_read
+    c.execute("""CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, sender INTEGER,
+        receiver INTEGER DEFAULT 0, team_id INTEGER DEFAULT 0, text TEXT, at REAL)""")
+    c.execute("CREATE INDEX IF NOT EXISTS msg_pair ON messages (receiver, sender)")
+    c.execute("CREATE INDEX IF NOT EXISTS msg_team ON messages (team_id)")
+    c.execute("CREATE TABLE IF NOT EXISTS chat_read (tg_id INTEGER, peer TEXT, last_id INTEGER, PRIMARY KEY (tg_id, peer))")
+    c.execute("CREATE TABLE IF NOT EXISTS chat_reports (msg_id INTEGER, by_id INTEGER, at REAL, PRIMARY KEY (msg_id, by_id))")
+    # команды (16.11): один игрок — одна команда; вход по коду
+    c.execute("CREATE TABLE IF NOT EXISTS teams (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, emoji TEXT, code TEXT UNIQUE, owner INTEGER, created REAL)")
+    c.execute("CREATE TABLE IF NOT EXISTS team_members (tg_id INTEGER PRIMARY KEY, team_id INTEGER, joined REAL)")
     c.execute("CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, tg_id INTEGER, until REAL)")
     c.execute("CREATE TABLE IF NOT EXISTS rec_tries2 (tg_id INTEGER PRIMARY KEY, fails INTEGER, lock REAL, at REAL)")   # кто пытается восстановить
     if "nick_limit" not in cols:
@@ -308,6 +320,81 @@ def profile_card(c, r, full=True):
     return out
 
 
+# ---------- чат и команды (16.11) ----------
+MSG_MAX = 500                 # символов в сообщении
+MSG_PER_MIN = 20              # сообщений в минуту с одного игрока
+TEAM_MAX = 20                 # человек в команде
+TEAM_EMOJI = ("🦁", "🐪", "🦊", "🐬", "🦉", "🐝", "🌵", "🍉", "🔥", "⭐", "🚀", "🕍")
+# грубые слова в чате заменяем звёздочками (корни; ловит и формы)
+#   (\b — только с начала слова, чтобы не задеть «небо», «хлеба» и т. п.)
+CHAT_BAD = re.compile(r"\b(х[уy][йеёияю]\w*|пизд\w*|[её]б[аеиоуыё]\w*|\w*[её]бан\w*|бля\w*|муд[аио]к\w*|пид[оа]р\w*|fuck\w*|shit\w*|bitch\w*)", re.I)
+
+
+def clean_text(t):
+    t = re.sub(r"\s+", " ", str(t or "")).strip()[:MSG_MAX]
+    return CHAT_BAD.sub(lambda m: "*" * len(m.group(0)), t)
+
+
+def week_points(st):
+    """Очки за текущую неделю (пн–вс, по Москве) из прогресса игрока (ключи points_Г-М-Д)."""
+    d = today_msk()
+    total = 0
+    for i in range(d.weekday() + 1):
+        x = d - timedelta(days=i)
+        try:
+            total += int(json.loads(st.get(f"points_{x.year}-{x.month}-{x.day}", "0")) or 0)
+        except Exception:
+            pass
+    return total
+
+
+def team_of(c, uid):
+    m = c.execute("SELECT team_id FROM team_members WHERE tg_id=?", (uid,)).fetchone()
+    return c.execute("SELECT * FROM teams WHERE id=?", (m[0],)).fetchone() if m else None
+
+
+def team_card(c, t, uid=None):
+    members = []
+    for m in c.execute("SELECT tg_id, joined FROM team_members WHERE team_id=? ORDER BY joined", (t["id"],)).fetchall():
+        pr = c.execute("SELECT * FROM players WHERE tg_id=?", (m[0],)).fetchone()
+        if not pr:
+            continue
+        card = profile_card(c, pr, full=False)
+        card["week"] = week_points(json.loads(pr["state"] or "{}"))
+        card["owner"] = m[0] == t["owner"]
+        card["me"] = m[0] == uid
+        members.append(card)
+    members.sort(key=lambda x: (-x["week"], -x["streak"]))
+    return {"id": t["id"], "name": t["name"], "emoji": t["emoji"], "code": t["code"], "members": members,
+            "week": sum(x["week"] for x in members), "max": TEAM_MAX, "i_own": t["owner"] == uid}
+
+
+def new_team_code(c):
+    abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"        # без похожих O/0, I/1
+    while True:
+        code = "".join(random.choice(abc) for _ in range(6))
+        if not c.execute("SELECT 1 FROM teams WHERE code=?", (code,)).fetchone():
+            return code
+
+
+def unread_for(c, uid):
+    """Непрочитанные: {"by": {ник: n}, "team": n, "total": n}."""
+    reads = {r[0]: r[1] for r in c.execute("SELECT peer, last_id FROM chat_read WHERE tg_id=?", (uid,)).fetchall()}
+    by, total = {}, 0
+    for s, n, mx in c.execute("SELECT sender, COUNT(*), MAX(id) FROM messages WHERE receiver=? GROUP BY sender", (uid,)).fetchall():
+        k = c.execute("SELECT COUNT(*) FROM messages WHERE receiver=? AND sender=? AND id>?", (uid, s, reads.get(f"u{s}", 0))).fetchone()[0]
+        if k:
+            h = c.execute("SELECT handle FROM players WHERE tg_id=?", (s,)).fetchone()
+            if h:
+                by[h[0]] = k
+                total += k
+    team = 0
+    t = team_of(c, uid)
+    if t:
+        team = c.execute("SELECT COUNT(*) FROM messages WHERE team_id=? AND sender!=? AND id>?", (t["id"], uid, reads.get(f"t{t['id']}", 0))).fetchone()[0]
+    return {"by": by, "team": team, "total": total + team}
+
+
 def relation(c, me_id, other_id):
     if me_id == other_id:
         return "me"
@@ -505,6 +592,118 @@ class Handler(BaseHTTPRequestHandler):
                 c.execute("INSERT OR REPLACE INTO friends VALUES (?,?,'pending',?)", (uid, o, now))
             return 200, {"relation": "out"}
 
+        # ----- чат: личный (только друзья) и командный (только участники) -----
+        if route == "/hapi/chat/unread":
+            return 200, unread_for(c, uid)
+        if route in ("/hapi/chat/list", "/hapi/chat/send", "/hapi/chat/report"):
+            if route == "/hapi/chat/report":                        # пожаловаться на сообщение
+                mid = int(p.get("id") or 0)
+                m = c.execute("SELECT * FROM messages WHERE id=?", (mid,)).fetchone()
+                if not m:
+                    return 200, {"error": "Сообщение не найдено"}
+                c.execute("INSERT OR IGNORE INTO chat_reports VALUES (?,?,?)", (mid, uid, now))
+                c.execute("INSERT INTO admin_log VALUES (?,?,?,?)", (now, r["handle"], str(m["sender"]),
+                          json.dumps({"chat_report": {"msg": mid, "text": m["text"][:200]}}, ensure_ascii=False)))
+                return 200, {"ok": True}
+            if p.get("team"):
+                t = team_of(c, uid)
+                if not t:
+                    return 200, {"error": "Ты не в команде"}
+                peer, where, args = f"t{t['id']}", "team_id=?", (t["id"],)
+                to_id, team_id = 0, t["id"]
+            else:
+                o = owner_of(c, norm(p.get("with")))
+                if o is None or o == uid:
+                    return 200, {"error": "Такого ника нет"}
+                if relation(c, uid, o) != "friend":
+                    return 200, {"error": "Писать можно только друзьям"}
+                peer, where, args = f"u{o}", "((sender=? AND receiver=?) OR (sender=? AND receiver=?))", (uid, o, o, uid)
+                to_id, team_id = o, 0
+            if route == "/hapi/chat/send":
+                text = clean_text(p.get("text"))
+                if not text:
+                    return 200, {"error": "Пустое сообщение"}
+                cnt = c.execute("SELECT COUNT(*) FROM messages WHERE sender=? AND at>?", (uid, now - 60)).fetchone()[0]
+                if cnt >= MSG_PER_MIN:
+                    return 200, {"error": "Слишком быстро — подожди минутку 🙂"}
+                c.execute("INSERT INTO messages (sender, receiver, team_id, text, at) VALUES (?,?,?,?,?)", (uid, to_id, team_id, text, now))
+            since = int(p.get("since") or 0)
+            rows = c.execute(f"SELECT * FROM messages WHERE {where} AND id>? ORDER BY id DESC LIMIT 60", args + (since,)).fetchall()[::-1]
+            who = {}
+            def author(sid):
+                if sid not in who:
+                    pr = c.execute("SELECT * FROM players WHERE tg_id=?", (sid,)).fetchone()
+                    who[sid] = profile_card(c, pr, full=False) if pr else {"handle": "?", "name": "?"}
+                return who[sid]
+            msgs = [{"id": m["id"], "me": m["sender"] == uid, "text": m["text"], "at": m["at"],
+                     "from": {k: author(m["sender"]).get(k) for k in ("handle", "name", "gender", "avatar")}} for m in rows]
+            if rows:
+                c.execute("INSERT INTO chat_read VALUES (?,?,?) ON CONFLICT(tg_id, peer) DO UPDATE SET last_id=MAX(last_id, excluded.last_id)",
+                          (uid, peer, rows[-1]["id"]))
+            return 200, {"messages": msgs}
+
+        # ----- команды -----
+        if route == "/hapi/team/me":
+            t = team_of(c, uid)
+            return 200, {"team": team_card(c, t, uid) if t else None, "emoji": TEAM_EMOJI}
+        if route == "/hapi/team/create":
+            if team_of(c, uid):
+                return 200, {"error": "Ты уже в команде — сначала выйди из неё"}
+            name = re.sub(r"\s+", " ", str(p.get("name") or "")).strip()[:30]
+            if len(name) < 2:
+                return 200, {"error": "Название — хотя бы 2 буквы"}
+            lat = re.sub(r"[^a-z0-9_]", "", name.lower())
+            if CHAT_BAD.search(name) or (len(lat) >= 3 and nick_is_bad(lat)):
+                return 200, {"error": "Придумай другое название 🙂"}
+            emoji = p.get("emoji") if p.get("emoji") in TEAM_EMOJI else TEAM_EMOJI[0]
+            cur = c.execute("INSERT INTO teams (name, emoji, code, owner, created) VALUES (?,?,?,?,?)", (name, emoji, new_team_code(c), uid, now))
+            c.execute("INSERT INTO team_members VALUES (?,?,?)", (uid, cur.lastrowid, now))
+            return 200, {"team": team_card(c, team_of(c, uid), uid)}
+        if route == "/hapi/team/join":
+            if team_of(c, uid):
+                return 200, {"error": "Ты уже в команде — сначала выйди из неё"}
+            t = c.execute("SELECT * FROM teams WHERE code=?", (str(p.get("code") or "").strip().upper()[:8],)).fetchone()
+            if not t:
+                return 200, {"error": "Команды с таким кодом нет"}
+            if c.execute("SELECT COUNT(*) FROM team_members WHERE team_id=?", (t["id"],)).fetchone()[0] >= TEAM_MAX:
+                return 200, {"error": f"В команде уже {TEAM_MAX} человек"}
+            c.execute("INSERT INTO team_members VALUES (?,?,?)", (uid, t["id"], now))
+            return 200, {"team": team_card(c, t, uid)}
+        if route in ("/hapi/team/leave", "/hapi/team/kick"):
+            t = team_of(c, uid)
+            if not t:
+                return 200, {"team": None}
+            who_id = uid
+            if route == "/hapi/team/kick":
+                if t["owner"] != uid:
+                    return 200, {"error": "Убирать из команды может только капитан"}
+                who_id = owner_of(c, norm(p.get("handle")))
+                if who_id is None or who_id == uid or not c.execute("SELECT 1 FROM team_members WHERE tg_id=? AND team_id=?", (who_id, t["id"])).fetchone():
+                    return 200, {"error": "Этого игрока нет в команде"}
+            c.execute("DELETE FROM team_members WHERE tg_id=?", (who_id,))
+            left = c.execute("SELECT tg_id FROM team_members WHERE team_id=? ORDER BY joined", (t["id"],)).fetchall()
+            if not left:                                             # ушёл последний — команды больше нет
+                c.execute("DELETE FROM teams WHERE id=?", (t["id"],))
+                c.execute("DELETE FROM messages WHERE team_id=?", (t["id"],))
+            elif who_id == t["owner"]:                               # ушёл капитан — капитаном становится старший по стажу
+                c.execute("UPDATE teams SET owner=? WHERE id=?", (left[0][0], t["id"]))
+            t2 = team_of(c, uid)
+            return 200, {"team": team_card(c, t2, uid) if t2 else None}
+        if route == "/hapi/team/top":                                # рейтинг команд за неделю
+            top = []
+            for t in c.execute("SELECT * FROM teams").fetchall():
+                ids = [m[0] for m in c.execute("SELECT tg_id FROM team_members WHERE team_id=?", (t["id"],)).fetchall()]
+                week = 0
+                for i in ids:
+                    pr = c.execute("SELECT state FROM players WHERE tg_id=?", (i,)).fetchone()
+                    if pr:
+                        week += week_points(json.loads(pr[0] or "{}"))
+                top.append({"id": t["id"], "name": t["name"], "emoji": t["emoji"], "size": len(ids), "week": week})
+            top.sort(key=lambda x: -x["week"])
+            mine = team_of(c, uid)
+            return 200, {"top": top[:30], "place": next((i + 1 for i, x in enumerate(top) if mine and x["id"] == mine["id"]), None),
+                         "my_id": mine["id"] if mine else None, "total": len(top)}
+
         # ----- админ -----
         if route.startswith("/hapi/admin/"):
             if not r["admin"]:
@@ -618,6 +817,8 @@ class Handler(BaseHTTPRequestHandler):
         for h in nicks_of(c, uid):
             c.execute("DELETE FROM handles WHERE handle=?", (h,))
         c.execute("DELETE FROM friends WHERE a=? OR b=?", (uid, uid))
+        c.execute("DELETE FROM team_members WHERE tg_id=?", (uid,))
+        c.execute("DELETE FROM chat_read WHERE tg_id=?", (uid,))
         c.execute("DELETE FROM players WHERE tg_id=?", (uid,))
         c.execute("DELETE FROM admin_sessions WHERE tg_id=?", (old_id,))
         name = " ".join(x for x in [user.get("first_name"), user.get("last_name")] if x)[:60]
@@ -626,6 +827,13 @@ class Handler(BaseHTTPRequestHandler):
         c.execute("UPDATE handles SET tg_id=? WHERE tg_id=?", (uid, old_id))
         c.execute("UPDATE friends SET a=? WHERE a=?", (uid, old_id))
         c.execute("UPDATE friends SET b=? WHERE b=?", (uid, old_id))
+        # чат и команда переезжают вместе с аккаунтом
+        c.execute("UPDATE messages SET sender=? WHERE sender=?", (uid, old_id))
+        c.execute("UPDATE messages SET receiver=? WHERE receiver=?", (uid, old_id))
+        c.execute("UPDATE chat_read SET tg_id=? WHERE tg_id=?", (uid, old_id))
+        c.execute("UPDATE chat_read SET peer=? WHERE peer=?", (f"u{uid}", f"u{old_id}"))
+        c.execute("UPDATE team_members SET tg_id=? WHERE tg_id=?", (uid, old_id))
+        c.execute("UPDATE teams SET owner=? WHERE owner=?", (uid, old_id))
         c.execute("INSERT INTO admin_log VALUES (?,?,?,?)", (now, hit["handle"], hit["handle"], json.dumps({"recover": {"from_tg": old_id, "to_tg": uid}})))
         r = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
         return 200, {"ok": True, "handle": r["handle"], "ver": r["ver"]}

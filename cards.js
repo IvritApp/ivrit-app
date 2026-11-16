@@ -78,7 +78,7 @@
     if (tg && tg.BackButton) tg.BackButton.show();
     bar.style.width = "0%"; bar.classList.remove("hot", "max", "run");
     comboBox.innerHTML = ""; comboBox.className = "combo";
-    screen.innerHTML = `<p class="task">Загрузка…</p>`;
+    if (window.showLoading) showLoading(screen, "Раскладываем карточки"); else screen.innerHTML = `<p class="task">Загрузка…</p>`;
     setIconHero(lvl.lessons[0]);
     let data;
     try { data = await levelWords(lvl); } catch (e) { screen.textContent = "Не удалось загрузить слова 😕"; return; }

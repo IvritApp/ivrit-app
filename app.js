@@ -440,7 +440,7 @@ function startLesson(id) {
   bar.style.width = "0%";
   bar.classList.remove("hot", "max", "run");
   updateCombo(false);
-  screen.textContent = "Загрузка…";
+  if (window.showLoading) showLoading(screen, "Готовим урок"); else screen.textContent = "Загрузка…";
   setIconHero(id);
 
   (given ? Promise.resolve(JSON.parse(JSON.stringify(given))) : fetch(`content/${COURSE_LANG}/lessons/${id}.json`).then(response => response.json()))
@@ -619,7 +619,7 @@ function showListen(ex) {
       <div class="listen-hint">нажми, чтобы послушать ещё раз</div>
       <div class="word reveal" dir="rtl" id="reveal" hidden>${word.he}</div>`) + `
     <div id="options"></div>`;
-  const play = () => { speak(word.he, { audio: word.audio }); const b = document.getElementById("listen"); b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); };
+  const play = () => { const b = document.getElementById("listen"); if (!b) return; speak(word.he, { audio: word.audio }); b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); };
   document.getElementById("listen").onclick = play;
   setTimeout(play, 500);
   const box = document.getElementById("options");
@@ -662,8 +662,15 @@ function showBuildPhrase(ex) {
     const b = document.createElement("button");
     b.className = "tile"; b.textContent = t; b.dir = "rtl";
     b.onclick = () => {
-      if (b.parentNode === pool) { line.appendChild(b); speak(t); playSound("pop"); }
-      else pool.appendChild(b);
+      if (b._fly) return;
+      const toLine = b.parentNode === pool;
+      if (toLine) { speak(t); playSound("pop"); }
+      // слово летит по дуге в строку ответа и обратно (anim.js); без него — просто переставляем
+      if (window.HAnim && !HAnim.reduced) {
+        b._fly = true;
+        setTimeout(() => { b._fly = false; }, 450);           // страховка, если анимация не закончилась
+        HAnim.play("chipMove", { el: b, to: toLine ? line : pool }).catch(() => {}).then(() => { b._fly = false; });
+      } else (toLine ? line : pool).appendChild(b);
       refresh();
     };
     pool.appendChild(b);
@@ -739,6 +746,14 @@ function showBlitz(ex) {
       <div class="bl-opts" id="blOpts"></div>`;
     const bar = document.getElementById("blBar");
     requestAnimationFrame(() => { bar.style.transition = `width ${BLITZ_SEC}s linear`; bar.style.width = "0%"; });
+    // кольцо-таймер (anim.js): тает по кругу, последние 5 секунд пульсирует красным
+    let ring = null;
+    if (window.HAnim) {
+      const top = box.querySelector(".bl-top");
+      top.classList.add("has-ring");
+      top.innerHTML = `<div class="bl-ring" id="blRing"></div><b id="blTime" hidden>${left}</b>`;
+      ring = HAnim.play("blitz", { el: document.getElementById("blRing"), seconds: BLITZ_SEC, onPeak: () => playSound("pop") });
+    }
     const timer = setInterval(() => {
       left--; document.getElementById("blTime").textContent = left;
       if (left <= 5) document.getElementById("blTime").classList.add("hot");
@@ -768,6 +783,7 @@ function showBlitz(ex) {
     };
     const finish = () => {
       if (over) return; over = true; clearInterval(timer);
+      if (ring && ring.stop) ring.stop();
       const good = total > 0 && right / total >= 0.7 && right >= 5;
       document.getElementById("blOpts").innerHTML = "";
       document.getElementById("blWord").innerHTML = `<span class="bl-res">${right} из ${total}</span>`;
@@ -931,7 +947,8 @@ function flashRed() {
 // --- 4. Конец урока ---
 function showFinish() {
   bar.style.width = "100%";
-  markDone(lesson.id);
+  const isPart = lesson.partsTotal > 0 && window.finishLessonPart;   // урок из частей (parts.js)
+  if (!isPart) markDone(lesson.id);
   window.streakHold = !!window.HAnim;                     // экран серии покажем сами — после праздника (см. конец функции)
   if (typeof streakDone === "function") streakDone();     // день засчитан в серию
   // Идеальный урок (ни одной ошибки) — золотой, очки за урок ×2
@@ -939,10 +956,13 @@ function showFinish() {
   if (perfect) {
     store.set(todayKey(), store.get(todayKey(), 0) + lessonPoints);   // добавляем ещё столько же
     lessonPoints *= 2;
-    markPerfect(lesson.id);
+    if (!isPart) markPerfect(lesson.id);
   }
-  const lvl = course && course.chapters[0].levels[0];
-  const left = lvl ? lvl.lessons.filter(id => !doneLessons().includes(id)).length : 1;
+  // часть урока: засчитываем часть; урок пройден — после последней; золотой — если все части без ошибок
+  const pr = isPart ? finishLessonPart(lesson, perfect) : { lessonDone: true, gold: perfect, next: -1 };
+  const partTitle = isPart && !pr.lessonDone ? `Часть ${lesson.part + 1} из ${lesson.partsTotal} пройдена!` : null;
+  const lvl = course && course.chapters[0].levels.find(l => (l.lessons || []).includes(lesson.id));
+  const left = lvl && pr.lessonDone ? lvl.lessons.filter(id => !doneLessons().includes(id)).length : 1;
   vibrate("success");
   screen.innerHTML = `
     <div class="finish">
@@ -964,9 +984,11 @@ function showFinish() {
         ${window.HAnim ? `<div class="bird" id="finBird"></div>` : `<img class="bird" src="assets/udod.png" alt="Удод">`}
       </div>
 
-      <h2 class="done${perfect ? " gold" : ""}">${perfect ? "Идеальный урок! 🏆" : "Урок пройден!"}</h2>
+      <h2 class="done${perfect ? " gold" : ""}">${partTitle ? (perfect ? partTitle.replace("!", " без ошибок! ⭐") : partTitle) : pr.gold ? "Идеальный урок! 🏆" : perfect ? "Без единой ошибки! ⭐" : "Урок пройден!"}</h2>
       <p class="task">«${lesson.title}» · Ошибок: ${mistakes}</p>
-      ${perfect ? `<div class="perfect-badge">Без единой ошибки — урок стал <b>золотым</b>, очки <b>×2</b></div>` : ""}
+      ${isPart ? `<div class="part-dots">${Array.from({ length: lesson.partsTotal }, (_, i) => `<i class="${i <= lesson.part || i < partsDoneOf(lesson.id, lesson.partsTotal) ? "on" : ""}${i === lesson.part ? " now" : ""}"></i>`).join("")}</div>` : ""}
+      ${pr.gold ? `<div class="perfect-badge">Все части без единой ошибки — урок стал <b>золотым</b>, очки <b>×2</b></div>`
+        : perfect ? `<div class="perfect-badge">Без единой ошибки — очки <b>×2</b>${isPart ? ". Пройди так все части — и урок станет золотым" : ""}</div>` : ""}
       <div class="points-row">
         <div class="pts-big">+${lessonPoints}</div>
         <div class="pts-label">очков за урок${perfect ? " (×2)" : ""}<br>Сегодня всего: <b>${store.get(todayKey(), 0)}</b></div>
@@ -976,19 +998,26 @@ function showFinish() {
       <!-- Бонус: сленговое выражение -->
       <div class="bonus" id="bonus"></div>
 
-      ${left === 0 ? `<div class="unlock">🌯 Все 7 уроков пройдены — <b>квест «Первая шаурма» открыт!</b></div>` : ""}
-      <button class="btn blue" onclick="showPath()">Дальше</button>
-      <button class="btn ghost" onclick="startLesson('${lesson.id}')">Пройти ещё раз</button>
+      ${left === 0 ? `<div class="unlock">🎉 Все ${lvl.lessons.length} уроков пройдены — <b>квест «${lvl.questTitle || lvl.title}» открыт!</b></div>` : ""}
+      ${isPart && pr.next >= 0
+        ? `<button class="btn blue" id="finNext">Дальше: часть ${pr.next + 1} из ${lesson.partsTotal}</button>
+           <button class="btn ghost" onclick="showPath()">На дорожку</button>`
+        : `<button class="btn blue" onclick="showPath()">Дальше</button>
+           <button class="btn ghost" id="finAgain">Пройти ещё раз</button>`}
     </div>
   `;
   screen.classList.remove("slide-out");
   screen.classList.add("slide-in");
+  const finNext = document.getElementById("finNext"), finAgain = document.getElementById("finAgain");
+  const lid = lesson.id, lpart = lesson.part;
+  if (finNext) finNext.onclick = () => startLessonPart(lid, pr.next);
+  if (finAgain) finAgain.onclick = () => isPart ? startLessonPart(lid, lpart) : startLesson(lid);
   setTimeout(() => playSound("finish"), 900);   // фанфара — когда удод сел на ветку
   // Праздник (anim.js): Хибри ликует на весь экран → «идеальный урок ×2» → экран серии дня
   if (window.HAnim) {
     const fb = document.getElementById("finBird");
     if (fb) { const m = HAnim.mascot(fb, "idle", { size: 120 }); setTimeout(() => { if (fb.isConnected) m.set("happy", { size: 120 }); }, 2300); }
-    HAnim.play("lessonEnd", { cards: false, title: perfect ? "Идеальный урок!" : "Урок пройден!" })
+    HAnim.play("lessonEnd", { cards: false, title: partTitle || (pr.gold ? "Идеальный урок!" : "Урок пройден!") })
       .then(() => perfect ? HAnim.play("perfect", { xp: lessonPoints / 2, onPeak: () => playSound("combo") }) : null)
       .then(() => { window.streakHold = false; return window.streakShow ? streakShow() : null; })
       .catch(() => { window.streakHold = false; });
