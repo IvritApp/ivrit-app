@@ -1,0 +1,4 @@
+claude-docs/
+.claude/settings.local.json
+node_modules/
+*.png.tmp
