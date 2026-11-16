@@ -1,0 +1,100 @@
+/* =====================================================
+   КАРТОЧКИ СЛОВ (cards.js): блок на дорожке + экран карточек + итог части
+   Цвета фона и текста — из темы (var(--bg) / var(--text)), анимируем только transform и opacity.
+   ===================================================== */
+:root { --cd-spring: cubic-bezier(.34, 1.56, .64, 1); --cd-out: cubic-bezier(.22, 1, .36, 1); }
+
+/* ---------- Блок на дорожке ---------- */
+.cd-path { display: flex; align-items: center; gap: 14px; width: 100%; margin: 18px 0 4px; padding: 14px 16px; text-align: left;
+  border: none; border-radius: 22px; cursor: pointer; font: inherit; color: #fff;
+  background: linear-gradient(135deg, #8b6cf0, #7a5ce0); box-shadow: 0 6px 0 #5b3fc0; transition: transform .12s; }
+.cd-path:active { transform: translateY(4px); box-shadow: 0 2px 0 #5b3fc0; }
+.cd-path.need { animation: cdPulse 1.8s ease-in-out infinite; }
+.cd-path.done { background: var(--soft); color: var(--text); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+.cd-path-ico { flex: none; width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-size: 30px; background: rgba(255,255,255,.22); }
+.cd-path.done .cd-path-ico { background: #58cc02; color: #fff; font-weight: 800; }
+.cd-path-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cd-path-txt b { font-size: 18px; }
+.cd-path-txt small { font-size: 13px; opacity: .9; }
+.cd-dots { display: flex; gap: 6px; margin-top: 6px; }
+.cd-dots i { width: 22px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.3); }
+.cd-dots i.on { background: #ffcf3f; }
+.cd-dots i.cur { background: #fff; animation: cdDot 1.2s ease-in-out infinite; }
+.cd-path.done .cd-dots i { background: #58cc02; }
+@keyframes cdPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+@keyframes cdDot { 50% { opacity: .45; } }
+
+/* ---------- Экран карточек ---------- */
+.cd-wrap { max-width: 420px; margin: 0 auto; }
+.cd-head { font-size: 15px; font-weight: 800; color: #7a5ce0; letter-spacing: .02em; text-transform: uppercase; }
+.cd-sub { font-size: 15px; color: var(--hint); margin: 4px 0 14px; min-height: 20px; }
+.cd-deck { position: relative; height: 340px; perspective: 1200px; }
+/* «стопка» под карточкой — видно, что впереди ещё слова */
+.cd-stack { position: absolute; left: 8%; right: 8%; top: 18px; bottom: -10px; border-radius: 26px; background: var(--soft);
+  transition: opacity .3s, transform .3s var(--cd-out); }
+.cd-stack.s1 { transform: translateY(6px) scale(.96); left: 5%; right: 5%; top: 10px; bottom: -4px; }
+.cd-deck[data-left="1"] .cd-stack.s2, .cd-deck[data-left="0"] .cd-stack { opacity: 0; transform: translateY(20px) scale(.9); }
+
+.cd-card { position: absolute; inset: 0; cursor: pointer; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  transition: transform .45s var(--cd-spring), opacity .35s; outline: none; }
+.cd-card.enter { transform: translateX(110%) rotate(8deg); opacity: 0; }
+.cd-card.drag { transition: none; }
+.cd-card.out-yes { transform: translate(120%, -30px) rotate(18deg) !important; opacity: 0; transition: transform .38s ease-in, opacity .38s ease-in; }
+.cd-card.out-no  { transform: translate(-60%, 80px) rotate(-10deg) scale(.85) !important; opacity: 0; transition: transform .38s ease-in, opacity .38s ease-in; }
+
+.cd-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .55s var(--cd-spring); }
+.cd-card.flipped .cd-inner { transform: rotateY(180deg); }
+.cd-face { position: absolute; inset: 0; border-radius: 26px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px;
+  background: var(--bg); color: var(--text); border: 2px solid rgba(122, 92, 224, .25); box-shadow: 0 8px 0 rgba(122, 92, 224, .22); }
+.cd-back { transform: rotateY(180deg); background: linear-gradient(160deg, #8b6cf0, #6c4fd6); color: #fff; border-color: transparent; box-shadow: 0 8px 0 #5b3fc0; }
+.cd-card.hint-yes .cd-face { box-shadow: 0 8px 0 #46a302, 0 0 0 4px rgba(88,204,2,.5); }
+.cd-card.hint-no .cd-face  { box-shadow: 0 8px 0 #c98a00, 0 0 0 4px rgba(255,159,67,.5); }
+
+.cd-pic { min-height: 104px; display: grid; place-items: center; }
+.cd-pic.none { font-size: 64px; opacity: .25; }
+.cd-he { font-size: 52px; line-height: 1.15; font-weight: 600; word-break: break-word; }
+.cd-say { border: none; background: var(--soft); color: inherit; width: 52px; height: 52px; border-radius: 50%; font-size: 24px; cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0,0,0,.1); transition: transform .12s; }
+.cd-say:active { transform: scale(.9); }
+.cd-back .cd-say { background: rgba(255,255,255,.2); box-shadow: none; }
+.cd-tap { font-size: 13px; color: var(--hint); animation: cdBlink 2.4s ease-in-out infinite; }
+@keyframes cdBlink { 50% { opacity: .35; } }
+.cd-ru { font-size: 34px; font-weight: 800; line-height: 1.2; }
+.cd-tr { font-size: 20px; opacity: .9; }
+.cd-he-sm { font-size: 28px; opacity: .85; }
+
+.cd-count { margin: 22px 0 6px; font-size: 14px; color: var(--hint); font-variant-numeric: tabular-nums; }
+.cd-btns { display: flex; gap: 10px; max-width: 420px; margin: 4px auto 0; min-height: 60px; }
+.cd-btns > * { animation: cdBtnIn .35s var(--cd-spring) both; }
+.cd-btns > *:nth-child(2) { animation-delay: .06s; }
+.cd-flipbtn { margin: 0 !important; }
+.cd-again, .cd-know { flex: 1; padding: 15px 8px; font: inherit; font-size: 17px; font-weight: 800; border-radius: 14px; cursor: pointer;
+  border: 2px solid; border-bottom-width: 5px; transition: transform .1s; }
+.cd-again:active, .cd-know:active { transform: translateY(3px); border-bottom-width: 2px; }
+.cd-again { background: var(--bg); color: #c25e12; border-color: #ffb27a; }
+.cd-know { background: #58cc02; color: #fff; border-color: #46a302; }
+@keyframes cdBtnIn { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+
+/* ---------- Итог части ---------- */
+.cd-end { max-width: 440px; margin: 0 auto; animation: cdEndIn .5s var(--cd-out) both; }
+.cd-end-bird { height: 150px; display: flex; justify-content: center; align-items: flex-end; }
+.cd-end-bird img { height: 140px; }
+.cd-end h2 { margin: 10px 0 4px; font-size: 26px; }
+.cd-end-sub { color: var(--hint); margin: 0 0 14px; }
+.cd-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 8px; }
+.cd-chip { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 12px; border-radius: 14px; background: var(--soft);
+  font-size: 13px; color: var(--hint); animation: cdChip .45s var(--cd-spring) both; animation-delay: calc(.25s + var(--i) * .06s); }
+.cd-chip b { font-size: 20px; color: var(--text); font-weight: 600; }
+.cd-end-btns { margin-top: 8px; }
+@keyframes cdEndIn { from { opacity: 0; transform: translateY(24px); } }
+@keyframes cdChip { from { opacity: 0; transform: scale(.6); } }
+
+body.theme-dark .cd-face:not(.cd-back) { border-color: rgba(160, 140, 255, .3); }
+
+/* Меньше движения */
+@media (prefers-reduced-motion: reduce) {
+  .cd-path.need, .cd-dots i.cur, .cd-tap { animation: none; }
+  .cd-card, .cd-inner { transition-duration: .15s; }
+  .cd-chip, .cd-end, .cd-btns > * { animation: none; }
+}

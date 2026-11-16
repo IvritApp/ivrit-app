@@ -67,7 +67,8 @@ function autoIntro() {
   const lvl = course.chapters[0].levels[0];
   if (lvl.intro !== "taxi" || store.get("taxiSeen", false) || autoIntro.tried) return false;
   autoIntro.tried = true;
-  showTaxi(() => startLesson(lvl.lessons[0]));
+  // после такси — сразу карточки слов (если их ещё не смотрели), иначе первый урок
+  showTaxi(() => (window.cardsNeeded && cardsNeeded(lvl)) ? startCards(lvl.id) : startLesson(lvl.lessons[0]));
   return true;
 }
 
@@ -102,7 +103,9 @@ function renderPath() {
   const allDone = testMode() || lvl.lessons.every(id => done.includes(id));
   const questDone = store.get("quest_q-" + lvl.quest, false);
   const questGold = store.get("questGold_q-" + lvl.quest, false);
-  const nextIdx = lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
+  // Карточки слов (cards.js): пока не пройдены — уроки уровня закрыты
+  const needCards = window.cardsNeeded ? cardsNeeded(lvl) : false;
+  const nextIdx = needCards ? -1 : lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
 
   // змейка: смещение кружков влево-вправо
   const offs = [0, 60, 90, 60, 0, -60, -90];
@@ -136,6 +139,7 @@ function renderPath() {
       <div class="p-level-bar"><div style="width:${done.filter(id => lvl.lessons.includes(id)).length / lvl.lessons.length * 100}%"></div></div>
     </div>
     ${lvl.introButton ? `<button class="p-scene" id="p-taxi">${lvl.introButton}</button>` : ""}
+    ${window.cardsBlockHTML ? cardsBlockHTML(lvl, needCards) : ""}
     <div class="p-track">${nodes}</div>
     <button class="p-quest ${allDone ? (questDone ? (questGold ? "done gold" : "done") : "open") : "locked"}" id="p-quest">
       ${questIcon(lvl.questImg)}
@@ -166,12 +170,13 @@ function renderPath() {
   }
 
   pathView.querySelectorAll(".p-node").forEach(b => b.onclick = () => {
-    if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий урок"); vibrate("warning"); return; }
+    if (b.classList.contains("locked")) { showToast(needCards ? "Сначала посмотри карточки слов 📇" : "Сначала пройди предыдущий урок"); vibrate("warning"); return; }
     const id = b.dataset.lesson;
     if (+b.dataset.k === 0 && lvl.intro === "taxi" && !store.get("taxiSeen", false)) showTaxi(() => startLesson(id));
     else startLesson(id);
   });
   document.getElementById("p-settings").onclick = openSettings;
+  if (window.cardsMount) cardsMount(lvl);
   pathView.querySelectorAll(".p-rev").forEach(b => b.onclick = () => startReview(lvl.id, +b.dataset.rev));
   const tb = document.getElementById("p-taxi");
   if (tb) tb.onclick = () => showTaxi(() => showPath());
