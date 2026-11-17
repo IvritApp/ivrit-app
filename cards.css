@@ -131,3 +131,52 @@ body.theme-dark .p-parts i:not(.on) { background: #2a3546; }
 .pt-b.gold b { background: linear-gradient(145deg, #ffe066, #f5b400); }
 .pt-b span { font-size: 13px; color: var(--hint); }
 body.theme-dark .pt-b { border-color: #2a3546; }
+
+/* =====================================================
+   16.11 (2): КАРТОЧКА «НОВОЕ СЛОВО» ВНУТРИ УРОКА + КОЛЬЦО ЧАСТЕЙ И ОКОШКО «НАЧАТЬ» НА ДОРОЖКЕ
+   ===================================================== */
+.cd-inlesson { padding-top: 4px; }
+.cd-newtag { display: inline-block; padding: 5px 14px; border-radius: 999px; background: #f1ecff; color: #6c4fd6; font-weight: 800; font-size: 15px;
+  margin-bottom: 14px; animation: cdChip .45s var(--cd-spring) both; }
+body.theme-dark .cd-newtag { background: #2c2450; color: #c7b8ff; }
+.cd-deck.one { height: 330px; }
+.cd-inlesson .cd-btns { margin-top: 22px; }
+.cd-inlesson .cd-btns .btn { margin: 0; }
+
+/* кольцо из отрезков вокруг кружка урока: 1 отрезок = 1 часть */
+.p-track { position: relative; }
+.p-node { position: relative; }
+.p-ring { position: absolute; left: -13px; top: -13px; width: calc(100% + 26px); height: calc(100% + 26px); pointer-events: none; overflow: visible; }
+.p-ring-s { fill: none; stroke: #dfe6ee; stroke-width: 7; stroke-linecap: round; }
+body.theme-dark .p-ring-s { stroke: #2a3546; }
+.p-ring-s.on { stroke: #58cc02; animation: ringIn .5s var(--cd-spring) both; animation-delay: calc(.25s + var(--i) * .08s); }
+.p-ring-s.gold { stroke: #f5b400; animation: ringIn .5s var(--cd-spring) both; animation-delay: calc(.25s + var(--i) * .08s); }
+@keyframes ringIn { from { opacity: 0; stroke-width: 2; } }
+.p-node.locked .p-ring-s { opacity: .6; }
+.p-node.current { animation: none; }
+.p-node-wrap.cur .p-node.current { animation: nodeBreath 2.2s ease-in-out infinite; }
+@keyframes nodeBreath { 50% { transform: scale(1.06); } }
+
+/* окошко под кружком (как в Duolingo) */
+.p-pop { position: absolute; z-index: 30; padding: 14px; border-radius: 18px; background: #58a8f0; color: #fff; text-align: left;
+  box-shadow: 0 6px 0 #3a8ad6, 0 12px 28px rgba(20, 60, 110, .25); opacity: 0; transform: translateY(-8px) scale(.94); transform-origin: var(--ax) 0;
+  transition: opacity .2s, transform .3s var(--cd-spring); }
+.p-pop.show { opacity: 1; transform: none; }
+.p-pop::before { content: ""; position: absolute; top: -9px; left: calc(var(--ax) - 10px); border: 10px solid transparent; border-top: 0; border-bottom-color: #58a8f0; }
+.p-pop.done { background: #58cc02; box-shadow: 0 6px 0 #46a302, 0 12px 28px rgba(40, 100, 20, .25); }
+.p-pop.done::before { border-bottom-color: #58cc02; }
+.p-pop-h { font-size: 18px; font-weight: 800; line-height: 1.25; }
+.p-pop-sub { font-size: 14px; opacity: .92; margin: 2px 0 10px; }
+.p-pop-parts { display: flex; gap: 6px; margin-bottom: 12px; }
+.p-pop-p { flex: 1; height: 30px; border: none; border-radius: 9px; background: rgba(255, 255, 255, .28); color: #fff; font: inherit; font-weight: 800; font-size: 14px; cursor: pointer; }
+.p-pop-p.on { background: rgba(255, 255, 255, .95); color: #3a8ad6; }
+.p-pop.done .p-pop-p.on { color: #46a302; }
+.p-pop-p.gold { background: #ffd34d; color: #8a5a00; }
+.p-pop-p.now { box-shadow: 0 0 0 3px #fff; animation: popNow 1.2s ease-in-out infinite; }
+.p-pop-p[disabled] { opacity: .55; cursor: default; }
+@keyframes popNow { 50% { transform: scale(1.08); } }
+.p-pop-go { width: 100%; padding: 13px; border: none; border-radius: 14px; background: #fff; color: #3a8ad6; font: inherit; font-size: 17px; font-weight: 900;
+  letter-spacing: .03em; border-bottom: 4px solid rgba(0, 0, 0, .15); cursor: pointer; }
+.p-pop.done .p-pop-go { color: #46a302; }
+.p-pop-go:active { transform: translateY(2px); border-bottom-width: 2px; }
+@media (prefers-reduced-motion: reduce) { .p-ring-s.on, .p-ring-s.gold, .p-node-wrap.cur .p-node.current, .p-pop-p.now { animation: none; } }

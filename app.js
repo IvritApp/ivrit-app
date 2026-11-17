@@ -463,7 +463,8 @@ function showStep() {
   if (step >= queue.length) { showFinish(); return; }
 
   const ex = queue[step];
-  if (ex.type === "choose_translation") showChooseTranslation(ex);
+  if (ex.type === "card" && window.showWordCard) showWordCard(ex);   // новое слово: карточка (cards.js)
+  else if (ex.type === "choose_translation") showChooseTranslation(ex);
   else if (ex.type === "choose_hebrew") showChooseHebrew(ex);
   else if (ex.type === "listen") { if (noListen()) showChooseTranslation(ex); else showListen(ex); }
   else if (ex.type === "build_phrase") showBuildPhrase(ex);

@@ -1,7 +1,9 @@
 // =====================================================
 // ЧАСТИ УРОКА: каждый урок = 3–6 коротких частей (как в Duolingo — кольцо вокруг кружка урока).
-// Часть 1 — задания из файла урока (как раньше). Части 2…N собираются здесь из тех же слов и фраз,
-// и каждая следующая — сложнее: больше «на слух», «собери фразу», блиц, иногда слова прошлых уроков.
+// Часть 1 и 2 — ЗНАКОМСТВО: каждое новое слово сначала карточкой («✨ Новое слово»), сразу за ней задание с ним
+// (первая половина слов — в части 1, вторая — в части 2). Часть 3 — задания из файла урока.
+// Части 4…N собираются здесь: больше «на слух», «собери фразу», блиц, иногда слова прошлых уроков.
+// На дорожке — кольцо из отрезков вокруг кружка (1 отрезок = 1 часть), нажал — окошко «НАЧАТЬ».
 // Сколько частей — по числу и сложности новых слов (длинные слова и выражения из нескольких слов — сложнее).
 //
 // Прогресс: store "parts" = { "<урок>": сколько частей пройдено }, урок пройден (done) после последней части.
@@ -74,14 +76,34 @@
     return list.length >= total;
   }
 
+  // Знакомство с новыми словами: КАРТОЧКА слова → сразу простое задание с ним (ведём за руку)
+  function introExercises(data, from, to) {
+    const out = [];
+    for (let i = from; i < to; i++) {
+      out.push({ type: "card", word: i });
+      out.push({ type: (i - from) % 2 ? "listen" : "choose_translation", word: i });
+    }
+    if (to >= 3) out.push({ type: "match_pairs" });               // пары — из уже показанных слов
+    return out;
+  }
+
   // ---------- запуск части ----------
+  // Часть 1 — первая половина новых слов (карточка + задание), часть 2 — вторая половина + «собери фразу»,
+  // часть 3 — задания из файла урока, части 4…N — собираются (buildExercises), всё сложнее.
   window.startLessonPart = function (id, k) {
     getLesson(id).then(raw => {
       const data = JSON.parse(JSON.stringify(raw));
       const total = partsCount(data);
       if (k == null) k = partsDoneOf(id, total) % total;
       k = Math.max(0, Math.min(total - 1, k));
-      if (k > 0) data.exercises = buildExercises(data, k);
+      const n = data.newCount || data.words.length, half = Math.ceil(n / 2);
+      if (k === 0) { data.exercises = introExercises(data, 0, half); data.newCount = half; }
+      else if (k === 1) {
+        data.exercises = introExercises(data, half, n);
+        if ((data.phrases || []).length) data.exercises.push({ type: "build_phrase", phrase: 0 });
+        data.newCount = n;
+      }
+      else if (k >= 3) data.exercises = buildExercises(data, k - 2);
       data.part = k; data.partsTotal = total;
       startLesson(data);
     }).catch(() => startLesson(id));                              // нет файла / нет сети — как раньше
@@ -101,25 +123,63 @@
     return { lessonDone: nowDone, justDone: nowDone && before < total, gold: allGold && nowDone, next };
   };
 
-  // ---------- дорожка: подписи «2/4», полоски частей и кольцо ----------
+  // ---------- дорожка: кольцо из отрезков вокруг кружка урока (как в Duolingo) ----------
+  // Один отрезок = одна часть. Пройденные — зелёные (у золотого урока — золотые), остальные — серые.
+  const R = 45, C = 2 * Math.PI * R;
+  function ringSVG(total, dn, gold) {
+    const gap = total > 1 ? 7 : 0, seg = C / total - gap;
+    return `<svg class="p-ring" viewBox="0 0 100 100" aria-hidden="true">${Array.from({ length: total }, (_, i) =>
+      `<circle cx="50" cy="50" r="${R}" class="p-ring-s${i < dn ? (gold ? " gold" : " on") : ""}" style="--i:${i}"
+        stroke-dasharray="${seg.toFixed(2)} ${C.toFixed(2)}" transform="rotate(${(-90 + i * 360 / total + (gap / C) * 180).toFixed(2)} 50 50)"/>`).join("")}</svg>`;
+  }
   window.partsDecorate = function (lvl, pathEl) {
     lvl.lessons.forEach(id => getLesson(id).then(data => {
       const total = partsCount(data), dn = partsDoneOf(id, total);
       const btn = pathEl.querySelector(`.p-node[data-lesson="${id}"]`);
-      if (!btn || !btn.isConnected) return;
-      btn.dataset.parts = total; btn.dataset.pdone = dn;
-      const wrap = btn.parentNode, lab = wrap.querySelector(".p-label");
-      if (lab && !wrap.querySelector(".p-parts")) {
-        const bar = document.createElement("div");
-        bar.className = "p-parts";
-        bar.innerHTML = Array.from({ length: total }, (_, i) => `<i class="${i < dn ? "on" : ""}" style="--i:${i}"></i>`).join("");
-        lab.after(bar);
-        if (!btn.classList.contains("locked")) lab.textContent += ` · ${dn}/${total}`;
-      }
-      // кольцо вокруг текущего урока = сколько его частей пройдено
-      if (btn.classList.contains("ha-node-cur") && window.HAnim) HAnim.play("nodePulse", { el: btn, progress: dn / total });
+      if (!btn || !btn.isConnected || btn.querySelector(".p-ring")) return;
+      btn.dataset.parts = total; btn.dataset.pdone = dn; btn.dataset.title = g(data.title || "");
+      btn.insertAdjacentHTML("beforeend", ringSVG(total, dn, perfectLessons().includes(id)));
     }).catch(() => {}));
   };
+
+  // ---------- окошко под кружком: «Урок 2 · Доброе утро! · Часть 2 из 4 · НАЧАТЬ» ----------
+  window.partsPopover = function (btn, k, run) {
+    const track = btn.closest(".p-track");
+    const old = track && track.querySelector(".p-pop");
+    if (old) { const same = old._for === btn; old.remove(); if (same) return; }   // повторное нажатие — закрыть
+    const id = btn.dataset.lesson;
+    getLesson(id).then(data => {
+      const total = partsCount(data), dn = partsDoneOf(id, total), done = doneLessons().includes(id);
+      const gold = (store.get("partsGold", {})[id] || []);
+      const next = done ? 0 : dn;
+      const pop = document.createElement("div");
+      pop.className = "p-pop" + (done ? " done" : "");
+      pop._for = btn;
+      pop.innerHTML = `
+        <div class="p-pop-h">Урок ${k + 1} · ${esc(g(data.title || ""))}</div>
+        <div class="p-pop-sub">${done ? "Пройден! Можно повторить любую часть" : dn ? `Часть ${dn + 1} из ${total}` : `${total} ${total < 5 ? "части" : "частей"} · начни с новых слов`}</div>
+        <div class="p-pop-parts">${Array.from({ length: total }, (_, i) =>
+          `<button class="p-pop-p${i < dn ? " on" : ""}${gold.includes(i) ? " gold" : ""}${i === next && !done ? " now" : ""}" data-k="${i}"${!done && i > dn ? " disabled" : ""}>${gold.includes(i) ? "★" : i + 1}</button>`).join("")}</div>
+        <button class="p-pop-go" id="pPopGo">${done ? "ПОВТОРИТЬ" : dn ? "ПРОДОЛЖИТЬ" : "НАЧАТЬ"}</button>`;
+      track.appendChild(pop);
+      // ставим окошко под кружком, но не за краем экрана; стрелка смотрит на кружок
+      const tr = track.getBoundingClientRect(), br = btn.getBoundingClientRect();
+      const w = Math.min(300, tr.width - 8), cx = br.left + br.width / 2 - tr.left;
+      const left = Math.max(4, Math.min(tr.width - w - 4, cx - w / 2));
+      pop.style.width = w + "px"; pop.style.left = left + "px"; pop.style.top = (br.bottom - tr.top + 14) + "px";
+      pop.style.setProperty("--ax", (cx - left) + "px");
+      requestAnimationFrame(() => { pop.classList.add("show"); setTimeout(() => pop.scrollIntoView && pop.scrollIntoView({ block: "nearest", behavior: "smooth" }), 120); });
+      if (typeof vibrate === "function") vibrate("light");
+      pop.querySelector("#pPopGo").onclick = () => { pop.remove(); run(next); };
+      pop.querySelectorAll(".p-pop-p:not([disabled])").forEach(b => b.onclick = () => { pop.remove(); run(+b.dataset.k); });
+      // нажатие мимо окошка — закрыть
+      setTimeout(() => document.addEventListener("pointerdown", function off(e) {
+        if (!pop.isConnected) return document.removeEventListener("pointerdown", off, true);
+        if (!pop.contains(e.target) && e.target !== btn && !btn.contains(e.target)) { pop.remove(); document.removeEventListener("pointerdown", off, true); }
+      }, true), 0);
+    }).catch(() => run());
+  };
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
   // Пройденный урок: выбрать, какую часть повторить
   window.partsPicker = function (id) {

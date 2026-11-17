@@ -210,6 +210,37 @@
     setTimeout(() => { card.remove(); nextCard(false); }, 380);
   }
 
+  // ---------- Карточка «Новое слово» ВНУТРИ урока (шаг { type: "card", word: i }) ----------
+  // Показываем слово: картинка, иврит, звук → нажал — перевод → «Понятно, дальше». Без оценки и без ошибок.
+  window.showWordCard = function (ex) {
+    const w = lesson.words[ex.word];
+    if (!w) { goNext(); return; }
+    S = { flipped: false, busy: false };
+    screen.innerHTML = `
+      <div class="cd-wrap cd-inlesson">
+        <div class="cd-newtag">✨ Новое слово</div>
+        <div class="cd-deck one" id="cd-deck">${cardHTML(w)}</div>
+        <div class="cd-btns" id="cd-btns"><button class="btn blue cd-flipbtn" id="cd-flip">Показать перевод</button></div>
+      </div>`;
+    const card = document.getElementById("cd-card");
+    requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove("enter")));
+    const sayIt = (e) => { if (e) e.stopPropagation(); speak(w.he, { audio: w.audio }); };
+    document.getElementById("cd-say").onclick = sayIt;
+    document.getElementById("cd-say2").onclick = sayIt;
+    setTimeout(sayIt, 350);
+    const turn = () => {
+      S.flipped = !S.flipped;
+      card.classList.toggle("flipped", S.flipped);
+      vibrate("light");
+      if (S.flipped && !document.getElementById("cd-go")) {
+        document.getElementById("cd-btns").innerHTML = `<button class="btn blue" id="cd-go">Понятно, дальше</button>`;
+        document.getElementById("cd-go").onclick = () => { playSound("pop"); goNext(); };
+      }
+    };
+    card.onclick = turn;
+    document.getElementById("cd-flip").onclick = turn;
+  };
+
   // ---------- Конец части ----------
   function finishPart() {
     const { lvl, k, total, words } = S;

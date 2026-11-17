@@ -67,9 +67,8 @@ function autoIntro() {
   const lvl = course.chapters[0].levels[0];
   if (lvl.intro !== "taxi" || store.get("taxiSeen", false) || autoIntro.tried) return false;
   autoIntro.tried = true;
-  // после такси — сразу карточки слов (если их ещё не смотрели), иначе первый урок
-  showTaxi(() => (window.cardsNeeded && cardsNeeded(lvl)) ? startCards(lvl.id)
-    : window.startLessonPart ? startLessonPart(lvl.lessons[0]) : startLesson(lvl.lessons[0]));
+  // после такси — сразу первый урок (его часть 1 начинается с карточек новых слов)
+  showTaxi(() => window.startLessonPart ? startLessonPart(lvl.lessons[0]) : startLesson(lvl.lessons[0]));
   return true;
 }
 
@@ -104,9 +103,7 @@ function renderPath() {
   const allDone = testMode() || lvl.lessons.every(id => done.includes(id));
   const questDone = store.get("quest_q-" + lvl.quest, false);
   const questGold = store.get("questGold_q-" + lvl.quest, false);
-  // Карточки слов (cards.js): пока не пройдены — уроки уровня закрыты
-  const needCards = window.cardsNeeded ? cardsNeeded(lvl) : false;
-  const nextIdx = needCards ? -1 : lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
+  const nextIdx = lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
 
   // змейка: смещение кружков влево-вправо
   const offs = [0, 60, 90, 60, 0, -60, -90];
@@ -140,7 +137,6 @@ function renderPath() {
       <div class="p-level-bar"><div style="width:${done.filter(id => lvl.lessons.includes(id)).length / lvl.lessons.length * 100}%"></div></div>
     </div>
     ${lvl.introButton ? `<button class="p-scene" id="p-taxi">${lvl.introButton}</button>` : ""}
-    ${window.cardsBlockHTML ? cardsBlockHTML(lvl, needCards) : ""}
     <div class="p-track">${nodes}</div>
     <button class="p-quest ${allDone ? (questDone ? (questGold ? "done gold" : "done") : "open") : "locked"}" id="p-quest">
       ${questIcon(lvl.questImg)}
@@ -157,12 +153,11 @@ function renderPath() {
     <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после ${ch.levels.length} уровней</span></div>
     <div class="p-soon next"><b>Дальше — глава ${ch.next}</b><span>🔒</span></div>`;
 
-  // Анимации дорожки (anim.js): кольцо прогресса уровня вокруг текущего узла; если открылся новый урок — ломается замок
+  // Анимации дорожки (anim.js): если открылся новый урок — ломается замок. Кольцо частей рисует parts.js
   if (window.HAnim && !testMode()) {
     const curId = nextIdx >= 0 ? lvl.lessons[nextIdx] : null;
     const curBtn = curId ? pathView.querySelector(`.p-node[data-lesson="${curId}"]`) : null;
     if (curBtn) {
-      HAnim.play("nodePulse", { el: curBtn, progress: 0 });   // кольцо = части урока (заполняет parts.js)
       const was = store.get("pathCur", null);
       if (was && was !== curId && done.includes(was)) setTimeout(() => { if (curBtn.isConnected) HAnim.play("unlock", { el: curBtn, lockedClass: "p-was-locked", openClass: "p-just-open",
         onPeak: () => { if (typeof playSound === "function") playSound("pop"); } }); }, 450);
@@ -171,16 +166,15 @@ function renderPath() {
   }
 
   pathView.querySelectorAll(".p-node").forEach(b => b.onclick = () => {
-    if (b.classList.contains("locked")) { showToast(needCards ? "Сначала посмотри карточки слов 📇" : "Сначала пройди предыдущий урок"); vibrate("warning"); return; }
+    if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий урок"); vibrate("warning"); return; }
     const id = b.dataset.lesson;
-    // урок из частей (parts.js): следующая непройденная часть; пройденный урок — выбрать часть для повтора
-    const go = () => window.startLessonPart ? (done.includes(id) ? partsPicker(id) : startLessonPart(id)) : startLesson(id);
-    if (+b.dataset.k === 0 && lvl.intro === "taxi" && !store.get("taxiSeen", false)) showTaxi(go);
-    else go();
+    const go = (k) => window.startLessonPart ? startLessonPart(id, k) : startLesson(id);
+    const run = (k) => { if (+b.dataset.k === 0 && lvl.intro === "taxi" && !store.get("taxiSeen", false)) showTaxi(() => go(k)); else go(k); };
+    // как в Duolingo: нажал кружок — под ним окошко «Урок 1 · часть 2 из 4 · НАЧАТЬ» (parts.js)
+    if (window.partsPopover) partsPopover(b, +b.dataset.k, run); else run();
   });
   if (window.partsDecorate) partsDecorate(lvl, pathView);
   document.getElementById("p-settings").onclick = openSettings;
-  if (window.cardsMount) cardsMount(lvl);
   pathView.querySelectorAll(".p-rev").forEach(b => b.onclick = () => startReview(lvl.id, +b.dataset.rev));
   const tb = document.getElementById("p-taxi");
   if (tb) tb.onclick = () => showTaxi(() => showPath());
