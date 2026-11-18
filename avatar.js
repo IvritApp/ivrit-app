@@ -93,7 +93,7 @@
   function earsX(c) { return c.head === "oval" ? [60, 140] : [56, 144]; }
 
   // Волосы закрыты сверху (шапка, кепка, шляпа, платок)?
-  function hairCovered(c) { return c.hat === "beanie" || c.hat === "cap" || (!c.hat && (c.headwear === "hasidhat" || c.headwear === "shtreimel" || c.headwear === "tichel")); }
+  function hairCovered(c) { return c.hat === "beanie" || c.hat === "cap" || c.hat === "chef" || (!c.hat && (c.headwear === "hasidhat" || c.headwear === "shtreimel" || c.headwear === "tichel")); }
   // Насколько поднять кипу / корону над пышной причёской (чтобы сидели сверху, а не «тонули»)
   const HAIR_LIFT = { afro: -24, curly: -8, twists: -8, quiff: -10, manbun: -4 };
   function hairBack(c, col) {
@@ -105,10 +105,10 @@
     }
     switch (c.hair) {
       case "wavy":      return `<path d="M50,86 C44,20 156,20 150,86 L153,118 Q140,130 126,121 Q114,128 100,122 Q86,128 74,121 Q60,130 47,118Z" fill="${col}"/>`;
-      case "long":      return `<path d="M52,86 C46,16 154,16 148,86 L154,196 C134,208 66,208 46,196Z" fill="${col}"/>`;
+      case "long":      return `<path d="M52,86 C46,16 154,16 148,86 L153,166 C134,176 66,176 47,166Z" fill="${col}"/>`;
       case "bob":       return `<path d="M52,88 C46,16 154,16 148,88 L152,142 C134,150 66,150 48,142Z" fill="${col}"/>`;
-      case "curlylong": return `<path d="M52,86 L148,86 L152,184 Q100,198 48,184Z" fill="${col}"/>` +
-                          [[50,100],[46,124],[48,148],[52,172],[150,100],[154,124],[152,148],[148,172],[72,190],[100,194],[128,190]]
+      case "curlylong": return `<path d="M52,86 L148,86 L152,158 Q100,170 48,158Z" fill="${col}"/>` +
+                          [[50,100],[46,118],[48,136],[52,152],[150,100],[154,118],[152,136],[148,152],[72,164],[100,168],[128,164]]
                           .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="12" fill="${col}"/>`).join("");
       case "manbun":    return `<circle cx="100" cy="24" r="14" fill="${col}"/>`;
       case "afro":      return `<circle cx="100" cy="68" r="54" fill="${col}"/>` +
@@ -171,9 +171,9 @@
   }
 
   function eyes(c, hairCol) {
-    const L = 83, R = 117, Y = 90;
+    const L = 82, R = 118, Y = 90;
     const fem = c.eyes === "lashes";
-    const brow = shade(hairCol, -0.1), bw = fem ? 2.4 : 3.6;
+    const brow = shade(hairCol, -0.1), bw = fem ? 2.8 : 4;
     const brows = `<path d="M${L - 9} ${Y - 13} Q${L} ${Y - 18} ${L + 9} ${Y - 14}" stroke="${brow}" stroke-width="${bw}" fill="none" stroke-linecap="round"/>
                    <path d="M${R - 9} ${Y - 14} Q${R} ${Y - 18} ${R + 9} ${Y - 13}" stroke="${brow}" stroke-width="${bw}" fill="none" stroke-linecap="round"/>`;
     const iris = "#8a5222", pupil = "#24150e";
@@ -183,10 +183,11 @@
     } else if (c.eyes === "dots") {
       e = [L, R].map(x => `<g class="av-eye"><ellipse cx="${x}" cy="${Y}" rx="4.4" ry="5.6" fill="${pupil}"/><circle cx="${x + 1.6}" cy="${Y - 2}" r="1.6" fill="#fff"/></g>`).join("");
     } else {
-      e = [L, R].map(x => `<g class="av-eye"><ellipse cx="${x}" cy="${Y}" rx="8" ry="9" fill="#fff"/>
-        <circle cx="${x + .6}" cy="${Y + 1.2}" r="5.6" fill="${iris}"/><circle cx="${x + .6}" cy="${Y + 1.6}" r="3" fill="${pupil}"/>
-        <circle cx="${x + 2.6}" cy="${Y - 1}" r="1.8" fill="#fff"/></g>`).join("");
-      if (fem) e += `<path d="M${L - 8} ${Y - 4} l-4 -2.4 M${L - 6} ${Y - 7} l-2.2 -3.6 M${R + 8} ${Y - 4} l4 -2.4 M${R + 6} ${Y - 7} l2.2 -3.6" stroke="${pupil}" stroke-width="1.8" stroke-linecap="round"/>`;
+      // 18.11: глаза крупнее и «живее» (большая радужка, два блика) — стиль как у Хибри
+      e = [L, R].map(x => `<g class="av-eye"><ellipse cx="${x}" cy="${Y}" rx="9.6" ry="10.8" fill="#fff"/>
+        <circle cx="${x + .6}" cy="${Y + 1.4}" r="7" fill="${iris}"/><circle cx="${x + .6}" cy="${Y + 1.8}" r="4" fill="${pupil}"/>
+        <circle cx="${x + 3}" cy="${Y - 1.4}" r="2.5" fill="#fff"/><circle cx="${x - 2}" cy="${Y + 4.4}" r="1.1" fill="#fff" opacity=".8"/></g>`).join("");
+      if (fem) e += `<path d="M${L - 9.5} ${Y - 4} l-4.4 -2.6 M${L - 7.4} ${Y - 7.6} l-2.4 -3.8 M${R + 9.5} ${Y - 4} l4.4 -2.6 M${R + 7.4} ${Y - 7.6} l2.4 -3.8" stroke="${pupil}" stroke-width="2" stroke-linecap="round"/>`;
     }
     return brows + e;
   }
@@ -346,6 +347,10 @@
       <path d="M100,68 Q146,64 170,78 Q146,86 100,80Z" fill="#3a8ad6"/>
       <circle cx="100" cy="30" r="4.4" fill="#3a8ad6"/>
       <path d="M88,52 L93,42 L98,52 L103,40 L108,52" stroke="#ff8a35" stroke-width="3.4" fill="none" stroke-linecap="round"/>`;
+    // колпак повара — только для персонажей (продавец шаурмы), в магазине его нет
+    if (c.hat === "chef") return `
+      <path d="M60,66 Q40,40 62,30 Q66,8 90,14 Q100,2 112,12 Q136,6 140,30 Q160,40 140,66Z" fill="#ffffff" stroke="#e3ebf3" stroke-width="2"/>
+      <rect x="58" y="58" width="84" height="16" rx="6" fill="#eef4fa" stroke="#dbe5ef" stroke-width="1.5"/>`;
     if (c.hat === "crown") return `
       <path d="M70,46 L77,18 L90,38 L100,10 L110,38 L123,18 L130,46Z" fill="#ffc928" stroke="#e0a400" stroke-width="2.6" stroke-linejoin="round"/>
       <circle cx="100" cy="30" r="4.4" fill="#ff8a35"/><circle cx="82" cy="38" r="3.4" fill="#5aa9f0"/><circle cx="118" cy="38" r="3.4" fill="#5aa9f0"/>`;
@@ -367,28 +372,35 @@
     const skin = SKIN[c.skin] || SKIN[1], hairCol = HAIRC[c.hairColor] || HAIRC[1];
     const skinD = shade(skin, -0.1);
     const [ex1, ex2] = earsX(c);
-    const hideHairTop = c.hat === "beanie" || c.hat === "cap";
+    const hideHairTop = c.hat === "beanie" || c.hat === "cap" || c.hat === "chef";
     const head = opts && opts.view === "head";
-    const vb = head ? "40 4 120 150" : "0 0 200 400";
+    // 18.11 НОВЫЙ СТИЛЬ (как Хибри и Duolingo): голова крупнее (×HS от шеи), тело короче и плотнее (×BS по высоте),
+    // всё сдвинуто вниз на DY, чтобы ступни остались на 386. Части рисуются в прежних координатах.
+    const HS = 1.42, BS = 0.74, NY = 140, DY = 386 - (NY + (386 - NY) * BS);
+    const headT = `translate(100 ${NY}) scale(${HS}) translate(-100 -${NY})`, bodyT = `translate(100 ${NY}) scale(1 ${BS}) translate(-100 -${NY})`;
+    const vb = head ? "14 14 172 200" : "0 0 200 400";
     // «Объём»: мягкие градиенты на коже, волосах и одежде (у каждого рисунка свои id)
     const id = "av" + (++UID);
     const top = TOPC[c.topColor] || TOPC[0];
     const G = (str, col, gid) => str.split(`fill="${col}"`).join(`fill="url(#${id}${gid})"`);
     const coverHair = c.headwear === "tichel" && !c.hat;
     const hideTop = hideHairTop || coverHair || ((c.headwear === "hasidhat" || c.headwear === "shtreimel") && !c.hat);
-    return `<svg class="hb-avatar hs-person pose-${pose}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+    return `<svg class="hb-avatar hs-person pose-${pose}${opts && opts.cls ? " " + opts.cls : ""}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" overflow="visible">
       <defs>
         <radialGradient id="${id}s" cx="42%" cy="36%" r="72%"><stop offset="0" stop-color="${shade(skin, .16)}"/><stop offset=".55" stop-color="${skin}"/><stop offset="1" stop-color="${shade(skin, -.12)}"/></radialGradient>
         <linearGradient id="${id}h" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="${shade(hairCol, .26)}"/><stop offset=".5" stop-color="${hairCol}"/><stop offset="1" stop-color="${shade(hairCol, -.14)}"/></linearGradient>
         <linearGradient id="${id}t" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="${shade(top, .18)}"/><stop offset=".6" stop-color="${top}"/><stop offset="1" stop-color="${shade(top, -.12)}"/></linearGradient>
       </defs>
-      ${head ? "" : `<ellipse cx="100" cy="386" rx="44" ry="6" fill="#1e3c6e" opacity=".12"/>`}
-      ${coverHair ? headwearBack(c) : G(hairBack(c, hairCol), hairCol, "h")}
+      ${head ? "" : `<ellipse cx="100" cy="386" rx="46" ry="7" fill="#1e3c6e" opacity=".12"/>`}
+      <g transform="translate(0 ${DY.toFixed(1)})">
+      <g transform="${headT}">${coverHair ? headwearBack(c) : G(hairBack(c, hairCol), hairCol, "h")}</g>
+      <g class="av-body" transform="${bodyT}">
       ${legs(c, pose)}
       <rect x="92" y="130" width="16" height="22" rx="5" fill="${skinD}"/>
       ${G(torso(c, pose), top, "t")}
       ${outerwear(c)}
-      <g class="av-head">
+      </g>
+      <g transform="${headT}"><g class="av-head hs-head">
         <circle cx="${ex1}" cy="92" r="9" fill="${skin}"/><circle cx="${ex2}" cy="92" r="9" fill="${skin}"/>
         <circle cx="${ex1}" cy="92" r="4.5" fill="${skinD}"/><circle cx="${ex2}" cy="92" r="4.5" fill="${skinD}"/>
         ${headShape(c, `url(#${id}s)`)}
@@ -399,13 +411,14 @@
         <ellipse cx="101.4" cy="100.6" rx="1.4" ry="1" fill="#fff" opacity=".55"/>
         ${eyes(c, hairCol)}
         ${beard(c, hairCol)}
-        ${mouth(c)}
+        <g class="av-mouth">${mouth(c)}</g>
         ${coverHair ? "" : hideTop ? (["long", "bob", "pony", "curlylong"].includes(c.hair) ? `<path d="M53,78 C52,92 53,102 54,108 L62,82Z M147,78 C148,92 147,102 146,108 L138,82Z" fill="${hairCol}"/>` : "") : G(hairFront(c, hairCol), hairCol, "h")}
         ${coverHair || hideTop || ["buzz"].includes(c.hair) ? "" : `<path d="M76,46 Q98,34 120,42" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".18"/>`}
         ${payot(c, hairCol)}
         <g transform="translate(0 ${c.headwear === "kippa" ? (HAIR_LIFT[c.hair] || 0) : 0})">${headwear(c)}</g>
         ${glasses(c)}
         <g transform="translate(0 ${c.hat === "crown" ? (HAIR_LIFT[c.hair] || 0) : 0})">${hat(c)}</g>
+      </g></g>
       </g>
     </svg>`;
   }
@@ -527,5 +540,17 @@
   document.addEventListener("DOMContentLoaded", initEditor);
   if (document.readyState !== "loading") initEditor();
 
-  window.HirbisAvatar = { svg, defaults, sanitize, openEditor, OPTIONS, SHOP, SKIN, HAIRC, TOPC, BOTC, KIPPAC };
+  // 18.11: ГЕРОИ ИСТОРИИ рисуются тем же художником (один стиль везде). Настройки — как у аватара игрока.
+  const CHARS = {
+    david:  { gender: "m", head: "round", skin: 0, hair: "curly", hairColor: 0, eyes: "round", mouth: "grin", top: "tee", topColor: 0, bottom: "jeans", bottomColor: 0 },
+    tzila:  { gender: "f", head: "oval", skin: 1, hair: "long", hairColor: 2, eyes: "lashes", mouth: "smile", top: "tee", topColor: 1, bottom: "jeans", bottomColor: 1, body: "slim" },
+    seller: { gender: "m", skin: 2, hair: "short", hairColor: 0, beard: "short", mouth: "grin", top: "tee", topColor: 2, bottom: "jeans", bottomColor: 2, hat: "chef" },
+    grocer: { gender: "m", skin: 2, hair: "short", hairColor: 1, beard: "short", headwear: "kippa", top: "shirt", topColor: 4, bottom: "jeans", bottomColor: 0 },
+    driver: { gender: "m", skin: 1, hair: "short", hairColor: 5, beard: "stubble", top: "shirt", topColor: 0, bottom: "jeans", bottomColor: 2, hat: "cap" }
+  };
+  function charSVG(name, opts) {
+    const cfg = CHARS[name]; if (!cfg) return "";
+    return svg(sanitize(Object.assign(defaults(cfg.gender), cfg)), opts);
+  }
+  window.HirbisAvatar = { svg, defaults, sanitize, openEditor, OPTIONS, SHOP, SKIN, HAIRC, TOPC, BOTC, KIPPAC, CHARS, charSVG };
 })();

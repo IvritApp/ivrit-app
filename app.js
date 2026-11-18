@@ -432,6 +432,8 @@ function startLesson(id) {
   if (typeof id === "string" && id.startsWith("rev-") && window.startReview) { const m = id.match(/^rev-(.+)-(\d+)$/); if (m) { startReview(m[1], +m[2] - 1); return; } }
   const given = typeof id === "object" && id ? id : null;
   if (given) id = given.id;
+  // сердечки кончились — урок не начинаем (тренировка и повторение — можно)
+  if (window.Hearts && !(given && (given.practice || given.review)) && Hearts.n() <= 0) { Hearts.outModal(); return; }
   stopHomeBird();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "lesson");
   if (tg && tg.BackButton) tg.BackButton.show();
@@ -451,6 +453,7 @@ function startLesson(id) {
       data.phrases = (data.phrases || []).map(w => Object.assign({}, w, { he: g(w.he), tr: g(w.tr), ru: g(w.ru) }));
       lesson = data;
       queue = [...lesson.exercises];          // порядок заданий продуман в файле урока
+      if (window.Hearts) Hearts.render();
       askTranslit(showStep);
     })
     .catch(() => { screen.textContent = "Не удалось загрузить урок 😕"; });
@@ -463,6 +466,8 @@ function showStep() {
   if (step >= queue.length) { showFinish(); return; }
 
   const ex = queue[step];
+  document.querySelectorAll(".ex-bottom").forEach(e => e.remove());
+  screen.classList.toggle("ex", ex.type !== "card");               // раскладка задания: кнопки внизу, «ПРОВЕРИТЬ»
   if (ex.type === "card" && window.showWordCard) showWordCard(ex);   // новое слово: карточка (cards.js)
   else if (ex.type === "choose_translation") showChooseTranslation(ex);
   else if (ex.type === "choose_hebrew") showChooseHebrew(ex);
@@ -480,6 +485,7 @@ function showStep() {
 // Перейти к следующему заданию: старое уезжает, новое въезжает
 function goNext() {
   hideFeedback();
+  if (window.Hearts && Hearts.out()) { Hearts.outModal(); return; }   // сердечки кончились посреди урока
   screen.classList.remove("slide-in");
   screen.classList.add("slide-out");
   setTimeout(() => { step++; showStep(); }, 250);
@@ -520,18 +526,38 @@ function hostIdle() {
     hostAct(n, ms);
   }, 4200);
 }
-function hostHTML(question, inner) {
+// 18.11: «для тупых» — задание коротко и крупно сверху; в облачке друга — только само слово / фраза (без болтовни)
+const TASK = { tr: "Выбери перевод", he: "Как это на иврите?", listen: "Что ты слышишь?", build: "Переведи фразу",
+  match: "Найди пары", blitz: "Блиц: 30 секунд!" };
+function hostHTML(title, inner) {
   const fig = window.friendFigureSVG ? window.friendFigureSVG(profile ? profile.gender : "m") : "";
-  setTimeout(() => hostAct("talk", 1300), 60);   // задаёт вопрос — жестикулирует
+  setTimeout(() => hostAct("talk", 1300), 60);   // говорит — жестикулирует и открывает рот
   hostIdle();
-  return `<div class="host">
+  return `<h2 class="ex-title">${title}</h2>` + (inner ? `<div class="host">
       <div class="host-fig">${fig}<img class="host-food" src="assets/gift-shawarma.png" alt=""></div>
-      <div class="host-bubble">
-        <div class="host-name">${friendName()}</div>
-        <div class="host-q">${question}</div>
-        ${inner}
-      </div>
-    </div>`;
+      <div class="host-bubble">${inner}</div>
+    </div>` : "");
+}
+// Выбрал вариант → большая кнопка «ПРОВЕРИТЬ» внизу (как в Duolingo). go(btn) — проверка выбранного
+function checkBar(onCheck) {
+  const wrap = document.createElement("div");
+  wrap.className = "ex-bottom";
+  wrap.innerHTML = `<button class="ex-check" disabled>ПРОВЕРИТЬ</button>`;
+  document.querySelectorAll(".ex-bottom").forEach(e => e.remove());
+  document.body.appendChild(wrap);       // на страницу, а не в #screen: у него анимация transform — «fixed» бы прилип к нему
+  const b = wrap.firstChild;
+  b.onclick = () => { if (!b.disabled) { wrap.remove(); onCheck(); } };
+  return b;
+}
+function pickable(box, go) {
+  let picked = null;
+  const check = checkBar(() => picked && go(picked));
+  box.querySelectorAll(".option").forEach(btn => btn.onclick = () => {
+    if (btn.disabled) return;
+    box.querySelectorAll(".option.sel").forEach(x => x.classList.remove("sel"));
+    btn.classList.add("sel"); picked = btn; check.disabled = false;
+    vibrate("light"); if (btn._say) btn._say();
+  });
 }
 
 function showChooseTranslation(ex) {
@@ -539,7 +565,7 @@ function showChooseTranslation(ex) {
   const others = lesson.words.filter(w => w !== word);
   const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
 
-  screen.innerHTML = hostHTML(ask(ASK_TR, "tr"), `
+  screen.innerHTML = hostHTML(TASK.tr, `
       <div class="word" dir="rtl">${word.he}</div>
       <div class="translit"><span class="tr">${word.tr}</span> <button class="listen small" id="listen" aria-label="Послушать">🔊</button></div>`) + `
     <div id="options"></div>
@@ -558,9 +584,9 @@ function showChooseTranslation(ex) {
     if (withPics) { btn.innerHTML = wordIcon(opt, 54) + "<span></span>"; btn.lastChild.textContent = opt.ru; }
     else btn.textContent = opt.ru;
     if (opt === word) btn.dataset.right = "1";
-    btn.onclick = () => checkAnswer(btn, opt === word, ex, word);
     box.appendChild(btn);
   });
+  pickable(box, (btn) => checkAnswer(btn, !!btn.dataset.right, ex, word));
 }
 
 // --- Мини-игра «Как это на иврите?» (обратное направление: русское слово → выбрать иврит) ---
@@ -570,7 +596,7 @@ function showChooseHebrew(ex) {
   const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
 
   const pic = typeof wordIcon === "function" ? wordIcon(word, 72) : "";
-  screen.innerHTML = hostHTML(ask(ASK_HE, "he").replace("$", word.ru), pic ? `<div class="q-pic">${pic}</div>` : "") + `
+  screen.innerHTML = hostHTML(TASK.he, `${pic ? `<div class="q-pic">${pic}</div>` : ""}<div class="q-ru">${word.ru}</div>`) + `
     <div id="options" class="he-options"></div>
   `;
   const box = document.getElementById("options");
@@ -579,9 +605,10 @@ function showChooseHebrew(ex) {
     btn.className = "option he-option";
     btn.innerHTML = `<span class="he" dir="rtl">${opt.he}</span><span class="tr">${opt.tr}</span>`;
     if (opt === word) btn.dataset.right = "1";
-    btn.onclick = () => { speak(opt.he, { audio: opt.audio }); checkAnswer(btn, opt === word, ex, word); };
+    btn._say = () => speak(opt.he, { audio: opt.audio });     // выбрал — слышит, как звучит
     box.appendChild(btn);
   });
+  pickable(box, (btn) => checkAnswer(btn, !!btn.dataset.right, ex, word));
 }
 
 // =====================================================
@@ -615,9 +642,8 @@ function showListen(ex) {
   const word = lesson.words[ex.word];
   const others = lesson.words.filter(w => w !== word && w.ru !== word.ru);
   const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
-  screen.innerHTML = hostHTML(ask(ASK_LISTEN, "listen"), `
+  screen.innerHTML = hostHTML(TASK.listen, `
       <button class="listen big" id="listen" aria-label="Послушать">🔊</button>
-      <div class="listen-hint">нажми, чтобы послушать ещё раз</div>
       <div class="word reveal" dir="rtl" id="reveal" hidden>${word.he}</div>`) + `
     <div id="options"></div>`;
   const play = () => { const b = document.getElementById("listen"); if (!b) return; speak(word.he, { audio: word.audio }); b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); };
@@ -629,11 +655,11 @@ function showListen(ex) {
     btn.className = "option";
     btn.textContent = opt.ru;
     if (opt === word) btn.dataset.right = "1";
-    btn.onclick = () => { document.getElementById("reveal").hidden = false; checkAnswer(btn, opt === word, ex, word); };
     box.appendChild(btn);
   });
+  pickable(box, (btn) => { const rv = document.getElementById("reveal"); if (rv) rv.hidden = false; checkAnswer(btn, !!btn.dataset.right, ex, word); });
   const nl = document.createElement("button");
-  nl.className = "no-listen"; nl.textContent = "🔇 Сейчас не могу слушать";
+  nl.className = "no-listen"; nl.textContent = "🔇 Не могу слушать";
   nl.onclick = () => {
     setNoListen(true); playSound("pop");
     showToast(`Задания на слух выключены на ${NO_LISTEN_MIN} минут`);
@@ -649,11 +675,11 @@ function showBuildPhrase(ex) {
   const target = ph.he.split(" ").map(cleanTok);
   const extra = shuffle(lesson.words.filter(w => !w.he.includes(" ") && !target.includes(w.he)).map(w => w.he)).slice(0, 2);
   const tiles = shuffle([...target, ...extra]);
-  screen.innerHTML = hostHTML(ask(ASK_BUILD, "build").replace("$", ph.ru), "") + `
-    <div class="build-line" dir="rtl" id="bLine"><span class="build-empty">нажимай слова по порядку</span></div>
-    <div class="build-pool" dir="rtl" id="bPool"></div>
-    <button class="option check-btn" id="bCheck" disabled>Проверить</button>`;
-  const line = document.getElementById("bLine"), pool = document.getElementById("bPool"), check = document.getElementById("bCheck");
+  screen.innerHTML = hostHTML(TASK.build, `<div class="q-ru">${ph.ru}</div>`) + `
+    <div class="build-line" dir="rtl" id="bLine"><span class="build-empty"></span></div>
+    <div class="build-pool" dir="rtl" id="bPool"></div>`;
+  const line = document.getElementById("bLine"), pool = document.getElementById("bPool");
+  const check = checkBar(() => doCheck());
   const refresh = () => {
     const n = line.querySelectorAll(".tile").length;
     check.disabled = n === 0;
@@ -676,14 +702,14 @@ function showBuildPhrase(ex) {
     };
     pool.appendChild(b);
   });
-  check.onclick = () => {
+  function doCheck() {
     const got = [...line.querySelectorAll(".tile")].map(b => b.textContent);
     const ok = got.join(" ") === target.join(" ");
     document.querySelectorAll(".tile").forEach(b => b.disabled = true);
     if (ok) { line.classList.add("good"); speak(ph.he, { audio: ph.audio }); }
     else line.classList.add("bad");
-    checkAnswer(check, ok, ex, ph);
-  };
+    checkAnswer(document.createElement("button"), ok, ex, ph);
+  }
 }
 
 // --- «Найди пары»: иврит слева, перевод справа ---
@@ -691,7 +717,7 @@ function showMatchPairs(ex) {
   const seen = new Set();
   const pairs = shuffle(lesson.words.slice(0, lesson.newCount || lesson.words.length)).concat(shuffle(lesson.words))
     .filter(w => !seen.has(w.ru) && seen.add(w.ru)).slice(0, 4);   // сначала новые слова урока
-  screen.innerHTML = hostHTML(ask(ASK_MATCH, "match"), "") + `
+  screen.innerHTML = hostHTML(TASK.match, "") + `
     <div class="match">
       <div class="match-col" id="mHe"></div>
       <div class="match-col" id="mRu"></div>
@@ -735,7 +761,7 @@ function showMatchPairs(ex) {
 const BLITZ_SEC = 30;
 function showBlitz(ex) {
   const pool = lesson.words.filter((w, i, arr) => arr.findIndex(x => x.ru === w.ru) === i);
-  screen.innerHTML = hostHTML("Блиц! 30 секунд — успей перевести как можно больше слов!", `
+  screen.innerHTML = hostHTML(TASK.blitz, `<div class="q-ru">Переводи слова на скорость</div>
       <div class="blitz-start"><button class="btn blue" id="blGo">Поехали! ⚡</button></div>`) + `<div id="blitz"></div>`;
   document.getElementById("blGo").onclick = () => {
     document.querySelector(".blitz-start").remove();
@@ -766,6 +792,7 @@ function showBlitz(ex) {
       const wrong = random(pool.filter(x => x !== w));
       const el = document.getElementById("blWord");
       el.textContent = w.he; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+      speak(w.he, { audio: w.audio });                    // 18.11: в блице каждое слово ещё и звучит
       const opts = document.getElementById("blOpts");
       opts.innerHTML = "";
       shuffle([w, wrong]).forEach(o => {
@@ -797,6 +824,8 @@ function showBlitz(ex) {
 
 // --- 3. Проверяем ответ ---
 function checkAnswer(btn, isRight, ex, word, wrongDetail) {
+  document.querySelectorAll(".ex-bottom").forEach(e => e.remove());   // кнопка «ПРОВЕРИТЬ» уступает место плашке
+  if (!isRight && window.Hearts) Hearts.lose();                      // ошибка — минус сердечко
   const all = document.querySelectorAll(".option");
   all.forEach(b => {
     b.disabled = true;
@@ -864,7 +893,8 @@ function showFeedback(good, title, detail) {
   // маленькая пауза, чтобы браузер успел «увидеть» начальное положение — тогда панель выезжает плавно
   requestAnimationFrame(() => requestAnimationFrame(() => feedback.classList.add("show")));
 }
-function hideFeedback() { feedback.classList.remove("show"); const b = document.querySelector(".ha-banner"); if (b) b.remove(); }
+function hideFeedback() { feedback.classList.remove("show"); const b = document.querySelector(".ha-banner"); if (b) b.remove();
+  document.querySelectorAll(".ex-bottom").forEach(e => e.remove()); }
 // Флажок «пожаловаться» на плашке: запоминаем задание (уходит на сервер вместе с прогрессом — потом можно посмотреть)
 function reportTask() {
   const ex = queue[step] || {}, list = store.get("reports", []);
@@ -948,8 +978,10 @@ function flashRed() {
 // --- 4. Конец урока ---
 function showFinish() {
   bar.style.width = "100%";
+  screen.classList.remove("ex");
   const isPart = lesson.partsTotal > 0 && window.finishLessonPart;   // урок из частей (parts.js)
-  if (!isPart) markDone(lesson.id);
+  if (lesson.practice && window.Hearts) Hearts.gain(1);              // тренировка вернула сердечко
+  if (!isPart && !lesson.practice) markDone(lesson.id);
   window.streakHold = !!window.HAnim;                     // экран серии покажем сами — после праздника (см. конец функции)
   if (typeof streakDone === "function") streakDone();     // день засчитан в серию
   // Идеальный урок (ни одной ошибки) — золотой, очки за урок ×2
@@ -957,7 +989,7 @@ function showFinish() {
   if (perfect) {
     store.set(todayKey(), store.get(todayKey(), 0) + lessonPoints);   // добавляем ещё столько же
     lessonPoints *= 2;
-    if (!isPart) markPerfect(lesson.id);
+    if (!isPart && !lesson.practice) markPerfect(lesson.id);
   }
   // часть урока: засчитываем часть; урок пройден — после последней; золотой — если все части без ошибок
   const pr = isPart ? finishLessonPart(lesson, perfect) : { lessonDone: true, gold: perfect, next: -1 };
@@ -1010,9 +1042,10 @@ function showFinish() {
   screen.classList.remove("slide-out");
   screen.classList.add("slide-in");
   const finNext = document.getElementById("finNext"), finAgain = document.getElementById("finAgain");
-  const lid = lesson.id, lpart = lesson.part;
+  const lid = lesson.id, lpart = lesson.part, lpractice = !!lesson.practice;
   if (finNext) finNext.onclick = () => startLessonPart(lid, pr.next);
-  if (finAgain) finAgain.onclick = () => isPart ? startLessonPart(lid, lpart) : startLesson(lid);
+  if (finAgain) finAgain.onclick = () => lpractice ? showPath() : isPart ? startLessonPart(lid, lpart) : startLesson(lid);
+  if (finAgain && lpractice) finAgain.textContent = "На дорожку";
   setTimeout(() => playSound("finish"), 900);   // фанфара — когда удод сел на ветку
   // Праздник (anim.js): Хибри ликует на весь экран → «идеальный урок ×2» → экран серии дня
   if (window.HAnim) {

@@ -45,9 +45,9 @@
     tzila: { custom: "tzila" },          // нарисована отдельно (tzilaSVG) по картинке из Шедеврума, цвета приглушены
     playerM: { skin: "#f1c9a8", hair: "short", hairC: "#6b4a32", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
     playerF: { skin: "#f1c9a8", hair: "long", hairC: "#5a3a26", top: "#6fbfb4", bottom: "#3a4660", shoes: "#ffffff" },
-    seller: { skin: "#e8b48c", hair: "short", hairC: "#2b211c", top: "#ffffff", bottom: "#ffffff", shoes: C.ink, hat: "chef", beard: true },
-    grocer: { skin: "#d9a27a", hair: "short", hairC: "#4a3a2e", top: "#3f8f5a", bottom: "#2f3b52", shoes: C.ink, hat: "kippa", beard: true },
-    driver: { skin: "#eabd98", hair: "short", hairC: "#444", top: "#8fa8c8", bottom: "#34405e", shoes: C.ink, hat: "cap" }
+    seller: { char: "seller", skin: "#e8b48c", hair: "short", hairC: "#2b211c", top: "#ffffff", bottom: "#ffffff", shoes: C.ink, hat: "chef", beard: true },
+    grocer: { char: "grocer", skin: "#d9a27a", hair: "short", hairC: "#4a3a2e", top: "#3f8f5a", bottom: "#2f3b52", shoes: C.ink, hat: "kippa", beard: true },
+    driver: { char: "driver", skin: "#eabd98", hair: "short", hairC: "#444", top: "#8fa8c8", bottom: "#34405e", shoes: C.ink, hat: "cap" }
   };
 
   // =====================================================
@@ -184,6 +184,12 @@
   }
 
   function personSVG(o) {
+    // 18.11: все герои — в едином новом стиле (avatar.js CHARS); старые рисунки — запасной вариант
+    if (window.HirbisAvatar && HirbisAvatar.charSVG) {
+      const key = o.custom === "david" || o.custom === "tzila" ? o.custom : o.char;
+      if (key && HirbisAvatar.CHARS[key]) return HirbisAvatar.charSVG(key, { pose: "stand", cls: o.custom ? "hs-david" + (key === "tzila" ? " hs-tzila" : "") : "" });
+      if (o === LOOK.playerM || o === LOOK.playerF) return HirbisAvatar.svg(HirbisAvatar.defaults(o === LOOK.playerF ? "f" : "m"), { pose: "stand" });
+    }
     if (o.custom === "tzila") return tzilaSVG();
     if (o.custom === "david") return davidSVG();
     if (o.custom === "avatar" && window.HirbisAvatar) return HirbisAvatar.svg(o.cfg, { pose: "stand" });

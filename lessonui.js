@@ -1,0 +1,98 @@
+// =====================================================
+// ЭКРАН УРОКА (18.11): крестик «выйти» и СЕРДЕЧКИ-ЖИЗНИ (как в Duolingo).
+//  • 5 ❤️. Ошибка в уроке — минус сердечко. Новое сердечко — каждые 30 минут (до 5).
+//  • Кончились — окно «Сердечки кончились»: подождать или «Тренировка» (старый урок без потери ❤️) → +1 ❤️.
+//  • Карточки «Новое слово», повторение после квеста и тренировка сердечки не тратят. Тестировщику — без ограничений.
+// store "hearts" = { n, t } (t — когда начался отсчёт до следующего сердечка).
+// =====================================================
+(function () {
+  const MAX = 5, REGEN_MS = 30 * 60 * 1000;
+  const HEART = `<svg viewBox="0 0 24 22" aria-hidden="true"><path d="M12 21.2 10.6 20C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.4 3c1.8 0 3.5.8 4.6 2.1C13.1 3.8 14.8 3 16.6 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.6 11.6z" fill="currentColor"/><path d="M6.4 6.6c.9-.9 2.2-1.1 3.2-.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".55"/></svg>`;
+  const unlimited = () => typeof testMode === "function" && testMode();
+
+  function state() {
+    const s = Object.assign({ n: MAX, t: Date.now() }, store.get("hearts", {}));
+    if (!(s.t <= Date.now())) s.t = Date.now();          // время «из будущего» (сбились часы) — считаем от сейчас
+    if (s.n < MAX) {                                     // восстановление со временем
+      const gained = Math.floor((Date.now() - s.t) / REGEN_MS);
+      if (gained > 0) { s.n = Math.min(MAX, s.n + gained); s.t += gained * REGEN_MS; store.set("hearts", s); }
+    }
+    return s;
+  }
+  function msToNext() { const s = state(); return s.n >= MAX ? 0 : Math.max(0, REGEN_MS - (Date.now() - s.t)); }
+  function minsText(ms) { const m = Math.ceil(ms / 60000); return m + " мин"; }
+  const spends = () => lesson && !lesson.practice && !lesson.review && !unlimited();
+
+  const Hearts = {
+    n: () => (unlimited() ? Infinity : state().n),
+    render(bump) {
+      const el = document.getElementById("hearts");
+      if (!el) return;
+      const n = Hearts.n();
+      el.className = "hearts" + (n === 0 ? " empty" : "") + (bump ? " lost" : "");
+      el.innerHTML = HEART + `<b>${n === Infinity ? "∞" : n}</b>`;
+    },
+    lose() {
+      if (!spends()) return;
+      const s = state();
+      if (s.n >= MAX) s.t = Date.now();                   // отсчёт до нового — с первой потери
+      s.n = Math.max(0, s.n - 1);
+      store.set("hearts", s);
+      Hearts.render(true);
+      if (window.HAnim) { const el = document.getElementById("hearts"); if (el) HAnim.shake(el); }
+    },
+    gain(k) { const s = state(); s.n = Math.min(MAX, s.n + (k || 1)); if (s.n >= MAX) s.t = Date.now(); store.set("hearts", s); Hearts.render(); },
+    out: () => spends() && state().n <= 0,
+    // окно «Сердечки кончились»
+    outModal(onClose) {
+      const old = document.getElementById("hOut"); if (old) old.remove();
+      const practiceIds = doneLessons().filter(id => /^a1-\d+-\d+$/.test(id));
+      const w = document.createElement("div");
+      w.id = "hOut";
+      w.innerHTML = `<div class="ho-card">
+          <div class="ho-heart">${HEART}</div>
+          <h2>Сердечки кончились</h2>
+          <p>Новое ❤️ через <b id="hoLeft">${minsText(msToNext())}</b></p>
+          ${practiceIds.length ? `<button class="btn blue" id="hoPractice">💪 Тренировка: +1 ❤️</button>` : ""}
+          <button class="btn ghost" id="hoWait">Подожду</button>
+        </div>`;
+      document.body.appendChild(w);
+      requestAnimationFrame(() => w.classList.add("show"));
+      if (typeof vibrate === "function") vibrate("warning");
+      const close = () => { w.classList.remove("show"); setTimeout(() => w.remove(), 250); };
+      w.querySelector("#hoWait").onclick = () => { close(); (onClose || showPath)(); };
+      const pb = w.querySelector("#hoPractice");
+      if (pb) pb.onclick = () => { close(); startPractice(practiceIds[Math.floor(Math.random() * practiceIds.length)]); };
+    }
+  };
+
+  // Тренировка: задания уже пройденного урока, сердечки не тратятся, в конце +1 ❤️
+  function startPractice(id) {
+    getLesson(id).then(raw => {
+      const data = JSON.parse(JSON.stringify(raw));
+      data.id = "practice"; data.practice = true; data.title = "Тренировка 💪";
+      startLesson(data);
+    }).catch(() => showPath());
+  }
+
+  // ---------- крестик «выйти» с вопросом ----------
+  function askExit() {
+    if (document.getElementById("exAsk")) return;
+    const w = document.createElement("div");
+    w.id = "exAsk";
+    w.innerHTML = `<div class="ho-card"><div class="ho-bird" id="exBird"></div><h2>Точно выйти?</h2>
+      <p>Прогресс этой части не сохранится</p>
+      <button class="btn blue" id="exStay">Остаться</button><button class="btn ghost ex-leave" id="exLeave">Выйти</button></div>`;
+    document.body.appendChild(w);
+    requestAnimationFrame(() => w.classList.add("show"));
+    if (window.HAnim) HAnim.mascot(document.getElementById("exBird"), "sad", { size: 90 });
+    const close = () => { w.classList.remove("show"); setTimeout(() => w.remove(), 250); };
+    w.querySelector("#exStay").onclick = close;
+    w.querySelector("#exLeave").onclick = () => { close(); hideFeedback(); showPath(); };
+  }
+  const x = document.getElementById("exClose");
+  if (x) x.onclick = askExit;
+
+  window.Hearts = Hearts;
+  window.startPractice = startPractice;
+})();

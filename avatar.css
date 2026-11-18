@@ -58,3 +58,18 @@
 /* Аватар моргает везде, как Давид */
 .hb-avatar .av-eye { animation: blink 4.6s infinite; }
 .hs-fig .hb-avatar { overflow: visible; height: 100%; }
+
+/* =====================================================
+   18.11 НОВЫЙ СТИЛЬ ПЕРСОНАЖЕЙ: живые — кивают, моргают, говорят (рот двигается), радуются
+   ВАЖНО: у групп с атрибутом transform (.av-body и обёртки головы) CSS transform НЕ задавать — сломает пропорции.
+   ===================================================== */
+.hb-avatar .av-mouth { transform-box: fill-box; transform-origin: 50% 25%; }
+.hs-person.hb-avatar .hs-head { transform-box: fill-box; transform-origin: 50% 92%; animation: avNod 3.8s ease-in-out infinite alternate; }
+@keyframes avNod { 0% { transform: rotate(-1.6deg); } 100% { transform: rotate(1.6deg) translateY(-.6px); } }
+/* говорит: рот открывается-закрывается */
+.talking .hb-avatar .av-mouth, .act-talk .hb-avatar .av-mouth, .hb-avatar.talking .av-mouth { animation: avTalk .17s ease-in-out infinite alternate; }
+@keyframes avTalk { from { transform: scaleY(.7); } to { transform: scaleY(1.9) scaleX(.92); } }
+/* радуется: подпрыгивает головой */
+.act-cheer .hb-avatar .hs-head, .av-joy .hb-avatar .hs-head { animation: avHop .45s cubic-bezier(.3, 1.6, .5, 1) 2 !important; }
+@keyframes avHop { 50% { transform: translateY(-7px) rotate(-3deg); } }
+@media (prefers-reduced-motion: reduce) { .hs-person.hb-avatar .hs-head, .talking .hb-avatar .av-mouth, .act-talk .hb-avatar .av-mouth { animation: none !important; } }

@@ -180,3 +180,25 @@ body.theme-dark .p-ring-s { stroke: #2a3546; }
 .p-pop.done .p-pop-go { color: #46a302; }
 .p-pop-go:active { transform: translateY(2px); border-bottom-width: 2px; }
 @media (prefers-reduced-motion: reduce) { .p-ring-s.on, .p-ring-s.gold, .p-node-wrap.cur .p-node.current, .p-pop-p.now { animation: none; } }
+
+/* 18.11: карточка «Новое слово» — иврит и русский рядом */
+.cd-pair { position: relative; max-width: 400px; margin: 0 auto; padding: 18px 14px 16px; border-radius: 26px; background: var(--bg); color: var(--text);
+  border: 2px solid rgba(122, 92, 224, .25); box-shadow: 0 8px 0 rgba(122, 92, 224, .22); cursor: pointer; animation: cdPairIn .5s var(--cd-spring) both; }
+@keyframes cdPairIn { from { opacity: 0; transform: translateY(24px) scale(.94); } }
+.cd-pair-pic { display: flex; justify-content: center; margin-bottom: 6px; }
+.cd-pair-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; }
+.cd-pair-he, .cd-pair-ru { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 18px; min-width: 0; }
+.cd-pair-he { background: #eaf3fd; animation: cdPairIn .45s var(--cd-spring) .1s both; }
+.cd-pair-ru { background: #f1ecff; animation: cdPairIn .45s var(--cd-spring) .3s both; }
+body.theme-dark .cd-pair-he { background: #1c2f45; } body.theme-dark .cd-pair-ru { background: #2c2450; }
+.cd-pair-lang { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--hint); }
+.cd-pair-he b { font-size: 40px; line-height: 1.15; font-weight: 600; color: #2f7fd0; word-break: break-word; }
+body.theme-dark .cd-pair-he b { color: #8cc4f5; }
+.cd-pair-he .tr { font-size: 16px; color: var(--hint); }
+.cd-pair-ru b { font-size: 24px; line-height: 1.2; font-weight: 800; word-break: break-word; text-align: center; }
+.cd-pair-eq { font-size: 26px; font-weight: 800; color: var(--hint); }
+.cd-pair-say { margin-top: 12px; }
+.cd-pair-say.ping { animation: cdPing .5s ease; }
+@keyframes cdPing { 40% { transform: scale(1.18); } }
+.cd-pair-tip { margin: 14px 0 0; font-size: 14px; color: var(--hint); }
+@media (max-width: 360px) { .cd-pair-row { grid-template-columns: 1fr; } .cd-pair-eq { display: none; } }

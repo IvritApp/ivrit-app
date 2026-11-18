@@ -1,0 +1,70 @@
+/* =====================================================
+   ЭКРАН УРОКА 18.11 (как в Duolingo, «для тупых»):
+   ✕ + полоска + ❤️ сверху · задание крупно · друг с облачком · крупные кнопки внизу · «ПРОВЕРИТЬ» под пальцем
+   ===================================================== */
+#lesson .topbar { margin-bottom: 14px; gap: 12px; }
+.ex-close { flex: none; width: 34px; height: 34px; border: none; background: none; color: #a7b3c0; font-size: 24px; font-weight: 700;
+  line-height: 1; cursor: pointer; border-radius: 10px; padding: 0; }
+.ex-close:active { background: var(--soft); }
+.hearts { flex: none; display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 18px; color: #ff4b4b; min-width: 42px; }
+.hearts svg { width: 26px; height: 24px; }
+.hearts.empty { color: #b3bcc8; }
+.hearts.lost svg { animation: hLost .6s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes hLost { 30% { transform: scale(1.5) rotate(-12deg); } 60% { transform: scale(.8) rotate(8deg); } }
+
+/* задание: заголовок сверху, варианты внизу у пальца */
+/* высота = экран − отступ сверху − шапка − кнопка «ПРОВЕРИТЬ» (≈100px) — чтобы варианты не уходили под кнопку */
+#screen.ex { display: flex; flex-direction: column; min-height: calc(100vh - 190px); min-height: calc(100dvh - 190px); text-align: left; }
+#lesson { padding-bottom: 0; }
+body:has(#lesson:not([hidden])) { padding-bottom: 110px; }
+.ex-title { margin: 2px 0 12px; font-size: 24px; font-weight: 800; line-height: 1.2; color: var(--text); animation: moRise .35s cubic-bezier(.22,1,.36,1) both; }
+#screen.ex .host { margin: 0 0 12px; align-items: center; }
+#screen.ex .host-fig { width: 84px; height: 168px; }
+#screen.ex .host-bubble { margin-bottom: 30px; padding: 12px 14px; border-radius: 20px; text-align: center; }
+#screen.ex .host-bubble .word { font-size: 46px; margin: 0; }
+.q-ru { font-size: 22px; font-weight: 800; line-height: 1.25; text-align: center; color: var(--text); }
+#screen.ex #options, #screen.ex .build-line, #screen.ex .match { margin-top: auto; }
+#screen.ex #options { width: 100%; max-width: 440px; margin-left: auto; margin-right: auto; padding-bottom: 8px; }
+#screen.ex .option { max-width: none; min-height: 60px; font-size: 20px; font-weight: 600; border-radius: 16px; margin: 0 0 10px; text-align: center; }
+#screen.ex #options.pic-options .option { min-height: 120px; margin: 0; }
+#screen.ex .he-option .he { font-size: 30px; }
+/* выбранный вариант — голубой, как в Duolingo */
+.option.sel { border-color: #84d8ff !important; background: #ddf4ff !important; color: #1899d6 !important; transform: translateY(-1px); }
+body.theme-dark .option.sel { background: #12324a !important; color: #8fd6ff !important; }
+/* «Собери фразу»: строки-линейки как в тетради */
+#screen.ex .build-line { min-height: 118px; max-width: 440px; width: 100%; margin: auto auto 18px; border: none; border-radius: 0; padding: 4px 2px;
+  align-content: flex-start; background: repeating-linear-gradient(to bottom, transparent 0 57px, #d7e0ea 57px 59px); }
+#screen.ex .build-line.good { background: repeating-linear-gradient(to bottom, #effbe6 0 57px, #58cc02 57px 59px); border-radius: 12px; }
+#screen.ex .build-line.bad { background: repeating-linear-gradient(to bottom, #fff0f0 0 57px, #ff5a5a 57px 59px); border-radius: 12px; }
+#screen.ex .build-pool { max-width: 440px; width: 100%; margin: 0 auto 8px; gap: 10px; }
+#screen.ex .tile { font-size: 24px; padding: 10px 16px; border-radius: 14px; }
+#screen.ex .match { width: 100%; max-width: 440px; }
+#screen.ex .m-card { min-height: 68px; font-size: 19px; }
+#screen.ex .no-listen { margin: 4px auto 0; font-size: 14px; }
+
+/* кнопка «ПРОВЕРИТЬ» внизу экрана */
+.ex-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg); border-top: 2px solid rgba(127, 127, 127, .14); animation: exBarIn .3s cubic-bezier(.22,1,.36,1) both; }
+@keyframes exBarIn { from { transform: translateY(100%); } }
+.ex-check { display: block; width: 100%; max-width: 440px; margin: 0 auto; padding: 16px; border: none; border-radius: 16px; font: inherit;
+  font-size: 18px; font-weight: 900; letter-spacing: .04em; color: #fff; background: #58cc02; border-bottom: 5px solid #46a302; cursor: pointer;
+  transition: background .2s, color .2s, transform .1s; }
+.ex-check:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 2px; }
+.ex-check:disabled { background: #e5ebf1; color: #a6b2be; border-bottom-color: #d3dbe3; cursor: default; }
+body.theme-dark .ex-check:disabled { background: #263142; color: #66758a; border-bottom-color: #1c2532; }
+
+/* окна: «Сердечки кончились» и «Точно выйти?» */
+#hOut, #exAsk { position: fixed; inset: 0; z-index: 95; display: flex; align-items: flex-end; justify-content: center; background: rgba(10, 20, 35, 0); transition: background .25s; }
+#hOut.show, #exAsk.show { background: rgba(10, 20, 35, .5); }
+.ho-card { width: 100%; max-width: 520px; padding: 22px 18px calc(22px + env(safe-area-inset-bottom, 0px)); border-radius: 26px 26px 0 0; background: var(--bg); color: var(--text);
+  text-align: center; transform: translateY(100%); transition: transform .35s cubic-bezier(.22,1,.36,1); }
+#hOut.show .ho-card, #exAsk.show .ho-card { transform: none; }
+.ho-card h2 { margin: 8px 0 4px; font-size: 24px; }
+.ho-card p { margin: 0 0 12px; color: var(--hint); }
+.ho-heart { width: 86px; margin: 0 auto; color: #ff4b4b; animation: hoBeat 1.4s ease-in-out infinite; }
+.ho-heart svg { width: 100%; height: auto; }
+@keyframes hoBeat { 15% { transform: scale(1.12); } 30% { transform: scale(.96); } 45% { transform: scale(1.06); } 60% { transform: scale(1); } }
+.ho-bird { height: 100px; display: flex; justify-content: center; align-items: flex-end; }
+.ex-leave { color: #e5484d !important; }
+
+@media (prefers-reduced-motion: reduce) { .ex-bottom, .ex-title, .ho-heart, .hearts.lost svg { animation: none; } }

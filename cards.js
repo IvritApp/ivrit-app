@@ -212,33 +212,31 @@
 
   // ---------- Карточка «Новое слово» ВНУТРИ урока (шаг { type: "card", word: i }) ----------
   // Показываем слово: картинка, иврит, звук → нажал — перевод → «Понятно, дальше». Без оценки и без ошибок.
+  // 18.11: иврит и русский — РЯДОМ на одной карточке (так лучше запоминается), без переворота
   window.showWordCard = function (ex) {
     const w = lesson.words[ex.word];
     if (!w) { goNext(); return; }
-    S = { flipped: false, busy: false };
+    const pic = typeof wordIcon === "function" ? wordIcon(w, 96) : "";
     screen.innerHTML = `
       <div class="cd-wrap cd-inlesson">
         <div class="cd-newtag">✨ Новое слово</div>
-        <div class="cd-deck one" id="cd-deck">${cardHTML(w)}</div>
-        <div class="cd-btns" id="cd-btns"><button class="btn blue cd-flipbtn" id="cd-flip">Показать перевод</button></div>
+        <div class="cd-pair" id="cd-pair">
+          ${pic ? `<div class="cd-pair-pic">${pic}</div>` : ""}
+          <div class="cd-pair-row">
+            <div class="cd-pair-he"><span class="cd-pair-lang">иврит</span><b dir="rtl">${w.he}</b><span class="tr">${w.tr}</span></div>
+            <div class="cd-pair-eq">=</div>
+            <div class="cd-pair-ru"><span class="cd-pair-lang">русский</span><b>${w.ru}</b></div>
+          </div>
+          <button class="cd-say cd-pair-say" id="cd-say" aria-label="Послушать ещё раз">🔊</button>
+        </div>
+        <div class="cd-pair-tip">Послушай и повтори вслух 🗣️</div>
+        <div class="cd-btns" id="cd-btns"><button class="btn blue" id="cd-go">Запомнил${g("{m:}{f:а}")}, дальше</button></div>
       </div>`;
-    const card = document.getElementById("cd-card");
-    requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove("enter")));
-    const sayIt = (e) => { if (e) e.stopPropagation(); speak(w.he, { audio: w.audio }); };
+    const sayIt = () => { speak(w.he, { audio: w.audio }); const b = document.getElementById("cd-say"); if (b) { b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); } };
     document.getElementById("cd-say").onclick = sayIt;
-    document.getElementById("cd-say2").onclick = sayIt;
+    document.getElementById("cd-pair").onclick = (e) => { if (e.target.id !== "cd-say") sayIt(); };
     setTimeout(sayIt, 350);
-    const turn = () => {
-      S.flipped = !S.flipped;
-      card.classList.toggle("flipped", S.flipped);
-      vibrate("light");
-      if (S.flipped && !document.getElementById("cd-go")) {
-        document.getElementById("cd-btns").innerHTML = `<button class="btn blue" id="cd-go">Понятно, дальше</button>`;
-        document.getElementById("cd-go").onclick = () => { playSound("pop"); goNext(); };
-      }
-    };
-    card.onclick = turn;
-    document.getElementById("cd-flip").onclick = turn;
+    document.getElementById("cd-go").onclick = () => { playSound("pop"); vibrate("light"); goNext(); };
   };
 
   // ---------- Конец части ----------
