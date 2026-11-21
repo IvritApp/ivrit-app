@@ -150,7 +150,7 @@ function showOnboarding() {
       <div class="ob-or">или придумай свой</div>` : ""}
       <label class="ob-nick"><span>@</span><input id="ob-nick" maxlength="32" placeholder="твой_ник" autocomplete="off" autocapitalize="off" spellcheck="false" value="${draft.nick || ""}"></label>
       <div class="ob-nick-st" id="ob-nick-st"></div>
-      <p class="ob-text small ob-rule">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</p>
+      <p class="ob-text small ob-rule">Только маленькие латинские буквы (a–z), цифры и _ — от 5 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</p>
       <p class="ob-text small">Нажимая «Дальше», ты соглашаешься, что твой прогресс хранится на нашем сервере в России — чтобы он не потерялся при смене телефона и перешёл в приложение Hirbis.</p>
       <button class="btn blue" data-next id="ob-go2" disabled>Дальше</button>`;
     },
@@ -187,7 +187,7 @@ function showOnboarding() {
       const test = async () => {
         const v = nick.value.trim().replace(/^@/, "").toLowerCase(); draft.nick = v; draft.nickOk = false; go2.disabled = true;
         if (!v) { st.textContent = ""; st.className = "ob-nick-st"; return; }
-        if (!/^[a-z0-9_]{3,32}$/.test(v)) { st.textContent = "Нужно от 3 до 32 символов"; st.className = "ob-nick-st bad"; return; }
+        if (!/^[a-z0-9_]{5,32}$/.test(v)) { st.textContent = "Нужно от 5 до 32 символов"; st.className = "ob-nick-st bad"; return; }
         st.textContent = "Проверяю…"; st.className = "ob-nick-st";
         const my = ++seq, r = await hirbisSync.checkHandle(v); if (my !== seq) return;
         if (r.ok) { st.textContent = r.offline ? "Проверим, когда появится связь" : `✓ @${v} свободен`; st.className = "ob-nick-st ok"; draft.nickOk = true; go2.disabled = false; }

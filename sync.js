@@ -8,7 +8,7 @@
 // =====================================================
 (function () {
   const API = "https://89-23-99-107.sslip.io/hapi";
-  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru", "autoplay", "plus"];
+  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru", "autoplay", "plus", "eco", "eco_mock"];
   const P = "hirbis_";
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;
@@ -131,7 +131,7 @@
       <div class="set-note">⭐ — основной ник, его видят друзья. Ников: ${nicks.length} из ${unl ? "∞" : lim}. Нажми на ник, чтобы сделать основным или удалить.</div>
       <div id="syNickAct"></div>
       ${canAdd ? `<div class="set-test"><input id="syNickNew" maxlength="32" placeholder="ещё один ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickAdd">Добавить</button></div>
-        <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 3 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
+        <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 5 до 32 символов (короткие, 3–4 знака — по купону 🏷 из магазина). Ник уникальный: если его уже кто-то занял, взять его нельзя.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
       <div class="set-note">${status}${!ok ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
       ${!(me && me.admin) ? `<div class="set-note sy-lost"><a href="#" id="syLost">Потерял старый Telegram? Войти в свой аккаунт</a></div><div id="syLostBox"></div>` : ""}
       ${me && me.admin ? `<div class="set-title">👑 Режим админа</div>

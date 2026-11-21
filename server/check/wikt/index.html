@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hirbis — сверка с Викисловарём</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --blue:#5aa9f0; --blueD:#3a8ad6; --orange:#ff8a35; --green:#3cae5c; --greenBg:#e3f7e8; --red:#e5484d; --redBg:#ffe7e7; --amber:#e8930c; --amberBg:#fff3dc; --bg:#f4f9fe; --card:#fff; --ink:#1f2433; --hint:#7c8597; --line:#e3ecf5; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif; padding-bottom:120px; }
+  header { background:#fff; padding:18px 16px 14px; border-bottom:1px solid var(--line); }
+  .wrap { max-width:760px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:22px; color:var(--blueD); }
+  h1 b { color:var(--orange); }
+  .intro { margin:6px 0 0; color:#4b5468; font-size:15px; }
+  .intro li { margin:3px 0; }
+  .progress { height:8px; background:var(--line); border-radius:99px; margin:12px 0 4px; overflow:hidden; }
+  .progress i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--blue),#7cc0ff); transition:width .3s; }
+  .stats { font-size:13px; color:var(--hint); }
+  .tabs { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+  .tabs button { border:1px solid var(--line); background:#fff; border-radius:99px; padding:6px 12px; font-size:14px; color:#4b5468; cursor:pointer; }
+  .tabs button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.05em; color:var(--blueD); margin:22px 16px 8px; }
+  .card { background:var(--card); margin:0 12px 10px; border-radius:16px; padding:12px 14px; border:2px solid transparent; box-shadow:0 1px 0 rgba(30,60,110,.06),0 3px 10px rgba(58,138,214,.08); }
+  .card.ok { border-color:#bfe8c9; }
+  .card.bad { border-color:#f6b9bb; background:#fffafa; }
+  .card.doubt { border-color:#f5d39a; background:#fffdf7; }
+  .top { display:flex; gap:10px; align-items:flex-start; }
+  .num { flex:none; min-width:30px; height:30px; border-radius:10px; background:var(--bg); color:var(--hint); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .main { flex:1; min-width:0; }
+  .he { font-family:"Noto Sans Hebrew","Arial Hebrew",Arial,sans-serif; font-size:30px; line-height:1.45; direction:rtl; text-align:right; font-weight:600; }
+  .plain { font-family:"Noto Sans Hebrew",Arial,sans-serif; direction:rtl; text-align:right; font-size:16px; color:var(--hint); }
+  .plain span { direction:ltr; unicode-bidi:isolate; font-family:-apple-system,"Segoe UI",Roboto,sans-serif; font-size:12px; }
+  .tr { font-size:17px; color:var(--blueD); margin-top:4px; }
+  .ru { font-size:17px; }
+  .meta { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .chip { font-size:12px; padding:3px 8px; border-radius:99px; background:var(--bg); color:#4b5468; }
+  .chip.m { background:#e4f0fc; color:var(--blueD); }
+  .chip.f { background:#fff0e4; color:#c4621a; }
+  .btns { display:flex; gap:8px; margin-top:10px; }
+  .btns button { flex:1; border:none; border-radius:12px; padding:10px 4px; font-size:15px; font-weight:600; cursor:pointer; background:var(--bg); color:#4b5468; transition:transform .1s; }
+  .btns button:active { transform:scale(.96); }
+  .card.ok .b-ok { background:var(--green); color:#fff; }
+  .card.bad .b-bad { background:var(--red); color:#fff; }
+  .card.doubt .b-doubt { background:var(--amber); color:#fff; }
+  .fix { display:none; margin-top:10px; }
+  .card.bad .fix, .card.doubt .fix { display:block; }
+  .fix p { margin:0 0 6px; font-size:13px; color:var(--hint); }
+  .what { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .what button { border:1px solid var(--line); background:#fff; border-radius:99px; padding:5px 10px; font-size:13px; cursor:pointer; color:#4b5468; }
+  .what button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fix input, .fix textarea { width:100%; border:1px solid var(--line); border-radius:10px; padding:9px 10px; font:16px -apple-system,"Segoe UI",Roboto,sans-serif; margin-bottom:6px; background:#fff; }
+  .fix input.heIn { font-family:"Noto Sans Hebrew",Arial,sans-serif; font-size:20px; }
+  .fix textarea { min-height:44px; resize:vertical; }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:rgba(255,255,255,.96); backdrop-filter:blur(8px); border-top:1px solid var(--line); padding:10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .bar .wrap { display:flex; gap:8px; align-items:center; }
+  .bar .cnt { flex:1; font-size:13px; color:var(--hint); line-height:1.3; }
+  .bar .cnt b { color:var(--ink); }
+  .bar button { border:none; border-radius:12px; padding:11px 14px; font-size:15px; font-weight:700; cursor:pointer; }
+  .send { background:var(--blue); color:#fff; }
+  .share { background:var(--orange); color:#fff; }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:10px 16px; border-radius:12px; font-size:14px; opacity:0; transition:.3s; pointer-events:none; z-index:9; }
+  .toast.on { opacity:1; transform:translateX(-50%); }
+  .empty { text-align:center; color:var(--hint); padding:30px; }
+  .reset { background:none; border:none; color:var(--hint); text-decoration:underline; font-size:13px; cursor:pointer; margin:24px auto; display:block; }
+  #report { display:none; margin:10px 12px; width:calc(100% - 24px); min-height:160px; font:13px monospace; }
+.parts { display: flex; gap: 6px; margin: 10px 0 8px; }
+.parts button { flex: 1; border: 2px solid #d9e6f2; background: #fff; border-radius: 12px; padding: 8px 4px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; line-height: 1.2; color: #1d4f86; }
+.parts button small { font-weight: 400; color: #7c8a99; }
+.parts button.on { background: #3a8ad6; border-color: #3a8ad6; color: #fff; }
+.parts button.on small { color: #e3f0fb; }
+.who-box { background: #fff; border: 2px solid #d9e6f2; border-radius: 12px; padding: 10px 12px; margin: 10px 0 6px; font-size: 15px; }
+.who-box p { margin: 0 0 8px; }
+.who-row { display: flex; gap: 8px; }
+.who-row input { flex: 1; min-width: 0; padding: 10px; border: 2px solid #d9e6f2; border-radius: 10px; font: inherit; font-size: 16px; }
+.who-row button, #chName { border: 0; background: #3a8ad6; color: #fff; border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+#chName { background: none; color: #3a8ad6; padding: 0 6px; font-weight: 600; }
+.net { font-size: 13px; margin: 4px 0 6px; color: #7c8a99; }
+.net.ok { color: #2c7a45; } .net.bad { color: #c0392b; }
+.chip.by { background: #e3f7e8; color: #2c7a45; }
+.card { transition: opacity .3s, transform .3s; }
+.card.gone { opacity: 0; transform: translateX(40px); }
+.b-done { margin-top: 8px; width: 100%; border: 0; background: #3a8ad6; color: #fff; border-radius: 10px; padding: 10px; font: inherit; font-weight: 700; cursor: pointer; }
+.wik { margin-top: 8px; background: #f3f7fd; border: 1px solid #dbe7f6; border-radius: 12px; padding: 8px 10px; font-size: 14px; }
+.wik .wl { margin: 2px 0; color: #4b5468; }
+.wik .he2 { display: inline; font-family: "Noto Sans Hebrew", Arial, sans-serif; font-size: 20px; direction: rtl; unicode-bidi: isolate; color: #1f2433; font-weight: 600; }
+.wik .wn { margin-top: 4px; color: #1f2433; }
+.wik a { color: #3a8ad6; font-weight: 600; }
+.chip.conf { background: #fff3dc; color: #a56a00; }
+#parts { display: none !important; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Hirbis — <b>сверка</b> с Викисловарём</h1>
+  <ul class="intro">
+    <li>Мы сравнили все 477 новых слов главы A1 с Викисловарём. Почти всё совпало; здесь только <b>спорные слова</b> — их надо решить вам.</li>
+    <li>Под каждым словом показано, что написано в Викисловаре и что мы предлагаем. Нажми <b>✓ Верно</b>, если в приложении всё правильно (оставляем как есть), <b>✗ Ошибка</b> — если надо исправить (напиши, как правильно), или <b>? Не уверен</b>.</li>
+    <li>Викисловарь — открытая вики, он тоже ошибается. Последнее слово за вами.</li>
+    <li>Отметки сохраняются на сервере и сразу видны второму знатоку. В конце нажми <b>«Скопировать отчёт»</b> и вставь текст в Telegram.</li>
+  </ul>
+  <div class="who-box" id="whoBox"></div>
+  <div class="net" id="net">⏳ Загружаю общие отметки…</div>
+  <div class="parts" id="parts" hidden>
+    <button data-p="1">👤 Я знаток 1<br><small>слова уроков</small></button>
+    <button data-p="2">👤 Я знаток 2<br><small>все квесты</small></button>
+    <button data-p="0">Всё<br><small>одному</small></button>
+  </div>
+  <div class="progress"><i id="pg"></i></div>
+  <div class="stats" id="stats"></div>
+  <div class="tabs" id="tabs">
+    <button data-f="todo" class="on">Осталось проверить</button>
+    <button data-f="bad">Ошибки и сомнения</button>
+    <button data-f="all">Все</button>
+  </div>
+</div></header>
+
+<main class="wrap" id="list"></main>
+<button class="reset" id="reset">Стереть все отметки и начать заново</button>
+<textarea id="report" readonly></textarea>
+
+<div class="bar"><div class="wrap">
+  <div class="cnt" id="cnt"></div>
+  <button class="share" id="share" hidden>Поделиться</button>
+  <button class="send" id="copy">Скопировать отчёт</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const ITEMS = [{"id":1,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"בְּכֵיף","tr":"бэ-кеф","ru":"с удовольствием","where":"Урок a1-6-6","who":"всем","wikHe":"בְּכֵּיף","propHe":"בְּכֵּיף","propRu":"с дагешем в כ","note":"У нас в כ нет дагеша: по правилу «כ без дагеша = х» слово читается «бэхейф», а не «бэкеф». Значение в Викисловаре «you\u0027re welcome» (разговорное), у нас «с удовольствием» — верен ли такой перевод?","url":"https://en.wiktionary.org/wiki/%D7%91%D7%9B%D7%99%D7%A3","conf":"высокая"},{"id":2,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"פִּינָה","tr":"пина","ru":"угол","where":"Урок a1-4-5","who":"всем","wikHe":"פִּנָּה","propHe":"פִּנָּה / פִּינָּה","propRu":"с дагешем в נ","note":"У нас в נ нет дагеша, в Викисловаре есть. По вашему правилу с י (מִיטָּה, כִּיסֵּא) дагеш сохраняется. Как писать это слово?","url":"https://en.wiktionary.org/wiki/%D7%A4%D7%99%D7%A0%D7%94","conf":"средняя"},{"id":3,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"מָה נִשְׁמָע?","tr":"ма нишма?","ru":"как дела?","where":"Урок a1-2-1","who":"всем","wikHe":"מַה נִּשְׁמַע?","propHe":"מַה נִּשְׁמָע?","propRu":"патах, дагеш в נ","note":"Какие гласные правильны: מָה или מַה? נִשְׁמָע или נִשְׁמַע? Нужен ли дагеш в נ?","url":"https://en.wiktionary.org/wiki/%D7%9E%D7%94%20%D7%A0%D7%A9%D7%9E%D7%A2","conf":"средняя"},{"id":4,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"שווארמה","tr":"шаварма","ru":"шаурма","where":"Урок a1-1-4","who":"всем","wikHe":"שׁוּאַרְמָה (he.wiktionary; в en статьи нет)","propHe":"","propRu":"добавить огласовки","note":"У нас слово без огласовок, транскрипция «шаварма». В he.wiktionary огласовки שׁוּאַרְמָה («шуарма»). Как правильно для приложения: с огласовками, и какими?","url":"https://he.wiktionary.org/wiki/%D7%A9%D7%95%D7%95%D7%90%D7%A8%D7%9E%D7%94","conf":"средняя"},{"id":5,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"צ\u0027יפס","tr":"чипс","ru":"картошка фри","where":"Урок a1-1-6","who":"всем","wikHe":"צ׳יפס","propHe":"","propRu":"знак ׳ вместо апострофа, огласовки","note":"У нас без огласовок и с обычным апострофом. В Викисловаре знак ׳. Нужны ли огласовки?","url":"https://en.wiktionary.org/wiki/%D7%A6%D7%B3%D7%99%D7%A4%D7%A1","conf":"низкая"},{"id":6,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"נֶהְדָּר","tr":"нэhдар","ru":"прекрасно","where":"Урок a1-6-6","who":"всем","wikHe":"en: נֶהֱדָר · he: נֶהְדָּר","propHe":"נֶהְדָּר","propRu":"оставить, как в he.wiktionary","note":"Два Викисловаря расходятся между собой. У нас вариант, как в he.wiktionary. Какой вариант лучше?","url":"https://en.wiktionary.org/wiki/%D7%A0%D7%94%D7%93%D7%A8","conf":"низкая"},{"id":7,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"קְרוּאָסוֹן","tr":"круасон","ru":"круассан","where":"Урок a1-6-3","who":"всем","wikHe":"קְרוֹאָסוֹן (he.wiktionary; в en статьи нет)","propHe":"","propRu":"оставить или заменить на וֹ","note":"У нас шурук (קְרוּ), в he.wiktionary холам (קְרוֹ). Заимствование — какой вариант принять?","url":"https://he.wiktionary.org/wiki/%D7%A7%D7%A8%D7%95%D7%90%D7%A1%D7%95%D7%9F","conf":"низкая"},{"id":8,"sec":"1. Викисловарь пишет иначе — нужно решение","he":"הָפוּךְ","tr":"hафух","ru":"капучино (досл. «перевёрнутый»)","where":"Урок a1-6-2","who":"всем","wikHe":"","propHe":"","propRu":"проверить перевод","note":"У нас перевод «капучино (досл. перевёрнутый)». В Викисловаре только «перевёрнутый»; значение «кофе с молоком» — разговорное. Подходит ли такой перевод для кафе?","url":"https://en.wiktionary.org/wiki/%D7%94%D7%A4%D7%95%D7%9A","conf":"средняя"},{"id":9,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"מְרוּהָט","tr":"мерухат","ru":"с мебелью","where":"Урок a1-3-7","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Нет ни в en, ни в he, ни в ru. Причастие страдательного залога от רִיהֵט («обставить»). Верна ли форма и огласовки?","url":"https://en.wiktionary.org/wiki/%D7%A8%D7%99%D7%94%D7%98","conf":"средняя"},{"id":10,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"רַב־קַו","tr":"рав-кав","ru":"проездной","where":"Урок a1-4-1","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Название проездного, в словарях статьи нет. Как это слово пишут на самой карте и в приложении?","url":"","conf":"низкая"},{"id":11,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"אֶסְפְּרֶסּוֹ","tr":"эспрессо","ru":"эспрессо","where":"Урок a1-6-2","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Заимствование, статьи нет в en/he/ru. Верны ли огласовки?","url":"","conf":"низкая"},{"id":12,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"יָמִינָה","tr":"ямина","ru":"направо","where":"Урок a1-2-5","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Статьи нет (есть ימין «правая сторона»). Форма направления «вправо». Верна ли?","url":"https://en.wiktionary.org/wiki/%D7%99%D7%9E%D7%99%D7%9F","conf":"средняя"},{"id":13,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"בַּבּוֹקֶר","tr":"ба-бокер","ru":"утром","where":"Урок a1-4-7","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Форма с предлогом ב + ה («утром»), отдельной статьи нет. Верна ли?","url":"https://en.wiktionary.org/wiki/%D7%91%D7%95%D7%A7%D7%A8","conf":"средняя"},{"id":14,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"בָּעֶרֶב","tr":"ба-эрев","ru":"вечером","where":"Урок a1-4-7","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Форма с предлогом («вечером»), отдельной статьи нет. Верна ли?","url":"https://en.wiktionary.org/wiki/%D7%A2%D7%A8%D7%91","conf":"средняя"},{"id":15,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"בְּיוֹם","tr":"бэ-йом","ru":"в день","where":"Урок a1-8-5","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Форма с предлогом («в день»), отдельной статьи нет. Верна ли?","url":"https://en.wiktionary.org/wiki/%D7%99%D7%95%D7%9D","conf":"средняя"},{"id":16,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"קוֹרְאִים לִי","tr":"корим ли","ru":"меня зовут","where":"Урок a1-5-5","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Фраза «меня зовут», отдельной статьи нет. Верна ли?","url":"","conf":"средняя"},{"id":17,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"קוּפַּת חוֹלִים","tr":"купат холим","ru":"больничная касса","where":"Урок a1-8-3","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"Статья в he.wiktionary есть, но без огласовок; в en/ru нет. Верны ли огласовки?","url":"https://he.wiktionary.org/wiki/%D7%A7%D7%95%D7%A4%D7%AA%20%D7%97%D7%95%D7%9C%D7%99%D7%9D","conf":"средняя"},{"id":18,"sec":"2. Слова, которых нет в Викисловаре — подтвердите","he":"פְּקִידָה","tr":"пкида","ru":"служащая","where":"Урок a1-10-1","who":"всем","wikHe":"","propHe":"","propRu":"оставить","note":"В Викисловаре есть פָּקִיד, женской формы с огласовками нет. Верна ли פְּקִידָה?","url":"https://en.wiktionary.org/wiki/%D7%A4%D7%A7%D7%99%D7%93","conf":"средняя"},{"id":19,"sec":"3. Мелкие отличия — глянь и отметь","he":"סֶנְדְּוִיץ׳","tr":"сэндвич","ru":"сэндвич","where":"Урок a1-6-3","who":"всем","wikHe":"סֶנְדְוִיץ׳","propHe":"","propRu":"различие только в дагеше","note":"Отличается только дагеш в ד. Чтение то же.","url":"https://en.wiktionary.org/wiki/%D7%A1%D7%A0%D7%93%D7%95%D7%95%D7%99%D7%A5%D7%B3","conf":"низкая"},{"id":20,"sec":"3. Мелкие отличия — глянь и отметь","he":"מֵייל","tr":"мейл","ru":"имейл, почта","where":"Урок a1-9-4","who":"всем","wikHe":"מֵיְל / מֵיל","propHe":"","propRu":"различие в י/шва","note":"У нас מֵייל (два י), в Викисловаре מֵיְל. Чтение то же.","url":"https://en.wiktionary.org/wiki/%D7%9E%D7%99%D7%99%D7%9C","conf":"низкая"},{"id":21,"sec":"3. Мелкие отличия — глянь и отметь","he":"שֶׁלְּךָ","tr":"шелха","ru":"твой","where":"Урок a1-5-2","who":"всем","wikHe":"שֶׁלְךָ","propHe":"","propRu":"различие в дагеше","note":"У нас дагеш в ל после шва. Чтение то же.","url":"https://en.wiktionary.org/wiki/%D7%A9%D7%9C","conf":"низкая"},{"id":22,"sec":"3. Мелкие отличия — глянь и отметь","he":"אֵין לִי מוּשָׂג","tr":"эйн ли мусаг","ru":"понятия не имею","where":"Урок a1-9-7","who":"всем","wikHe":"מֻשָּׂג (с дагешем в שׂ)","propHe":"","propRu":"различие в дагеше","note":"В Викисловаре у слова מוּשָׂג дагеш в שׂ (מֻשָּׂג), у нас нет. «У» через ו — по вашему правилу.","url":"https://en.wiktionary.org/wiki/%D7%9E%D7%95%D7%A9%D7%92","conf":"низкая"}];
+const VERSION = "a1-wikt";
+const KEY = "hirbis-check-" + VERSION;
+const WHAT = ["в слове", "в огласовках", "в транскрипции", "в переводе", "так не говорят"];
+let marks = {};
+try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+let filter = "todo";
+// ===== Общие отметки на сервере: что проверил один знаток — исчезает у всех =====
+const API = "/api", K = new URLSearchParams(location.search).get("k") || "";
+let ME = ""; try { ME = localStorage.getItem("hirbis-check-name") || ""; } catch (e) {}
+const keepOpen = new Set();          // ошибки/сомнения, которые знаток сейчас описывает — не прячем, пока не нажмёт «Готово»
+let since = 0, queue = {}, sendTimer = null, online = false;
+// Две половины для двух знатоков: каждый проверяет свою часть, отчёты потом сводятся в один
+let part = 0; try { part = +(localStorage.getItem(KEY + "-part") || 0); } catch (e) {}
+const lvlOf = it => { const m = /Уровень (\d+)/.exec(it.sec); return m ? +m[1] : 0; };
+const inPart = it => true;
+const PART_NAME = ["сверка с Викисловарём", "", ""];
+
+const mix = s => esc(s).replace(/[\u05D0-\u05EA\u05B0-\u05C7\u05BE\u05F3][\u05D0-\u05EA\u05B0-\u05C7\u05BE\u05F3]*(?: [\u05D0-\u05EA\u05B0-\u05C7\u05BE\u05F3]+)*\??/g, m => `<span class="he2" dir="rtl">${m}</span>`);
+const plain = s => s.replace(/[֑-ׇֽֿׁׂׅׄ]/g, "");
+const hasNikud = s => plain(s) !== s;
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]);
+function save(id) {
+  try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (e) {}
+  if (id !== undefined) { queue[id] = marks[id] || {}; clearTimeout(sendTimer); sendTimer = setTimeout(send, 700); }
+}
+function net(t, ok) { const n = document.getElementById("net"); n.textContent = t; n.className = "net " + (ok ? "ok" : "bad"); }
+async function send() {
+  const ids = Object.keys(queue); if (!ids.length) return;
+  const batch = queue; queue = {};
+  try {
+    const r = await fetch(`${API}/mark?k=${encodeURIComponent(K)}`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ list: VERSION, by: ME, items: ids.map(id => ({ id: +id, m: batch[id] })) }) });
+    if (!r.ok) throw 0;
+    net("🟢 Отметки сохраняются на сервере — у второго знатока они тоже видны", true);
+  } catch (e) {
+    Object.assign(batch, queue); queue = batch;            // вернём в очередь, отправим позже
+    net("🔴 Нет связи с сервером — отметки сохранятся, когда связь вернётся", false);
+    clearTimeout(sendTimer); sendTimer = setTimeout(send, 5000);
+  }
+}
+async function pull(first) {
+  try {
+    const r = await fetch(`${API}/marks?k=${encodeURIComponent(K)}&list=${encodeURIComponent(VERSION)}&since=${since}`, { cache: "no-store" });
+    if (r.status === 403) { net("⛔ Неверная ссылка — попроси у автора правильную", false); return; }
+    if (!r.ok) throw 0;
+    const d = await r.json(); since = d.now;
+    let changed = false;
+    Object.entries(d.marks).forEach(([id, m]) => {
+      if (queue[id]) return;                               // свою неотправленную правку не затираем
+      const clean = Object.assign({}, m); delete clean.at;
+      if (!clean.s) delete marks[id]; else marks[id] = clean;
+      changed = true;
+    });
+    if (first) {
+      // перенос старых отметок из этого браузера на сервер (если там их ещё нет)
+      let local = {}; try { local = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+      Object.entries(local).forEach(([id, m]) => { if (m && m.s && !d.marks[id]) { marks[id] = Object.assign({ by: ME }, m); queue[id] = marks[id]; } });
+      if (Object.keys(queue).length) { send(); changed = true; }
+    }
+    if (!online || changed) net("🟢 Отметки сохраняются на сервере — у второго знатока они тоже видны", true);
+    online = true;
+    const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#list");
+    if (changed && !typing) render(); else stats();
+  } catch (e) { online = false; net("🔴 Нет связи с сервером — проверь интернет", false); }
+}
+function askName() {
+  const box = document.getElementById("whoBox");
+  if (ME) { box.innerHTML = `👤 Ты: <b>${esc(ME)}</b> <button id="chName">сменить</button>`; document.getElementById("chName").onclick = () => { ME = ""; askName(); }; return; }
+  box.innerHTML = `<p><b>Как тебя зовут?</b> Имя увидит второй знаток рядом с твоими отметками.</p>
+    <div class="who-row"><input id="nameIn" placeholder="Имя"><button id="nameOk">Начать</button></div>`;
+  document.getElementById("nameOk").onclick = () => {
+    const v = document.getElementById("nameIn").value.trim().slice(0, 30); if (!v) return;
+    ME = v; try { localStorage.setItem("hirbis-check-name", v); } catch (e) {}
+    askName(); render();
+  };
+}
+
+function render() {
+  const list = document.getElementById("list");
+  let html = "", sec = "", shown = 0;
+  ITEMS.forEach(it => {
+    if (!inPart(it)) return;
+    const m = marks[it.id] || {};
+    if (filter === "todo" && m.s && !keepOpen.has(String(it.id))) return;
+    if (filter === "bad" && !(m.s === "bad" || m.s === "doubt")) return;
+    if (it.sec !== sec) { sec = it.sec; html += `<h2>${esc(sec)}</h2>`; }
+    shown++;
+    const who = it.who === "парню" ? `<span class="chip m">парню ♂</span>` : it.who === "девушке" ? `<span class="chip f">девушке ♀</span>` : "";
+    html += `<div class="card ${m.s || ""}" data-id="${it.id}">
+      <div class="top"><div class="num">${it.id}</div><div class="main">
+        <div class="he" dir="rtl">${esc(it.he)}</div>
+        ${hasNikud(it.he) ? `<div class="plain" dir="rtl">${esc(plain(it.he))} <span>— без огласовок</span></div>` : ""}
+        <div class="tr">${esc(it.tr)}</div>
+        <div class="ru">${esc(it.ru)}</div>
+        <div class="meta">${who}<span class="chip">${esc(it.where)}</span>${m.by ? `<span class="chip by">✓ ${esc(m.by)}</span>` : ""}</div>
+        <div class="wik">
+          <div class="wl">📚 В Викисловаре: ${it.wikHe ? mix(it.wikHe) : "такого нет"}</div>
+          ${(it.propHe || it.propRu) ? `<div class="wl">💡 Предлагается: ${mix(it.propHe)} <small>${mix(it.propRu)}</small></div>` : ""}
+          <div class="wn">${mix(it.note)} ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">Открыть в Викисловаре ↗</a>` : ""}</div>
+          <div class="wl"><span class="chip conf">уверенность: ${esc(it.conf)}</span></div>
+        </div>
+      </div></div>
+      <div class="btns">
+        <button class="b-ok" data-s="ok">✓ Верно</button>
+        <button class="b-bad" data-s="bad">✗ Ошибка</button>
+        <button class="b-doubt" data-s="doubt">? Не уверен</button>
+      </div>
+      <div class="fix">
+        <p>Что не так? (можно несколько)</p>
+        <div class="what">${WHAT.map(w => `<button data-w="${w}" class="${(m.w || []).includes(w) ? "on" : ""}">${w}</button>`).join("")}</div>
+        <input class="heIn" dir="auto" placeholder="Как правильно (иврит / транскрипция)" data-k="fix" value="${esc(m.fix)}">
+        <textarea dir="auto" placeholder="Комментарий (необязательно)" data-k="note">${esc(m.note)}</textarea>
+        <button class="b-done" data-done="1">Готово — дальше ↓</button>
+      </div>
+    </div>`;
+  });
+  list.innerHTML = html || `<div class="empty">Здесь пусто 🙂</div>`;
+  stats();
+}
+
+function stats() {
+  const mine = ITEMS.filter(inPart);
+  const n = mine.length;
+  const c = { ok:0, bad:0, doubt:0 };
+  mine.forEach(it => { const m = marks[it.id]; if (m && c[m.s] !== undefined) c[m.s]++; });
+  const done = c.ok + c.bad + c.doubt;
+  document.getElementById("pg").style.width = (done / n * 100) + "%";
+  document.getElementById("stats").textContent = `Проверено ${done} из ${n}`;
+  document.getElementById("cnt").innerHTML = `<b>${done}/${n}</b> проверено<br>✓ ${c.ok} · ✗ ${c.bad} · ? ${c.doubt}`;
+}
+
+document.getElementById("list").addEventListener("click", e => {
+  const card = e.target.closest(".card"); if (!card) return;
+  const id = card.dataset.id; const m = marks[id] = marks[id] || {};
+  const sb = e.target.closest("[data-s]");
+  if (sb) {
+    if (!ME) { toast("Сначала напиши своё имя вверху"); window.scrollTo(0, 0); return; }
+    m.s = m.s === sb.dataset.s ? undefined : sb.dataset.s;   // повторное нажатие снимает отметку
+    m.by = ME;
+    card.className = "card " + (m.s || "");
+    save(id); if (!m.s) delete marks[id]; stats();
+    if (m.s === "ok" && filter === "todo") { card.classList.add("gone"); setTimeout(() => card.remove(), 350); }   // проверенное исчезает
+    if (m.s === "bad" || m.s === "doubt") keepOpen.add(id); else keepOpen.delete(id);
+    if (m.s === "bad" || m.s === "doubt") setTimeout(() => card.querySelector(".what").scrollIntoView({ behavior:"smooth", block:"nearest" }), 50);
+    return;
+  }
+  if (e.target.closest("[data-done]")) {
+    keepOpen.delete(id);
+    if (filter === "todo") { card.classList.add("gone"); setTimeout(() => card.remove(), 350); }
+    return;
+  }
+  const wb = e.target.closest("[data-w]");
+  if (wb) {
+    m.w = m.w || [];
+    const w = wb.dataset.w;
+    m.w = m.w.includes(w) ? m.w.filter(x => x !== w) : m.w.concat(w);
+    wb.classList.toggle("on");
+    m.by = ME; save(id);
+  }
+});
+document.getElementById("list").addEventListener("input", e => {
+  const k = e.target.dataset.k; if (!k) return;
+  const id = e.target.closest(".card").dataset.id;
+  marks[id] = marks[id] || {}; marks[id][k] = e.target.value; marks[id].by = ME; save(id);
+});
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  render();
+});
+
+function report() {
+  const mine = ITEMS.filter(inPart);
+  const n = mine.length; let ok = 0, lines = [];
+  mine.forEach(it => {
+    const m = marks[it.id]; if (!m || !m.s) return;
+    if (m.s === "ok") { ok++; return; }
+    lines.push(`${m.s === "bad" ? "❌ ОШИБКА" : "❓ СОМНЕНИЕ"} #${it.id} [${it.sec}${it.who !== "всем" ? ", " + it.who : ""}]${m.by ? " — отметил(а): " + m.by : ""}`);
+    lines.push(`   ${it.he}`);
+    lines.push(`   ${it.tr} — ${it.ru}`);
+    if (m.w && m.w.length) lines.push(`   Что не так: ${m.w.join(", ")}`);
+    if (m.fix) lines.push(`   Как правильно: ${m.fix}`);
+    if (m.note) lines.push(`   Комментарий: ${m.note}`);
+    lines.push("");
+  });
+  const done = mine.filter(it => marks[it.id] && marks[it.id].s).length;
+  const todo = mine.filter(it => !(marks[it.id] && marks[it.id].s)).map(it => it.id);
+  return [
+    `Hirbis — проверка иврита (список ${VERSION}, ${PART_NAME[part]})`,
+    `Проверено ${done} из ${n}. Верно: ${ok}. Ошибок/сомнений: ${done - ok}.`,
+    todo.length ? `Не проверены: ${todo.join(", ")}` : "Проверено всё 👍",
+    "",
+    ...(lines.length ? lines : ["Ошибок не найдено ✓"])
+  ].join("\n");
+}
+function showParts() { document.querySelectorAll("#parts button").forEach(b => b.classList.toggle("on", +b.dataset.p === part)); }
+document.getElementById("parts").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  part = +b.dataset.p; try { localStorage.setItem(KEY + "-part", part); } catch (e) {}
+  showParts(); render(); stats(); window.scrollTo(0, 0);
+});
+setTimeout(showParts, 0);
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 2200); }
+document.getElementById("copy").onclick = async () => {
+  const text = report();
+  try { await navigator.clipboard.writeText(text); toast("Отчёт скопирован — вставь его в Telegram"); }
+  catch (e) {
+    const ta = document.getElementById("report"); ta.value = text; ta.style.display = "block";
+    ta.focus(); ta.select();
+    try { document.execCommand("copy"); toast("Отчёт скопирован — вставь его в Telegram"); } catch (e2) { toast("Выдели текст внизу и скопируй вручную"); }
+    ta.scrollIntoView({ behavior: "smooth" });
+  }
+};
+if (navigator.share) {
+  const s = document.getElementById("share"); s.hidden = false;
+  s.onclick = () => navigator.share({ text: report() }).catch(() => {});
+}
+document.getElementById("reset").onclick = () => {
+  toast("Общие отметки стирать нельзя — попроси автора");
+};
+askName();
+render();
+pull(true);
+setInterval(() => pull(false), 8000);     // раз в 8 секунд подтягиваем отметки второго знатока
+</script>
+</body>
+</html>

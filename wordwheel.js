@@ -8,7 +8,7 @@
 // Прогресс: store "wheel" = { round: {...текущий раунд}, seen: [последние слова-основы] }.
 // =====================================================
 (function () {
-  const PRICE = 30, HINT_PRICE = 10, MAX_W = 8, MAX_H = 7, MAX_WORDS = 6;
+  const PRICE = 30, MAX_W = 8, MAX_H = 7, MAX_WORDS = 6;
   window.WHEEL_PRICE = PRICE;
   const FINAL = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
   const TO_FINAL = { "כ": "ך", "מ": "ם", "נ": "ן", "פ": "ף", "צ": "ץ" };
@@ -136,20 +136,20 @@
     newRound();
   };
 
-  function newRound() {
-    if (!window.Wallet) return;
-    if (Wallet.balance() < PRICE) {                          // не хватает: если игра ещё не на экране — вернуть список игр
-      if (!document.getElementById("wwBoard") && window.openMinigames) openMinigames();
-      Wallet.need(PRICE); return;
-    }
+  let paying = false;
+  async function newRound() {
+    if (!window.Wallet || paying) return;
     const r = makeRound();
     if (!r) { showToast("Не получилось собрать головоломку 😕"); return; }
-    Wallet.spend(PRICE);
+    paying = true;
+    const ok = await Wallet.spend(PRICE);                     // 🥐 списывает сервер (eco.js); не хватило — окно «Нужно ещё…»
+    paying = false;
+    if (!ok) { if (!document.getElementById("wwBoard") && window.openMinigames) openMinigames(); return; }
     R = r;
     const st = store.get("wheel", {});
     st.seen = [r.base, ...(st.seen || []).filter(k => k !== r.base)].slice(0, 40);
     st.round = R; store.set("wheel", st);
-    showToast(`−${PRICE} 🪙 · удачи!`);
+    showToast(`−${PRICE} 🥐 · удачи!`);
     render();
   }
 
@@ -349,16 +349,17 @@
   }
   function hintBadge() {
     const p = document.getElementById("wwHintP"); if (!p) return;
-    p.textContent = R.hintFree ? "1" : HINT_PRICE + "🪙";
+    p.textContent = R.hintFree ? "1" : "0";
     p.classList.toggle("paid", !R.hintFree);
+    const b = document.getElementById("wwHint"); if (b) b.classList.toggle("used", !R.hintFree);
   }
-  // 💡 открыть одну букву: первый раз за раунд — бесплатно, дальше — HINT_PRICE очков
+  // 💡 открыть одну букву: одна бесплатная подсказка за раунд
   function hint() {
     if (R.done || busy) return;
+    if (!R.hintFree) { showToast("Подсказка уже использована — ещё будет в новом раунде"); vibrate("warning"); return; }
     const m = cellMap();
     const closed = [...m.values()].filter(c => !R.open.includes(c.x + "," + c.y) && !c.words.some(k => R.found.includes(k)));
     if (!closed.length) return;
-    if (!R.hintFree) { if (!Wallet.spend(HINT_PRICE)) { Wallet.need(HINT_PRICE); return; } showToast(`−${HINT_PRICE} 🪙`); }
     R.hintFree = false;
     const c = closed[Math.floor(Math.random() * closed.length)], id = c.x + "," + c.y;
     R.open.push(id);
@@ -389,7 +390,7 @@
         <div class="ww-bird" id="wwBird"></div>
         <div class="ww-win-h">Все слова найдены! 🎉</div>
         <div class="ww-chips">${R.words.concat((R.bonus || []).map(k => ({ key: k, bonus: true }))).map(w => { const e = BY.get(w.key); return e ? `<button class="ww-chip${w.bonus ? " bonus" : ""}" data-k="${w.key}"><span dir="rtl">${e.he}</span><small>${g(e.ru)}</small></button>` : ""; }).join("")}</div>
-        <button class="btn blue" id="wwMore">Ещё раунд — ${PRICE} 🪙</button>
+        <button class="btn blue" id="wwMore">Ещё раунд — ${PRICE} 🥐</button>
         <button class="btn ghost" id="wwMenu">К мини-играм</button></div>`;
     play.querySelectorAll(".ww-chip").forEach(b => b.onclick = () => say(BY.get(b.dataset.k)));
     document.getElementById("wwMore").onclick = () => newRound();

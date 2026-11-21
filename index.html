@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="motion.css?v=20261121i">
   <link rel="stylesheet" href="wordle.css?v=20261121i">
   <link rel="stylesheet" href="minigames.css?v=20261121i">
+  <link rel="stylesheet" href="eco.css?v=20261121i">
+  <link rel="stylesheet" href="chest.css?v=20261121i">
   <link rel="stylesheet" href="social.css?v=20261121i">
   <link rel="stylesheet" href="lessonui.css?v=20261121i">
 <link rel="stylesheet" href="plus.css?v=20261121i">
@@ -78,6 +80,15 @@
         <span class="arrow">›</span>
       </button>
 
+      <button class="card shop-card" id="go-shop">
+        <span class="icon">🛒</span>
+        <span class="text">
+          <span class="name">Магазин</span>
+          <span class="desc" id="goShopDesc">Сундуки, скины, ники</span>
+        </span>
+        <span class="arrow">›</span>
+      </button>
+
       <button class="card hero-card" id="go-hero">
         <span class="icon" id="heroIcon"></span>
         <span class="text">
@@ -123,6 +134,9 @@
 
   <!-- ===== МИНИ-ИГРЫ: кошелёк очков и игры (minigames.js, wordwheel.js) ===== -->
   <section id="minigames" hidden></section>
+
+  <!-- ===== МАГАЗИН: сундуки, скины, ники, 💎 за ⭐ (eco.js; анимация сундука — chest.js) ===== -->
+  <section id="shop" hidden></section>
 
   <!-- ===== ДОСКА ПОЧЁТА ===== -->
   <section id="honor" hidden></section>
@@ -185,6 +199,8 @@
   <script src="wordle.js?v=20261121i"></script>
   <script src="minigames.js?v=20261121i"></script>
   <script src="wordwheel.js?v=20261121i"></script>
+  <script src="chest.js?v=20261121i"></script>
+  <script src="eco.js?v=20261121i"></script>
   <script src="plus.js?v=20261121i"></script>
 <script src="lessonui.js?v=20261121i"></script>
   <script src="tutorial.js?v=20261121i"></script>

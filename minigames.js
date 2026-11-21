@@ -1,65 +1,31 @@
 // =====================================================
-// МИНИ-ИГРЫ: раздел с играми (#minigames) и КОШЕЛЁК очков.
-// Кошелёк отдельный (решение владельца): очки за учёбу копятся, трата НЕ уменьшает очки дня и рейтинг.
-//   баланс = сумма всех store "points_Г-М-Д" (очки дней) − store "wallet_spent" (сколько потрачено всего).
-// Игры: «Вордл · слово дня» (wordle.js, бесплатно раз в день, даёт очки) и «Буквы по кругу» (wordwheel.js, стоит очки).
+// МИНИ-ИГРЫ: раздел с играми (#minigames).
+// Платят 🥐 БУРЕКАСАМИ (eco.js, window.Eco; валюта живёт на сервере). Трата НЕ уменьшает очки дня и рейтинг.
+// window.Wallet — обёртка над Eco (старое имя, чтобы ничего не сломалось): balance(), spend(n) → Promise<bool>, need(n).
+// Игры: «Вордл · слово дня» (wordle.js, бесплатно раз в день, даёт очки) и «Буквы по кругу» (wordwheel.js, 30 🥐).
 // =====================================================
 (function () {
   const view = () => document.getElementById("minigames");
   let mgView = null;            // что сейчас открыто в разделе: "menu" | "wheel" | null
   let wdFromMenu = false;       // Вордл открыт из мини-игр (кнопка «Назад» вернёт сюда)
 
-  // ---------- КОШЕЛЁК ----------
-  function earned() {
-    let s = 0;
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (/^hirbis_points_\d{4}-\d{1,2}-\d{1,2}$/.test(k)) s += Number(JSON.parse(localStorage.getItem(k))) || 0;
-      }
-    } catch (e) {}
-    return s;
-  }
-  const spent = () => Number(store.get("wallet_spent", 0)) || 0;
-  const balance = () => Math.max(0, Math.round(earned() - spent()));
-  function spend(n) {
-    if (balance() < n) return false;
-    store.set("wallet_spent", spent() + n);
-    refreshChips();
+  // ---------- КОШЕЛЁК = 🥐 бурекасы из eco.js ----------
+  const balance = () => (window.Eco ? Eco.bur() : 0);
+  // списать за раунд мини-игры (сервер списывает фиксированную цену Eco.PRICE)
+  async function spend() {
+    if (!window.Eco) return false;
+    const r = await Eco.spend("minigame", "wheel");
+    if (r.need) { need(Eco.PRICE, r.need); return false; }
+    if (r.error) { showToast(r.error); return false; }
     return true;
   }
-  // все значки кошелька на экране обновляются сами
-  function refreshChips() { document.querySelectorAll("[data-wallet]").forEach(el => { el.textContent = balance(); }); }
-  const chip = () => `<span class="mg-chip" aria-label="Очков в кошельке">🪙 <b data-wallet>${balance()}</b></span>`;
-
-  // Не хватает очков → окошко снизу «Нужно ещё N очков» + кнопка к урокам
-  function need(price) {
-    const old = document.getElementById("mgNeed"); if (old) old.remove();
-    const s = document.createElement("div");
-    s.id = "mgNeed";
-    const n = price - balance();
-    s.innerHTML = `<div class="mg-sheet">
-        <div class="mg-need-bird" id="mgNeedBird"></div>
-        <div class="mg-need-h">Нужно ещё ${n} ${pointsWord(n)}</div>
-        <div class="mg-need-sub">Пройди урок — и очки появятся 🪙</div>
-        <button class="btn blue" id="mgNeedGo">🎯 К урокам</button>
-        <button class="btn ghost" id="mgNeedNo">Позже</button></div>`;
-    document.body.appendChild(s);
-    requestAnimationFrame(() => s.classList.add("show"));
-    const close = () => { s.classList.remove("show"); setTimeout(() => s.remove(), 250); };
-    s.onclick = (e) => { if (e.target === s) close(); };
-    document.getElementById("mgNeedNo").onclick = close;
-    document.getElementById("mgNeedGo").onclick = () => { close(); mgView = null; showPath(); };
-    if (window.HAnim) HAnim.mascot(document.getElementById("mgNeedBird"), "think", { size: 80 });
-    vibrate("warning");
+  function refreshChips() { if (window.Eco) Eco.paint(); }
+  const chip = () => `<span class="mg-chip" aria-label="Бурекасы">🥐 <b data-bur>${balance()}</b></span>`;
+  // Не хватает → окошко «Нужно ещё N бурекасов» + кнопка к урокам
+  function need(price, short) {
+    if (window.Eco) Eco.needSheet("bur", short != null ? short : Math.max(1, price - balance()));
   }
-  function pointsWord(n) {
-    const a = n % 10, b = n % 100;
-    if (a === 1 && b !== 11) return "очко";
-    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return "очка";
-    return "очков";
-  }
-  window.Wallet = { balance, earned, spend, need, chip, refresh: refreshChips, pointsWord };
+  window.Wallet = { balance, spend, need, chip, refresh: refreshChips };
 
   // ---------- ЭКРАН «МИНИ-ИГРЫ» ----------
   function show() {
@@ -76,10 +42,10 @@
     view().innerHTML = `
       <div class="mg-top"><button class="mg-back" id="mgBack" aria-label="Назад">‹</button><div class="mg-title">Мини-игры</div><span></span></div>
       <div class="mg-wallet">
-        <div class="mg-coin">🪙</div>
-        <div class="mg-wallet-t"><b data-wallet>${balance()}</b><span>очков в кошельке</span></div>
+        <button class="mg-wl" data-eco="bur"><span class="mg-coin">🥐</span><span class="mg-wallet-t"><b data-bur>${balance()}</b><span>бурекасов</span></span></button>
+        <button class="mg-wl gem" data-eco="gems"><span class="mg-coin">💎</span><span class="mg-wallet-t"><b data-gems>${window.Eco ? Eco.gems() : 0}</b><span>хибриллиантов</span></span></button>
       </div>
-      <div class="mg-note">Очки — за уроки. Игры их тратят, а рейтинг не трогают.</div>
+      <div class="mg-note">🥐 — за уроки. Игры их тратят, а рейтинг не трогают.</div>
       <button class="mg-game" id="mgWordle">
         <span class="mg-ic mg-ic-wd">🟩</span>
         <span class="mg-tx"><b>Вордл · слово дня</b><small>Угадай слово за 6 попыток</small></span>
@@ -88,9 +54,10 @@
       <button class="mg-game" id="mgWheel">
         <span class="mg-ic mg-ic-ww" dir="rtl"><i>ש</i><i>ל</i><i>ו</i><i>ם</i></span>
         <span class="mg-tx"><b>Буквы по кругу</b><small>Веди пальцем по буквам — собери слова</small></span>
-        <span class="mg-price">${going ? "продолжить" : price + " 🪙"}</span>
+        <span class="mg-price">${going ? "продолжить" : price + " 🥐"}</span>
       </button>`;
     document.getElementById("mgBack").onclick = () => { mgView = null; showHome(); };
+    if (window.Eco) Eco.refresh();                       // свежий баланс с сервера
     document.getElementById("mgWordle").onclick = () => { wdFromMenu = true; mgView = null; openWordle(); };
     document.getElementById("mgWheel").onclick = () => { if (window.openWheel) { mgView = "wheel"; openWheel(view()); } };
   };
@@ -111,12 +78,5 @@
   // ---------- КАРТОЧКА НА ГЛАВНОЙ ----------
   const card = document.getElementById("go-games");
   if (card) card.onclick = () => openMinigames();
-  const prevToday = window.updateToday;
-  window.updateToday = function () {
-    prevToday();
-    const d = document.getElementById("goGamesDesc");
-    if (d) d.innerHTML = `🪙 ${balance()} · Вордл и «Буквы по кругу»`;
-  };
-  const d0 = document.getElementById("goGamesDesc");
-  if (d0) d0.innerHTML = `🪙 ${balance()} · Вордл и «Буквы по кругу»`;
+  // подпись карточки («🥐 N · Вордл…») обновляет eco.js (Eco.paint)
 })();

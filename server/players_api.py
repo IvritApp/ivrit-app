@@ -91,6 +91,16 @@ def db():
     c.execute("CREATE TABLE IF NOT EXISTS promo_uses (code TEXT, tg_id INTEGER, at REAL, PRIMARY KEY (code, tg_id))")
     c.execute("""CREATE TABLE IF NOT EXISTS payments (charge_id TEXT PRIMARY KEY, tg_id INTEGER, stars INTEGER, days INTEGER,
         code TEXT DEFAULT '', at REAL)""")
+    # экономика (21.11, claude-docs/ekonomika.md): 🥐 бурекасы и 💎 хибриллианты, сундуки, вещи, журнал операций
+    c.execute("""CREATE TABLE IF NOT EXISTS wallets (tg_id INTEGER PRIMARY KEY, bur INTEGER DEFAULT 0, gems INTEGER DEFAULT 0,
+        counted INTEGER DEFAULT 0, lessons INTEGER DEFAULT 0, quests INTEGER DEFAULT 0, daily TEXT DEFAULT '',
+        nick_coupons INTEGER DEFAULT 0)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS chests (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, kind TEXT, src TEXT,
+        at REAL, opened REAL DEFAULT 0, rarity TEXT DEFAULT '', reward TEXT DEFAULT '')""")
+    c.execute("CREATE INDEX IF NOT EXISTS chests_user ON chests (tg_id, opened)")
+    c.execute("CREATE TABLE IF NOT EXISTS inventory (tg_id INTEGER, item TEXT, at REAL, PRIMARY KEY (tg_id, item))")
+    c.execute("CREATE TABLE IF NOT EXISTS equip (tg_id INTEGER PRIMARY KEY, frame TEXT DEFAULT '', color TEXT DEFAULT '', badge TEXT DEFAULT '')")
+    c.execute("CREATE TABLE IF NOT EXISTS ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, cur TEXT, delta INTEGER, why TEXT)")
     if "nick_limit" not in cols:
         c.execute(f"ALTER TABLE players ADD COLUMN nick_limit INTEGER DEFAULT {DEFAULT_NICKS}")
     # перенос старых данных: основной ник каждого игрока → в таблицу ников
@@ -319,6 +329,8 @@ def player_public(c, r):
         "done": len(js("done", [])), "perfect": len(js("perfect", [])), "medals": js("medals", {}),
         "quests": len([k for k in st if k.startswith("quest_q-")]),
         "plus_until": plus_until(c, r["tg_id"]),
+        "eco": (lambda w: {"bur": w["bur"], "gems": w["gems"]} if w else None)(
+            c.execute("SELECT bur, gems FROM wallets WHERE tg_id=?", (r["tg_id"],)).fetchone()),
     }
 
 
@@ -338,8 +350,10 @@ def profile_card(c, r, full=True):
             return d
     prof = js("profile", {}) or {}
     streak = js("streak", {}) or {}
+    eq = c.execute("SELECT frame, color, badge FROM equip WHERE tg_id=?", (r["tg_id"],)).fetchone()
     out = {"handle": r["handle"], "name": prof.get("name") or (r["name"] or "").split(" ")[0], "gender": prof.get("gender"),
            "avatar": prof.get("avatar"), "streak": streak_alive(streak),
+           "skin": {"frame": eq[0], "color": eq[1], "badge": eq[2]} if eq else {},
            "points": sum(int(js(k, 0) or 0) for k in st if k.startswith("points_")), "admin": bool(r["admin"])}
     if full:
         out.update({"nicks": nicks_of(c, r["tg_id"]), "best": streak.get("best", 0), "done": len(js("done", [])),
@@ -486,16 +500,181 @@ def promo_public(pr):
             "expires": pr["expires"], "created": pr["created"], "by": pr["by"], "note": pr["note"]}
 
 
-def create_invoice_link(price, payload):
+def create_invoice_link(price, payload, title=None, desc=None):
     """Счёт Telegram Stars (XTR). provider_token для звёзд — пустой."""
     import urllib.request
-    body = json.dumps({"title": "Hirbis Plus · 30 дней", "description": "Бесконечные сердечки ❤️ на 30 дней. Учись без остановок!",
+    title = title or "Hirbis Plus · 30 дней"
+    body = json.dumps({"title": title, "description": desc or "Бесконечные сердечки ❤️ на 30 дней. Учись без остановок!",
                        "payload": payload, "provider_token": "", "currency": "XTR",
-                       "prices": [{"label": "Hirbis Plus", "amount": price}]}).encode()
+                       "prices": [{"label": title, "amount": price}]}).encode()
     req = urllib.request.Request(f"{tg_api()}/bot{token()}/createInvoiceLink", data=body, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=12) as r:
         res = json.loads(r.read())
     return res.get("result") if res.get("ok") else None
+
+
+# ---------- ЭКОНОМИКА (21.11): 🥐 бурекасы, 💎 хибриллианты, сундуки, магазин — claude-docs/ekonomika.md ----------
+EARN_DAY_CAP = 1500                  # больше 1500 🥐 за день из очков не засчитываем (защита от накрутки)
+CHEST_QUEUE_MAX = 30
+MINIGAME_COST = {"wheel": 30}
+RARITIES = ["rare", "super", "epic", "mythic", "legendary"]
+UPGRADE = {"rare": 0.5, "super": 0.4, "epic": 0.3, "mythic": 0.4}      # шанс подняться на ступень выше → 50/30/14/3.6/2.4 %
+CHEST_START = {"chest": "rare", "daily": "rare", "big": "epic", "welcome": "epic"}
+GEM_PACKS = {"g100": {"stars": 50, "gems": 100}, "g350": {"stars": 150, "gems": 350}, "g1000": {"stars": 400, "gems": 1000}}
+# каталог магазина: slot — куда «надевается» скин; cur — валюта; drop — может выпасть из сундука
+CATALOG = {
+    "chest":       {"name": "Сундук", "icon": "🎁", "cur": "bur", "price": 200, "kind": "chest"},
+    "big_chest":   {"name": "Большой сундук", "icon": "🎁", "cur": "gems", "price": 40, "kind": "chest"},
+    "freeze":      {"name": "Заморозка серии", "icon": "❄️", "cur": "bur", "price": 150, "kind": "perk"},
+    "hearts":      {"name": "Полные сердечки", "icon": "❤️", "cur": "bur", "price": 300, "kind": "perk"},
+    "nick_coupon": {"name": "Купон: редкий ник (3–4 знака)", "icon": "🏷", "cur": "gems", "price": 300, "kind": "nick"},
+    "nick_slot":   {"name": "Ещё одно место под ник", "icon": "➕", "cur": "gems", "price": 100, "kind": "nick"},
+    "frame_green":   {"name": "Изумрудная рамка", "icon": "🟢", "cur": "gems", "price": 50, "slot": "frame"},
+    "frame_blue":    {"name": "Морская рамка", "icon": "🔵", "cur": "gems", "price": 80, "slot": "frame"},
+    "frame_purple":  {"name": "Фиолетовая рамка", "icon": "🟣", "cur": "gems", "price": 120, "slot": "frame"},
+    "frame_fire":    {"name": "Огненная рамка", "icon": "🔥", "cur": "gems", "price": 180, "slot": "frame"},
+    "frame_gold":    {"name": "Золотая рамка", "icon": "🟡", "cur": "gems", "price": 250, "slot": "frame"},
+    "frame_rainbow": {"name": "Радужная рамка", "icon": "🌈", "cur": "gems", "price": 300, "slot": "frame"},
+    "color_blue":    {"name": "Синий ник", "icon": "🔷", "cur": "gems", "price": 30, "slot": "color"},
+    "color_purple":  {"name": "Фиолетовый ник", "icon": "🟪", "cur": "gems", "price": 50, "slot": "color"},
+    "color_red":     {"name": "Красный ник", "icon": "🟥", "cur": "gems", "price": 70, "slot": "color"},
+    "color_gold":    {"name": "Золотой ник", "icon": "🟨", "cur": "gems", "price": 100, "slot": "color"},
+    "badge_fire":    {"name": "Значок «Огонь»", "icon": "🔥", "cur": "gems", "price": 20, "slot": "badge"},
+    "badge_cactus":  {"name": "Значок «Кактус»", "icon": "🌵", "cur": "gems", "price": 30, "slot": "badge"},
+    "badge_owl":     {"name": "Значок «Сова»", "icon": "🦉", "cur": "gems", "price": 40, "slot": "badge"},
+    "badge_rocket":  {"name": "Значок «Ракета»", "icon": "🚀", "cur": "gems", "price": 50, "slot": "badge"},
+    "badge_gem":     {"name": "Значок «Бриллиант»", "icon": "💎", "cur": "gems", "price": 60, "slot": "badge"},
+    "badge_hibri":   {"name": "Значок «Хибри»", "icon": "🐦", "cur": "gems", "price": 80, "slot": "badge"},
+}
+SKINS = [k for k, v in CATALOG.items() if v.get("slot")]
+SHORT_NICK = 5                       # ники короче 5 знаков — только по купону (у админа без ограничений)
+
+
+def eco_row(c, uid, r=None):
+    """Кошелёк игрока; при первом обращении создаём: бурекасы = очки − потраченное в старом кошельке мини-игр,
+    уже пройденные уроки/уровни сундуков не дают (дарим один приветственный сундук)."""
+    w = c.execute("SELECT * FROM wallets WHERE tg_id=?", (uid,)).fetchone()
+    if w:
+        return w
+    st = json.loads((r["state"] if r else "{}") or "{}")
+    earned, lessons, quests = eco_progress(st)
+    try:
+        spent = int(json.loads(st.get("wallet_spent", "0")) or 0)
+    except Exception:
+        spent = 0
+    c.execute("INSERT INTO wallets (tg_id, bur, gems, counted, lessons, quests) VALUES (?,?,0,?,?,?)",
+              (uid, max(0, earned - spent), earned, lessons, quests))
+    c.execute("INSERT INTO ledger (tg_id, at, cur, delta, why) VALUES (?,?,?,?,?)", (uid, time.time(), "bur", max(0, earned - spent), "start"))
+    c.execute("INSERT INTO chests (tg_id, kind, src, at) VALUES (?,?,?,?)", (uid, "welcome", "welcome", time.time()))
+    return c.execute("SELECT * FROM wallets WHERE tg_id=?", (uid,)).fetchone()
+
+
+def eco_progress(st):
+    """Из прогресса: очки (каждый день не больше EARN_DAY_CAP), пройденные уроки, пройденные уровни (квесты)."""
+    earned = 0
+    for k, v in st.items():
+        if re.match(r"^points_\d{4}-\d{1,2}-\d{1,2}$", k):
+            try:
+                earned += max(0, min(EARN_DAY_CAP, int(json.loads(v) or 0)))
+            except Exception:
+                pass
+    try:
+        done = json.loads(st.get("done", "[]")) or []
+    except Exception:
+        done = []
+    lessons = len({x for x in done if isinstance(x, str) and re.match(r"^a\d+-\d+-\d+$", x)})
+    quests = len([k for k in st if k.startswith("quest_q-")])
+    return earned, lessons, quests
+
+
+def eco_add(c, uid, cur, delta, why):
+    if not delta:
+        return
+    col = "bur" if cur == "bur" else "gems"
+    c.execute(f"UPDATE wallets SET {col}=MAX(0, {col}+?) WHERE tg_id=?", (int(delta), uid))
+    c.execute("INSERT INTO ledger (tg_id, at, cur, delta, why) VALUES (?,?,?,?,?)", (uid, time.time(), col, int(delta), why[:60]))
+
+
+def eco_chest_add(c, uid, kind, src):
+    n = c.execute("SELECT COUNT(*) FROM chests WHERE tg_id=? AND opened=0", (uid,)).fetchone()[0]
+    if n < CHEST_QUEUE_MAX:
+        c.execute("INSERT INTO chests (tg_id, kind, src, at) VALUES (?,?,?,?)", (uid, kind, src, time.time()))
+
+
+def eco_catch_up(c, uid, r):
+    """Новые очки → бурекасы; новые пройденные уроки → сундук, новые уровни → большой сундук."""
+    w = eco_row(c, uid, r)
+    earned, lessons, quests = eco_progress(json.loads(r["state"] or "{}"))
+    if earned > w["counted"]:
+        eco_add(c, uid, "bur", earned - w["counted"], "learn")
+    for _ in range(max(0, min(10, lessons - w["lessons"]))):
+        eco_chest_add(c, uid, "chest", "lesson")
+    for _ in range(max(0, min(5, quests - w["quests"]))):
+        eco_chest_add(c, uid, "big", "level")
+    c.execute("UPDATE wallets SET counted=MAX(counted, ?), lessons=MAX(lessons, ?), quests=MAX(quests, ?) WHERE tg_id=?",
+              (earned, lessons, quests, uid))
+
+
+def msk_day():
+    d = today_msk()
+    return f"{d.year}-{d.month:02d}-{d.day:02d}"
+
+
+def eco_me(c, uid):
+    w = c.execute("SELECT * FROM wallets WHERE tg_id=?", (uid,)).fetchone()
+    eq = c.execute("SELECT * FROM equip WHERE tg_id=?", (uid,)).fetchone()
+    chests = c.execute("SELECT id, kind, src, at FROM chests WHERE tg_id=? AND opened=0 ORDER BY id", (uid,)).fetchall()
+    items = [x[0] for x in c.execute("SELECT item FROM inventory WHERE tg_id=? ORDER BY at", (uid,)).fetchall()]
+    return {"bur": w["bur"], "gems": w["gems"], "nick_coupons": w["nick_coupons"], "daily_ready": w["daily"] != msk_day(),
+            "chests": [dict(x) for x in chests], "inv": {"items": items, "equip": {"frame": eq["frame"] if eq else "",
+            "color": eq["color"] if eq else "", "badge": eq["badge"] if eq else ""}},
+            "catalog": CATALOG, "packs": GEM_PACKS, "minigame_cost": MINIGAME_COST}
+
+
+def eco_reward(c, uid, rarity):
+    """Награда по редкости. Скин, который уже есть (или кончились), → 💎 по его цене."""
+    owned = {x[0] for x in c.execute("SELECT item FROM inventory WHERE tg_id=?", (uid,)).fetchall()}
+    def skin(cheap):
+        pool = [k for k in SKINS if (CATALOG[k]["price"] <= 80) == cheap and k not in owned]
+        if not pool:
+            return {"type": "gems", "amount": 40 if cheap else 120}
+        k = random.choice(pool)
+        return {"type": "skin", "item": {"id": k, "name": CATALOG[k]["name"], "icon": CATALOG[k]["icon"], "slot": CATALOG[k]["slot"]}}
+    if rarity == "rare":
+        return {"type": "bur", "amount": random.randint(20, 40)}
+    if rarity == "super":
+        return random.choice([{"type": "bur", "amount": random.randint(60, 100)}] * 3 + [{"type": "hearts"}])
+    if rarity == "epic":
+        return random.choice([{"type": "gems", "amount": random.randint(5, 10)}, {"type": "bur", "amount": 200}, {"type": "freeze"}])
+    if rarity == "mythic":
+        return random.choice([{"type": "gems", "amount": 25}, skin(True), {"type": "plus", "amount": 1}])
+    return random.choice([{"type": "gems", "amount": 100}, skin(False), {"type": "nick_coupon"}, {"type": "plus", "amount": 3}])
+
+
+def eco_give(c, uid, rw, why):
+    """Выдать награду на сервере. hearts / freeze применяет телефон (это его данные)."""
+    t = rw["type"]
+    if t == "bur":
+        eco_add(c, uid, "bur", rw["amount"], why)
+    elif t == "gems":
+        eco_add(c, uid, "gems", rw["amount"], why)
+    elif t == "skin":
+        c.execute("INSERT OR IGNORE INTO inventory VALUES (?,?,?)", (uid, rw["item"]["id"], time.time()))
+    elif t == "plus":
+        grant_plus(c, uid, rw["amount"])
+    elif t == "nick_coupon":
+        c.execute("UPDATE wallets SET nick_coupons=nick_coupons+1 WHERE tg_id=?", (uid,))
+
+
+def short_nick_ok(c, uid, h, is_admin):
+    """Ник короче SHORT_NICK знаков — только по купону (купон тратится). → ошибка или ''."""
+    if len(h) >= SHORT_NICK or is_admin:
+        return ""
+    w = c.execute("SELECT nick_coupons FROM wallets WHERE tg_id=?", (uid,)).fetchone()
+    if not w or w[0] <= 0:
+        return f"Ники короче {SHORT_NICK} знаков — редкие 💎 Их даёт купон из магазина или сундука"
+    c.execute("UPDATE wallets SET nick_coupons=nick_coupons-1 WHERE tg_id=?", (uid,))
+    return ""
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -550,7 +729,7 @@ class Handler(BaseHTTPRequestHandler):
         inv = res[1].pop("_invoice", None) if isinstance(res[1], dict) else None
         if inv:                                   # счёт создаём уже без блокировки базы (это запрос в Telegram)
             try:
-                link = create_invoice_link(inv["price"], inv["payload"])
+                link = create_invoice_link(inv["price"], inv["payload"], inv.get("title"), inv.get("desc"))
             except Exception:
                 link = None
             res = (200, {"link": link, "price": inv["price"]} if link else {"error": "Оплата сейчас недоступна. Попробуй позже 🙏"})
@@ -568,6 +747,8 @@ class Handler(BaseHTTPRequestHandler):
                 return 200, {"ok": False, "error": BAD_NICK}
             if nick_is_bad(h):
                 return 200, {"ok": False, "error": bad_nick_msg(uid, h)}
+            if len(h) < SHORT_NICK:
+                return 200, {"ok": False, "error": f"Ник — от {SHORT_NICK} знаков (короткие — редкие, их дают за 💎)"}
             o = owner_of(c, h)
             return 200, {"ok": o is None or o == uid, "error": "" if o is None or o == uid else "Этот ник уже занят"}
 
@@ -632,6 +813,79 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.dumps({"u": uid, "p": price, "d": PLUS_DAYS, "c": pr["code"] if pr else ""}, separators=(",", ":"))
             return 200, {"_invoice": {"price": price, "payload": payload}}
 
+        # ----- экономика: 🥐 бурекасы, 💎 хибриллианты, сундуки, магазин -----
+        if route.startswith("/hapi/eco/"):
+            eco_catch_up(c, uid, r)
+            w = c.execute("SELECT * FROM wallets WHERE tg_id=?", (uid,)).fetchone()
+            if route == "/hapi/eco/me":
+                return 200, me(eco=eco_me(c, uid))
+            if route == "/hapi/eco/daily":                            # ежедневный сундук
+                if w["daily"] == msk_day():
+                    return 200, me(error="Сегодня сундук уже забран. Новый — завтра 🌙", eco=eco_me(c, uid))
+                c.execute("UPDATE wallets SET daily=? WHERE tg_id=?", (msk_day(), uid))
+                c.execute("INSERT INTO chests (tg_id, kind, src, at) VALUES (?,?,?,?)", (uid, "daily", "daily", now))
+                return 200, me(ok=True, eco=eco_me(c, uid))
+            if route == "/hapi/eco/open":                             # открыть сундук: редкость и награда решаются здесь
+                ch = c.execute("SELECT * FROM chests WHERE id=? AND tg_id=? AND opened=0", (int(p.get("id") or 0), uid)).fetchone()
+                if not ch:
+                    return 200, me(error="Сундук не найден", eco=eco_me(c, uid))
+                steps = [CHEST_START.get(ch["kind"], "rare")]
+                while steps[-1] in UPGRADE and random.random() < UPGRADE[steps[-1]]:
+                    steps.append(RARITIES[RARITIES.index(steps[-1]) + 1])
+                rw = eco_reward(c, uid, steps[-1])
+                eco_give(c, uid, rw, f"chest:{ch['kind']}:{steps[-1]}")
+                c.execute("UPDATE chests SET opened=?, rarity=?, reward=? WHERE id=?", (now, steps[-1], json.dumps(rw, ensure_ascii=False), ch["id"]))
+                return 200, me(ok=True, kind=ch["kind"], steps=steps, rarity=steps[-1], reward=rw, eco=eco_me(c, uid))
+            if route == "/hapi/eco/buy":
+                key = str(p.get("item") or "")
+                it = CATALOG.get(key)
+                if not it:
+                    return 200, me(error="Такого товара нет", eco=eco_me(c, uid))
+                if it.get("slot") and c.execute("SELECT 1 FROM inventory WHERE tg_id=? AND item=?", (uid, key)).fetchone():
+                    return 200, me(error="Это уже твоё 🙂", eco=eco_me(c, uid))
+                have = w["bur"] if it["cur"] == "bur" else w["gems"]
+                if have < it["price"]:
+                    return 200, me(error="not_enough", need=it["price"] - have, cur=it["cur"], eco=eco_me(c, uid))
+                eco_add(c, uid, it["cur"], -it["price"], "buy:" + key)
+                give = {}
+                if it.get("slot"):
+                    c.execute("INSERT OR IGNORE INTO inventory VALUES (?,?,?)", (uid, key, now))
+                elif key in ("chest", "big_chest"):
+                    c.execute("INSERT INTO chests (tg_id, kind, src, at) VALUES (?,?,?,?)", (uid, "big" if key == "big_chest" else "chest", "shop", now))
+                elif key == "nick_coupon":
+                    c.execute("UPDATE wallets SET nick_coupons=nick_coupons+1 WHERE tg_id=?", (uid,))
+                elif key == "nick_slot":
+                    if r["nick_limit"] != UNLIMITED:
+                        c.execute("UPDATE players SET nick_limit=? WHERE tg_id=?", (limit_of(r) + 1, uid))
+                else:                                                  # freeze / hearts — применяет телефон
+                    give = {"type": key}
+                return 200, me(ok=True, item=key, apply=give, eco=eco_me(c, uid))
+            if route == "/hapi/eco/equip":
+                slot, key = str(p.get("slot") or ""), p.get("item") or ""
+                if slot not in ("frame", "color", "badge"):
+                    return 200, me(error="bad slot")
+                if key and (CATALOG.get(key, {}).get("slot") != slot or not c.execute("SELECT 1 FROM inventory WHERE tg_id=? AND item=?", (uid, key)).fetchone()):
+                    return 200, me(error="Этого скина у тебя нет", eco=eco_me(c, uid))
+                c.execute("INSERT OR IGNORE INTO equip (tg_id) VALUES (?)", (uid,))
+                c.execute(f"UPDATE equip SET {slot}=? WHERE tg_id=?", (key, uid))
+                return 200, me(ok=True, eco=eco_me(c, uid))
+            if route == "/hapi/eco/spend":                            # раунд мини-игры
+                cost = MINIGAME_COST.get(str(p.get("game") or ""))
+                if not cost:
+                    return 200, me(error="Нет такой игры")
+                if w["bur"] < cost:
+                    return 200, me(error="not_enough", need=cost - w["bur"], cur="bur", eco=eco_me(c, uid))
+                eco_add(c, uid, "bur", -cost, "game:" + str(p.get("game")))
+                return 200, me(ok=True, eco=eco_me(c, uid))
+            if route == "/hapi/eco/gems_invoice":                     # 💎 за ⭐
+                pack = GEM_PACKS.get(str(p.get("pack") or ""))
+                if not pack:
+                    return 200, {"error": "Нет такого набора"}
+                payload = json.dumps({"t": "gems", "u": uid, "p": pack["stars"], "g": pack["gems"]}, separators=(",", ":"))
+                return 200, {"_invoice": {"price": pack["stars"], "payload": payload,
+                                          "title": f"{pack['gems']} хибриллиантов 💎", "desc": "Хибриллианты для магазина Hirbis: скины, ники, сундуки."}}
+            return 404, {"error": "not found"}
+
         # ----- ники игрока -----
         if route in ("/hapi/handle", "/hapi/nicks/add", "/hapi/nicks/main", "/hapi/nicks/remove"):
             h = norm(p.get("handle"))
@@ -645,6 +899,10 @@ class Handler(BaseHTTPRequestHandler):
                 if o is not None and o != uid:
                     return 200, me(error="Этот ник уже занят")
                 old, lim = r["handle"], limit_of(r)
+                if o is None:
+                    e = short_nick_ok(c, uid, h, r["admin"])
+                    if e:
+                        return 200, me(error=e)
                 if o is None and lim != UNLIMITED and len(mine) >= lim and old:
                     c.execute("DELETE FROM handles WHERE handle=? AND tg_id=?", (old, uid))   # лимит — старый освобождаем
                 give_nick(c, uid, h, main=True)
@@ -657,6 +915,9 @@ class Handler(BaseHTTPRequestHandler):
                 lim = limit_of(r)
                 if lim != UNLIMITED and len(mine) >= lim:
                     return 200, me(error=f"Можно не больше {lim} ников")
+                e = short_nick_ok(c, uid, h, r["admin"])
+                if e:
+                    return 200, me(error=e)
                 give_nick(c, uid, h)
                 return 200, me()
             if o != uid:
@@ -993,6 +1254,11 @@ class Handler(BaseHTTPRequestHandler):
         if best:
             c.execute("INSERT INTO plus VALUES (?, ?)", (uid, best))
         c.execute("UPDATE OR IGNORE promo_uses SET tg_id=? WHERE tg_id=?", (uid, old_id))
+        # валюта, сундуки и вещи — тоже (у нового пустого аккаунта их стираем)
+        for tb in ("wallets", "equip", "inventory", "chests"):
+            c.execute(f"DELETE FROM {tb} WHERE tg_id=?", (uid,))
+            c.execute(f"UPDATE {tb} SET tg_id=? WHERE tg_id=?", (uid, old_id))
+        c.execute("UPDATE ledger SET tg_id=? WHERE tg_id=?", (uid, old_id))
         c.execute("INSERT INTO admin_log VALUES (?,?,?,?)", (now, hit["handle"], hit["handle"], json.dumps({"recover": {"from_tg": old_id, "to_tg": uid}})))
         r = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
         return 200, {"ok": True, "handle": r["handle"], "ver": r["ver"]}
@@ -1091,6 +1357,15 @@ class Handler(BaseHTTPRequestHandler):
                 grant_plus(c, tid, min(days, 3650)); what["plus.add_days"] = days
             else:
                 c.execute("DELETE FROM plus WHERE tg_id=?", (tid,)); what["plus.remove"] = True
+        # валюта: подарить / забрать 🥐 и 💎
+        for key, cur in (("addBur", "bur"), ("addGems", "gems")):
+            if p.get(key):
+                try:
+                    n = max(-1_000_000, min(1_000_000, int(p[key])))
+                except (TypeError, ValueError):
+                    n = 0
+                if n:
+                    eco_row(c, tid, t); eco_add(c, tid, cur, n, "admin"); what[key] = n
         # права админа
         if "admin" in p:
             if tid == admin_uid and not p["admin"]:

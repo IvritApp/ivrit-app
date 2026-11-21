@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Сундуки Hirbis</title>
+<link rel="stylesheet" href="anim.css">
+<link rel="stylesheet" href="chest.css">
+<style>
+  body{margin:0;padding:16px;background:#f4f1ff;color:#21183d;font-family:"Nunito","Segoe UI",Roboto,Arial,sans-serif}
+  h1{font-size:22px;margin:0 0 4px}
+  p{margin:0 0 14px;color:#5b5378;font-size:14px}
+  h2{font-size:15px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.05em;color:#6a5aa8}
+  .row{display:flex;flex-wrap:wrap;gap:8px}
+  button.d{border:0;border-radius:12px;padding:11px 14px;font:inherit;font-weight:800;font-size:14px;color:#fff;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+  button.d:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .g{background:#7a5ce0}
+  label{display:flex;gap:8px;align-items:center;margin-top:16px;font-size:14px}
+  #log{margin-top:14px;padding:10px 12px;border-radius:12px;background:#fff;font-size:13px;min-height:40px;white-space:pre-line}
+</style>
+</head>
+<body>
+<h1>🎁 Сундуки — витрина</h1>
+<p>chest.js · ChestFX.play({kind, steps, reward}). Касайся экрана сундука, пока он не раскроется.</p>
+
+<h2>Редкость (до какой дойдёт)</h2>
+<div class="row" id="byRarity"></div>
+
+<h2>Награды</h2>
+<div class="row" id="byReward"></div>
+
+<h2>Виды сундуков</h2>
+<div class="row" id="byKind"></div>
+
+<h2>Как на сервере</h2>
+<div class="row"><button class="d g" id="rnd">🎲 Случайный (шансы сервера)</button><button class="d g" id="rndBig">🎲 Большой случайный</button></div>
+
+<label><input type="checkbox" id="rm"> Уменьшить движение (prefers-reduced-motion)</label>
+<div id="log">Журнал…</div>
+
+<script src="anim.js"></script>
+<script src="chest.js"></script>
+<script>
+(function () {
+  var O = ChestFX.ORDER, R = ChestFX.RARITY, log = document.getElementById("log");
+  function upTo(r, from) { return O.slice(O.indexOf(from || "rare"), O.indexOf(r) + 1); }
+  function say(s) { log.textContent = s + "\n" + log.textContent.split("\n").slice(0, 6).join("\n"); }
+  function run(o) {
+    say("▶ " + (o.kind || "chest") + " · " + o.steps.join(" → "));
+    ChestFX.play(o).then(function (rw) { say("✔ Забрал: " + ChestFX.label(rw)); });
+  }
+  function btn(host, text, color, fn) {
+    var b = document.createElement("button"); b.className = "d"; b.textContent = text;
+    b.style.background = color; b.onclick = fn; document.getElementById(host).appendChild(b);
+  }
+  var TYPICAL = {
+    rare: { type: "bur", amount: 35 }, super: { type: "bur", amount: 80 }, epic: { type: "gems", amount: 8 },
+    mythic: { type: "skin", item: { id: "frame_gold", name: "Золотая рамка", icon: "🖼️" } },
+    legendary: { type: "gems", amount: 100 }
+  };
+  O.forEach(function (r) { btn("byRarity", R[r].name, R[r].color, function () { run({ kind: "chest", steps: upTo(r), reward: TYPICAL[r] }); }); });
+
+  var REW = [
+    ["🥐 Бурекасы +35", "rare", { type: "bur", amount: 35 }],
+    ["🥐 Бурекасы +200", "epic", { type: "bur", amount: 200 }],
+    ["💎 +25", "mythic", { type: "gems", amount: 25 }],
+    ["❤️ Сердечки", "super", { type: "hearts" }],
+    ["❄️ Заморозка", "epic", { type: "freeze" }],
+    ["🎨 Скин", "mythic", { type: "skin", item: { id: "color_mint", name: "Мятный ник", icon: "🎨" } }],
+    ["🖼️ Скин без иконки", "legendary", { type: "skin", item: { id: "frame_royal", name: "Королевская рамка" } }],
+    ["👑 Plus 1 день", "mythic", { type: "plus", amount: 1 }],
+    ["👑 Plus 3 дня", "legendary", { type: "plus", amount: 3 }],
+    ["🎟️ Купон: редкий ник", "legendary", { type: "nick_coupon" }]
+  ];
+  REW.forEach(function (x) { btn("byReward", x[0], R[x[1]].color, function () { run({ kind: "chest", steps: upTo(x[1]), reward: x[2] }); }); });
+
+  btn("byKind", "Сундук", "#5b4bb0", function () { run({ kind: "chest", steps: ["rare", "super"], reward: { type: "bur", amount: 72 } }); });
+  btn("byKind", "Большой (с эпического)", "#5b4bb0", function () { run({ kind: "big", steps: ["epic", "mythic", "legendary"], reward: { type: "nick_coupon" } }); });
+  btn("byKind", "Ежедневный", "#5b4bb0", function () { run({ kind: "daily", steps: ["rare"], reward: { type: "bur", amount: 21 } }); });
+
+  var UP = { rare: .5, super: .4, epic: .3, mythic: .2 };
+  function rnd(start) {
+    var s = [start];
+    while (UP[s[s.length - 1]] && Math.random() < UP[s[s.length - 1]]) s.push(O[O.indexOf(s[s.length - 1]) + 1]);
+    return s;
+  }
+  function rewFor(r) {
+    var opts = {
+      rare: [{ type: "bur", amount: 20 + Math.floor(Math.random() * 21) }],
+      super: [{ type: "bur", amount: 60 + Math.floor(Math.random() * 41) }, { type: "hearts" }],
+      epic: [{ type: "gems", amount: 5 + Math.floor(Math.random() * 6) }, { type: "bur", amount: 200 }, { type: "freeze" }],
+      mythic: [{ type: "gems", amount: 25 }, { type: "skin", item: { name: "Синий ник", icon: "🎨" } }, { type: "plus", amount: 1 }],
+      legendary: [{ type: "gems", amount: 100 }, { type: "skin", item: { name: "Радужная рамка", icon: "🌈" } }, { type: "nick_coupon" }, { type: "plus", amount: 3 }]
+    }[r];
+    return opts[Math.floor(Math.random() * opts.length)];
+  }
+  document.getElementById("rnd").onclick = function () { var s = rnd("rare"); run({ kind: "chest", steps: s, reward: rewFor(s[s.length - 1]) }); };
+  document.getElementById("rndBig").onclick = function () { var s = rnd("epic"); run({ kind: "big", steps: s, reward: rewFor(s[s.length - 1]) }); };
+
+  document.getElementById("rm").onchange = function () { if (window.HAnim) HAnim.setReduced(this.checked); };
+  window.addEventListener("hanim:peak", function (e) { if (e.detail && e.detail.chest) say("🔊 hanim:peak · " + e.detail.rarity); });
+})();
+</script>
+</body>
+</html>

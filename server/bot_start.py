@@ -137,13 +137,23 @@ def ensure_tables(db):
     db.execute("CREATE TABLE IF NOT EXISTS promo_uses (code TEXT, tg_id INTEGER, at REAL, PRIMARY KEY (code, tg_id))")
     db.execute("""CREATE TABLE IF NOT EXISTS payments (charge_id TEXT PRIMARY KEY, tg_id INTEGER, stars INTEGER, days INTEGER,
         code TEXT DEFAULT '', at REAL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS wallets (tg_id INTEGER PRIMARY KEY, bur INTEGER DEFAULT 0, gems INTEGER DEFAULT 0,
+        counted INTEGER DEFAULT 0, lessons INTEGER DEFAULT 0, quests INTEGER DEFAULT 0, daily TEXT DEFAULT '',
+        nick_coupons INTEGER DEFAULT 0)""")
+    db.execute("CREATE TABLE IF NOT EXISTS ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, cur TEXT, delta INTEGER, why TEXT)")
     db.commit()
 
 
+GEM_PACKS = {50: 100, 150: 350, 400: 1000}       # ⭐ → 💎 (same as players_api.py GEM_PACKS)
+
+
 def parse_payload(s):
+    """Plus: {u, p, d, c}. Gems: {t:"gems", u, p, g}."""
     try:
         p = json.loads(s or "{}")
-        return {"u": int(p["u"]), "p": int(p["p"]), "d": int(p["d"]), "c": str(p.get("c") or "")}
+        if p.get("t") == "gems":
+            return {"t": "gems", "u": int(p["u"]), "p": int(p["p"]), "g": int(p["g"]), "d": 0, "c": ""}
+        return {"t": "plus", "u": int(p["u"]), "p": int(p["p"]), "d": int(p["d"]), "c": str(p.get("c") or "")}
     except Exception:
         return None
 
@@ -162,7 +172,8 @@ def pre_checkout(token, db, q):
     p = parse_payload(q.get("invoice_payload"))
     uid = (q.get("from") or {}).get("id")
     good = (p is not None and p["u"] == uid and q.get("currency") == "XTR" and q.get("total_amount") == p["p"]
-            and 1 <= p["d"] <= 366 and promo_ok(db, p["c"], uid))
+            and ((p["t"] == "plus" and 1 <= p["d"] <= 366 and promo_ok(db, p["c"], uid))
+                 or (p["t"] == "gems" and GEM_PACKS.get(p["p"]) == p["g"])))
     ans = {"pre_checkout_query_id": q.get("id"), "ok": bool(good)}
     if not good:
         ans["error_message"] = "Не получилось оформить подписку. Открой Hirbis и попробуй ещё раз 🙏"
@@ -174,12 +185,23 @@ def paid(token, db, msg):
     """Money received: add days of Hirbis Plus (once per payment)."""
     sp = msg["successful_payment"]
     uid = (msg.get("from") or {}).get("id")
-    p = parse_payload(sp.get("invoice_payload")) or {"u": uid, "p": sp.get("total_amount"), "d": 30, "c": ""}
+    p = parse_payload(sp.get("invoice_payload")) or {"t": "plus", "u": uid, "p": sp.get("total_amount"), "d": 30, "c": ""}
     charge = sp.get("telegram_payment_charge_id") or ""
     now = time.time()
-    cur = db.execute("INSERT OR IGNORE INTO payments VALUES (?,?,?,?,?,?)", (charge, uid, sp.get("total_amount"), p["d"], p["c"], now))
+    cur = db.execute("INSERT OR IGNORE INTO payments VALUES (?,?,?,?,?,?)",
+                     (charge, uid, sp.get("total_amount"), p["d"], p["c"] if p["t"] == "plus" else f"gems:{p['g']}", now))
     if cur.rowcount == 0:                        # this payment was already counted
         db.rollback()                            # close the transaction, or the database stays locked for players_api
+        return
+    if p["t"] == "gems":                         # 💎 хибриллианты (the wallet exists: the invoice is made by /hapi/eco/gems_invoice)
+        w = db.execute("UPDATE wallets SET gems=gems+? WHERE tg_id=?", (p["g"], uid))
+        if w.rowcount == 0:
+            print("оплата 💎: нет кошелька у", uid, flush=True)
+        db.execute("INSERT INTO ledger (tg_id, at, cur, delta, why) VALUES (?,?,?,?,?)", (uid, now, "gems", p["g"], "stars:" + charge[:40]))
+        db.commit()
+        print("оплата: получено", sp.get("total_amount"), "⭐ →", p["g"], "💎 от", uid, flush=True)
+        api(token, "sendMessage", {"chat_id": msg["chat"]["id"], "reply_markup": app_button(),
+                                   "text": f"Спасибо! 💎 +{p['g']} хибриллиантов уже в Hirbis. Загляни в магазин 🛒"})
         return
     row = db.execute("SELECT until FROM plus WHERE tg_id=?", (uid,)).fetchone()
     until = max(now, float(row[0]) if row and row[0] else 0) + p["d"] * 86400

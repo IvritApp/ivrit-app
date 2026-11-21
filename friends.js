@@ -22,14 +22,21 @@
   }
 
   // Чужой герой: берём только простые значения (защита), остальное — по умолчанию
-  function head(cfg, gender, size) {
+  // sk — скины игрока (рамка/цвет ника/значок) из skinOf(): только id из каталога eco.js → CSS-классы
+  function head(cfg, gender, size, sk) {
     const g = gender === "f" ? "f" : "m";
     const clean = HirbisAvatar.defaults(g);
     if (cfg && typeof cfg === "object") Object.entries(cfg).forEach(([k, v]) => {
       if (k in clean && (typeof v === "number" || (typeof v === "string" && /^[#\w-]{1,24}$/.test(v)))) clean[k] = v;
     });
     clean.gender = g;
-    return `<span class="fr-ava" style="width:${size}px;height:${size}px">${HirbisAvatar.svg(HirbisAvatar.sanitize(clean), { view: "head" })}</span>`;
+    return `<span class="fr-ava${sk ? sk.frame : ""}" style="width:${size}px;height:${size}px">${HirbisAvatar.svg(HirbisAvatar.sanitize(clean), { view: "head" })}</span>`;
+  }
+  // Скины друга (белый список: frame, color, badge — простые строки-id; неизвестные id отбрасываются)
+  function skinOf(x) {
+    const s = (x && typeof x.skin === "object" && x.skin) || (x && typeof x.equip === "object" && x.equip) || {};
+    const pick = (k) => { const v = x && x[k] != null ? x[k] : s[k]; return typeof v === "string" && /^[a-z0-9_]{1,32}$/.test(v) ? v : null; };
+    return window.Eco ? Eco.skin({ frame: pick("frame"), color: pick("color"), badge: pick("badge") }) : { frame: "", color: "", badge: "" };
   }
 
   // ---------- нижнее меню: видно только на главной и в «Друзьях» ----------
@@ -67,8 +74,8 @@
     catch (e) { body.innerHTML = `<p class="fr-note">Нет связи с сервером. Попробуй чуть позже.</p>`; return; }
     if (d.banned || d.error) { body.innerHTML = `<p class="fr-note">${esc(d.error || "Аккаунт заблокирован")}</p>`; return; }
     incomingCount = d.incoming.length; updateBar();
-    const row = (x, right) => `<div class="fr-row" data-h="${esc(x.handle)}">${head(x.avatar, x.gender, 46)}
-      <div class="fr-who"><b>${esc(x.name || "@" + x.handle)}</b><span>@${esc(x.handle)}</span></div>${right || ""}</div>`;
+    const row = (x, right) => { const sk = skinOf(x); return `<div class="fr-row" data-h="${esc(x.handle)}">${head(x.avatar, x.gender, 46, sk)}
+      <div class="fr-who"><b class="${sk.color.trim()}">${esc(x.name || "@" + x.handle)}${sk.badge}</b><span>@${esc(x.handle)}</span></div>${right || ""}</div>`; };
     const un = (h) => (window.chatUnread && window.chatUnread.by && window.chatUnread.by[h]) || 0;
     const stat = x => `<div class="fr-stat">🔥 ${x.streak}<small>⭐ ${x.points}</small></div>
       <button class="fr-chat" data-chat="${esc(x.handle)}" aria-label="Написать">💬${un(x.handle) ? `<i>${un(x.handle)}</i>` : ""}</button>`;
@@ -154,10 +161,11 @@
     const MG = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
     const cd = p.created ? new Date(p.created * 1000) : null, since = cd ? MG[cd.getMonth()] + " " + cd.getFullYear() : "";
     const medals = Object.values(p.medals || {});
+    const sk = skinOf(p);
     box.innerHTML = `<div class="fr-page">
       <button class="fr-back" id="frBack">‹ Назад</button>
-      <div class="fr-top">${head(p.avatar, p.gender, 120)}
-        <div class="fr-name">${esc(p.name || "@" + p.handle)}${p.admin ? " 👑" : ""}</div>
+      <div class="fr-top">${head(p.avatar, p.gender, 120, sk)}
+        <div class="fr-name"><span class="${sk.color.trim()}">${esc(p.name || "@" + p.handle)}</span>${sk.badge}${p.admin ? " 👑" : ""}</div>
         <div class="fr-since">${since ? "В Hirbis с " + esc(since) : ""}</div>
         <div class="fr-relbox">${relBtn(r.relation, p.handle)}</div>
       </div>
