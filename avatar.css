@@ -102,3 +102,12 @@
 /* лист B: думает / машет / показывает / слушает / удивлён */
 .act-think .ci.ci-b .ci-f, .act-wave .ci.ci-b .ci-f, .ci.ci-think .ci-f, .ci.ci-wave .ci-f, .ci.ci-point .ci-f, .ci.ci-listen .ci-f, .ci.ci-surprised .ci-f { opacity: 0 !important; animation: none !important; }
 .act-think .ci.ci-b .ci-think, .ci.ci-think .ci-think, .act-wave .ci.ci-b .ci-wave, .ci.ci-wave .ci-wave, .ci.ci-point .ci-point, .ci.ci-listen .ci-listen, .ci.ci-surprised .ci-surprised { opacity: 1 !important; }
+
+/* 3D-Хибри вместо SVG (chars.js mascot3D, 22.11): холст 600×640, птица ~62% высоты — делаем блок шире, чтобы Хибри был того же размера, что прежний */
+.ha-m.ha-m3d { width: calc(var(--ha-m-size, 140px) * 1.45); margin: calc(var(--ha-m-size, 140px) * -0.42) calc(var(--ha-m-size, 140px) * -0.225) 0; line-height: 0; }
+.ha-m3d .ci { height: auto; width: 100%; }
+.ha-m3d .ci.ci-hop { animation: ciHop .5s cubic-bezier(.3, 1.6, .5, 1) 2; }
+.ci.ci-sleep .ci-f { opacity: 0 !important; animation: none !important; } .ci.ci-sleep .ci-blink { opacity: 1 !important; }
+.ha-m3d .ci.ci-flyout { transition: transform .9s ease-in, opacity .9s; transform: translate(60px, -120px) scale(.6); opacity: 0; }
+.ha-m3d.ha-m--flip .ci { transform: scaleX(-1); }
+.ha-m3d.ha-m--gone { display: none; }

@@ -127,6 +127,7 @@
   /* ───────── картинки (3D от Codex): assets/items/<имя>.webp; нет файла → SVG/эмодзи ───────── */
   var PROBE = {};                                  /* url → Promise(url|null), кэш на всю сессию */
   function probe(name) {
+    if (!W.ChestFX.base) return Promise.resolve(null);   /* картинки выключены (22.11: вернулись к рисованному стилю) */
     var url = W.ChestFX.src(name);
     if (!PROBE[url]) PROBE[url] = new Promise(function (res) {
       var im = new Image();
@@ -382,7 +383,7 @@
 
   W.ChestFX = {
     play: play, label: label, preload: preload, RARITY: RARITY, ORDER: ORDER, KIND: KIND,
-    base: "assets/items/",
+    base: "",            /* 22.11: 3D-картинки выключены (владелец: «слишком нейросетевые»); включить — "assets/items/" */
     src: function (name) { return W.ChestFX.base + name + ".webp"; }   /* можно подменить (тесты) */
   };
 })();
