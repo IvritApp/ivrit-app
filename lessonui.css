@@ -108,6 +108,6 @@ button.p-exam.locked { opacity: .75; }
 #path.p-fresh .p-medals, #path.p-fresh .p-level-hint { display: none; }
 
 /* низкие экраны (≤700px): друг-картинка меньше, чтобы все варианты помещались без прокрутки */
-@media (max-height: 700px) { #screen.ex .host-fig.ci-host { height: 170px; width: 64px; } #screen.ex .ex-title { font-size: 21px; margin-bottom: 8px; } }
+@media (max-height: 700px) { #screen.ex .host-fig.ci-host { height: 170px; width: 80px; } #screen.ex .ex-title { font-size: 21px; margin-bottom: 8px; } }
 
 body.theme-dark .q-goal-s { color: #9aa7b8; }

@@ -8,14 +8,17 @@
 // Пока у персонажа нет картинок — рисуется прежний SVG (avatar.js).
 // =====================================================
 (function () {
-  const V = "20261121f";
-  // какие кадры уже есть (исходники — Desktop\Клод\Project\ivrit-app\Фото от ChatGPT\sheetNN_*.png)
-  const CHARS = { david: ["neutral", "talk", "blink", "happy", "oops", "think", "wave", "point", "listen", "surprised"] };
+  const V = "20261121h";
+  // какие кадры уже есть (исходники — Desktop\Клод\Фото от ChatGPT\sheetNN_*.png).
+  // Все кадры — холст 360×768, один масштаб, ступни на одной линии (slice_sheet.ps1)
+  const A = ["neutral", "talk", "blink", "happy", "oops"], AB = A.concat(["think", "wave", "point", "listen", "surprised"]);
+  const CHARS = { david: AB, tzila: AB, hero_m1: A, hero_m2: A, hero_m3: A };
   const has = (id) => !!CHARS[id];
 
   window.charImgHTML = function (id, cls) {
     if (!has(id)) return "";
-    return `<div class="ci ${cls || ""}" data-char="${id}">${CHARS[id].map(f =>
+    const b = CHARS[id].includes("think") ? " ci-b" : "";   // есть лист B (думает, машет…)
+    return `<div class="ci${b} ${cls || ""}" data-char="${id}">${CHARS[id].map(f =>
       `<img class="ci-f ci-${f}" src="assets/chars/${id}_${f}.webp?v=${V}" alt="" draggable="false">`).join("")}</div>`;
   };
 
@@ -26,7 +29,7 @@
     });
   }, 1700);
 
-  // Друг в уроке (Давид для парня). Для девушки — Циля, пока по-старому (картинки ещё нет)
+  // Друг в уроке: Давид для парня, Циля для девушки
   const oldFriend = window.friendFigureSVG;
   window.friendFigureSVG = function (gender) {
     const id = gender === "f" ? "tzila" : "david";
