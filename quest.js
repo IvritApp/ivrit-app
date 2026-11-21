@@ -53,6 +53,7 @@ function renderStageShell(place, title, icon) {
   questView.innerHTML = `
     <div class="st-wrap">
       <div class="st-view" id="stView">
+        <div class="q-prog" id="qProg"></div>
         <button class="st-order" id="stOrder" hidden>🧾 Мой заказ</button>
         <div class="combo st-fire" id="stFire"></div>
         <div class="q-tray" id="qTray" hidden></div>
@@ -157,7 +158,14 @@ function startQuest(id) {
       ob.onclick = (e) => { e.stopPropagation(); tray.hidden = !tray.hidden; };
       tray.onclick = (e) => { e.stopPropagation(); tray.hidden = true; };
       tray.dataset.empty = d.emptyOrder || "Пока пусто";
-      setTimeout(() => { if (token === stageToken) showQuestStep(); }, (stage && stage.introMs) ? stage.introMs + 300 : 1500);
+      // 21.11: «для тупых» — сначала цель квеста крупно и кнопка «Начать» (пока идёт заставка с дверями)
+      const introDone = new Promise(r => setTimeout(r, (stage && stage.introMs) ? stage.introMs + 300 : 1500));
+      const opts = document.getElementById("qOpts");
+      opts.innerHTML = `<div class="q-goal"><div class="q-goal-k">🎯 Твоя цель</div><div class="q-goal-t">${g(d.goal || d.title)}</div>
+        <div class="q-goal-s">${stepsWord(d.steps.length)} · отвечай кнопками${canSpeakNow() ? ", а фразы можно сказать вслух 🎤" : ""}</div>
+        <button class="btn blue q-goal-go" id="qGoalGo">Начать</button></div>`;
+      questProgress();
+      document.getElementById("qGoalGo").onclick = () => { playSound("pop"); opts.innerHTML = ""; introDone.then(() => { if (token === stageToken) showQuestStep(); }); };
     })
     .catch(() => { questView.innerHTML = `<p class="task">Не удалось загрузить квест 😕</p>`; });
 }
@@ -168,16 +176,26 @@ function sellerHTML(s, who) {
   const id = "ru" + Math.floor(Math.random() * 1e6);
   const name = who || (stage && stage.hostName) || "Продавец";
   if (typeof ruMode === "function" && ruMode()) return `${nameTag(name)}<div class="ru-only">${g(s.ru)}</div>`;
+  // 21.11: перевод виден сразу (новичку нужно понимать, что ему сказали)
   return `${nameTag(name)}<div class="he" dir="rtl">${he}</div>
     <div class="tr">${tr}</div>
+    <div class="ru q-ru-line" id="${id}">${g(s.ru)}</div>
     <div class="q-tools">
-      <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊</button>
-      <button class="q-tool" onclick="event.stopPropagation();document.getElementById('${id}').hidden=false;this.remove()">Перевод</button>
-    </div>
-    <div class="ru" id="${id}" hidden>${g(s.ru)}</div>`;
+      <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊 Ещё раз</button>
+    </div>`;
+}
+
+// «1 шаг», «3 шага», «5 шагов», «21 шаг»
+function stepsWord(n) { const a = n % 10, b = n % 100; return n + (a === 1 && b !== 11 ? " шаг" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? " шага" : " шагов"); }
+// Шкала шагов квеста сверху: пройденные — зелёные, текущий — мигает
+function questProgress() {
+  const box = document.getElementById("qProg");
+  if (!box || !quest) return;
+  box.innerHTML = quest.steps.map((_, i) => `<i class="${i < qStep ? "on" : i === qStep ? "now" : ""}"></i>`).join("");
 }
 
 function showQuestStep() {
+  questProgress();
   if (qStep >= quest.steps.length) { finishQuest(); return; }
   const st = quest.steps[qStep];
   qHinted = false;
@@ -241,7 +259,7 @@ function addQuestOptions(st, opts) {
     }, 1200);
     return;
   }
-  if (canSpeakNow()) { addSpeakTask(st, opts); return; }
+  // 21.11: всегда кнопки с переводом (новичок с нуля не знает, КАК сказать). Голос — после верного ответа, по желанию
   addTapOptions(st, opts);
 }
 // Обычный режим: выбор кнопкой (если голос недоступен или «🙊 Не могу говорить»)
@@ -250,12 +268,13 @@ function addTapOptions(st, opts) {
     const b = document.createElement("button");
     b.className = "option q-opt";
     b.innerHTML = ruMode() ? `<span class="ru-only">${g(o.ru)}</span><span class="he" hidden>${g(o.he)}</span>`
-      : `<span class="he" dir="rtl">${g(o.he)}</span><span class="tr">${g(o.tr)}</span>`;
+      : `<span class="he" dir="rtl">${g(o.he)}</span><span class="tr">${g(o.tr)}</span><span class="q-opt-ru">${g(o.ru)}</span>`;
     b.onclick = () => chooseOption(b, o, st);
     opts.appendChild(b);
   });
 }
-// ГЛАВНЫЙ режим: никаких вариантов — тебе говорят по-русски, ЧТО сказать, ты говоришь на иврите, текст «вписывается» в поле
+// БЫВШИЙ главный режим (до 21.11): без вариантов — сказать фразу по-русскому заданию. Сейчас НЕ вызывается:
+// новичку с нуля это слишком трудно, вместо него кнопки + sayAloud. Оставлен на будущее (режим «для продвинутых»).
 function addSpeakTask(st, opts) {
   const oks = st.options.filter(o => o.ok);
   const task = st.say ? g(st.say) : oks.length > 1 ? `Ответь сам{m:}{f:а} — например: ${oks.map(o => `«${g(o.ru)}»`).join(" или ")}` : `Скажи на иврите: «${g(oks[0].ru)}»`;
@@ -341,8 +360,13 @@ function chooseOption(btn, o, st) {
     speak(g(o.he), { audio: o.audio });
     if (o.add) addToTray([].concat(o.add));
     qStep++;
-    setTimeout(() => { if (token !== stageToken) return; document.getElementById("qOpts").innerHTML = ""; stage.hide(); }, 2400);
-    setTimeout(() => { if (token !== stageToken) return; showQuestStep(); }, 3000);
+    questProgress();
+    const proceed = () => { if (token !== stageToken) return; document.getElementById("qOpts").innerHTML = ""; stage.hide(); setTimeout(() => { if (token === stageToken) showQuestStep(); }, 500); };
+    // 21.11: «скажи вслух» — по желанию, не мешает идти дальше. Где голос не работает — сразу дальше, как раньше
+    // в «звонке» и «переписке» экран закрыт телефоном — там без этого шага (иначе кнопку «Дальше» не видно)
+    const phone = window.phoneOpen && phoneOpen();
+    if (canSpeakNow() && !ruMode() && !phone) setTimeout(() => { if (token === stageToken) sayAloud(o, proceed); }, 1200);
+    else setTimeout(proceed, 2500);
   } else {
     btn.classList.remove("wrong"); void btn.offsetWidth; btn.classList.add("wrong");
     btn.disabled = true;
@@ -357,6 +381,50 @@ function chooseOption(btn, o, st) {
       h.hidden = false; qHinted = true;
     }
   }
+}
+
+// «Скажи вслух» после верного ответа: фраза перед глазами, 🎤 — бонус +5 очков; «Дальше» — без голоса
+function sayAloud(o, proceed) {
+  const opts = document.getElementById("qOpts");
+  const he = g(o.he);
+  opts.innerHTML = `<div class="q-aloud">
+      <div class="q-say-k">🗣️ А теперь скажи вслух</div>
+      <div class="q-say-he" dir="rtl">${he}</div>
+      <div class="q-say-tr">${g(o.tr)}</div>
+      <button class="q-mic q-say-mic" type="button"><span>🎤</span><b>Нажми и скажи</b></button>
+      <button class="q-say-skip" type="button">Дальше без голоса →</button>
+    </div>`;
+  const mic = opts.querySelector(".q-say-mic"), lab = mic.querySelector("b");
+  let tries = 0, done = false;
+  const finish = () => { if (done) return; done = true; try { qRec && qRec.abort(); } catch (e) {} proceed(); };
+  opts.querySelector(".q-say-skip").onclick = finish;
+  mic.onclick = () => {
+    if (mic.classList.contains("on")) { try { qRec && qRec.stop(); } catch (e) {} return; }
+    mic.classList.add("on"); lab.textContent = "Слушаю… говори";
+    listenHe((alts) => {
+      mic.classList.remove("on");
+      const sim = Math.max(0, ...alts.map(t => heSim(t, he)));
+      if (sim >= 0.55) {
+        qTalk.clean++; qPoints += 5;
+        lab.textContent = "Отлично сказано! +5"; mic.classList.add("ok");
+        playSound("right"); vibrate("success");
+        if (window.HAnim) HAnim.sparkle(mic, { count: 8 });
+        setTimeout(finish, 900);
+      } else {
+        tries++; qTalk.misses++;
+        lab.textContent = tries >= 2 ? "Почти! Можно идти дальше" : "Почти! Ещё раз";
+        vibrate("warning");
+        if (tries >= 2) opts.querySelector(".q-say-skip").classList.add("big");
+      }
+    }, (err) => {
+      mic.classList.remove("on");
+      if (err === "not-allowed" || err === "service-not-allowed" || err === "start" || err === "network" || err === "language-not-supported") {
+        store.set("nospeak_until", Date.now() + 24 * 3600000);        // голос тут не работает — сутки без этого шага
+        showToast("Голос на этом телефоне не работает — идём дальше");
+        finish();
+      } else lab.textContent = "Ничего не слышно 🙉 Ещё раз";
+    });
+  };
 }
 
 // =====================================================

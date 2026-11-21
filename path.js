@@ -117,6 +117,8 @@ function renderPath() {
     </div>`;
   }).join("");
 
+  // 21.11: «для тупых» — пока не пройден ни один урок, не грузим новичка медалями и правилами «золотого уровня»
+  pathView.classList.toggle("p-fresh", !testMode() && !done.some(id => /^a1-/.test(id)));
   pathView.innerHTML = `
     <button class="p-settings" id="p-settings" aria-label="Настройки">⚙️</button>
     ${testMode() ? `<div class="p-test">🔓 Режим тестировщика: всё открыто</div>` : ""}
@@ -150,7 +152,8 @@ function renderPath() {
     <div class="p-lvl-list-title">Все уровни</div>
     ${ch.levels.map((l, i) => l.soon ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
       : `<button class="p-soon p-lvl-go${i === lvlIdx ? " sel" : ""}${levelOpen(ch, i) ? "" : " locked"}" data-lvl="${i}"><b>Уровень ${i + 1} · ${l.title}</b><span>${i === lvlIdx ? "сейчас" : levelGold(l) ? "🏅" : levelDone(l) ? "✓" : levelOpen(ch, i) ? "›" : "🔒"}</span></button>`).join("")}
-    <div class="p-soon exam"><b>📝 ${ch.exam.title}</b><span>после ${ch.levels.length} уровней</span></div>
+    ${(() => { const open = testMode() || ch.levels.every(levelDone), passed = doneLessons().includes("exam-" + ch.id);
+      return `<button class="p-soon exam p-exam${open ? " open" : " locked"}" id="p-exam"><b>📝 ${ch.exam.title}</b><span>${passed ? "сдан ✓" : open ? "открыт — вперёд!" : `после ${ch.levels.length} уровней 🔒`}</span></button>`; })()}
     <div class="p-soon next"><b>Дальше — глава ${ch.next}</b><span>🔒</span></div>`;
 
   // Анимации дорожки (anim.js): если открылся новый урок — ломается замок. Кольцо частей рисует parts.js
@@ -181,6 +184,12 @@ function renderPath() {
   pathView.querySelectorAll(".p-lvl-go").forEach(b => b.onclick = () => {
     if (b.classList.contains("locked")) { showToast("Сначала пройди предыдущий уровень — все уроки и квест"); vibrate("warning"); return; } store.set("level_" + ch.id, +b.dataset.lvl); renderPath();
     pathView.scrollTo ? pathView.scrollTo({ top: 0, behavior: "smooth" }) : 0; window.scrollTo({ top: 0, behavior: "smooth" }); });
+  // экзамен главы (parts.js startExam): открывается, когда пройдены все уровни главы
+  const ex = document.getElementById("p-exam");
+  if (ex) ex.onclick = () => {
+    if (ex.classList.contains("locked")) { showToast(`Экзамен откроется, когда пройдёшь все ${ch.levels.length} уровней`); vibrate("warning"); return; }
+    if (window.startExam) startExam(ch);
+  };
   document.getElementById("p-quest").onclick = () => {
     if (!allDone) { showToast(`Пройди все ${lvl.lessons.length} уроков — и квест откроется`); vibrate("warning"); return; }
     startQuest(lvl.quest);

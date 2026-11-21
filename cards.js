@@ -236,7 +236,8 @@
     document.getElementById("cd-say").onclick = sayIt;
     document.getElementById("cd-pair").onclick = (e) => { if (e.target.id !== "cd-say") sayIt(); };
     setTimeout(sayIt, 350);
-    document.getElementById("cd-go").onclick = () => { playSound("pop"); vibrate("light"); goNext(); };
+    // двойное нажатие не должно пропускать следующее задание
+    document.getElementById("cd-go").onclick = function () { if (this.disabled) return; this.disabled = true; playSound("pop"); vibrate("light"); goNext(); };
   };
 
   // ---------- Конец части ----------

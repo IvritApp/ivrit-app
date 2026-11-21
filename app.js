@@ -433,7 +433,8 @@ function startLesson(id) {
   const given = typeof id === "object" && id ? id : null;
   if (given) id = given.id;
   // сердечки кончились — урок не начинаем (тренировка и повторение — можно)
-  if (window.Hearts && !(given && (given.practice || given.review)) && Hearts.n() <= 0) { Hearts.outModal(); return; }
+  // (части «знакомство» 0–1 сердечки не тратят — туда пускаем и с нулём)
+  if (window.Hearts && !(given && (given.practice || given.review || given.part === 0 || given.part === 1)) && Hearts.n() <= 0) { Hearts.outModal(); return; }
   stopHomeBird();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "lesson");
   if (tg && tg.BackButton) tg.BackButton.show();
@@ -461,6 +462,8 @@ function startLesson(id) {
 
 // --- 2. Показываем текущее задание (с плавной сменой) ---
 function showStep() {
+  if (lessonView.hidden) return;                                     // ушли из урока, а таймер ещё сработал
+  document.body.classList.add("in-lesson");                          // место снизу под кнопку «ПРОВЕРИТЬ» (без :has — для старых телефонов)
   bar.style.width = (step / queue.length * 100) + "%";
 
   if (step >= queue.length) { showFinish(); return; }
@@ -511,16 +514,18 @@ let hostTimer = null;
 function hostAct(name, ms) {
   const f = document.querySelector(".host-fig");
   if (!f) return;
-  f.className = "host-fig act-" + name;
+  // меняем только класс действия act-*, остальные (например ci-host у друга-картинки) не трогаем
+  const clear = () => [...f.classList].filter(c => c.startsWith("act-")).forEach(c => f.classList.remove(c));
+  clear(); f.classList.add("act-" + name);
   clearTimeout(f._t);
-  f._t = setTimeout(() => { f.className = "host-fig"; }, ms || 1400);
+  f._t = setTimeout(clear, ms || 1400);
 }
 function hostIdle() {
   clearInterval(hostTimer);
   hostTimer = setInterval(() => {
     const f = document.querySelector(".host-fig");
     if (!f || document.getElementById("lesson").hidden) return;
-    if (f.className !== "host-fig") return;                  // уже что-то делает
+    if ([...f.classList].some(c => c.startsWith("act-"))) return;   // уже что-то делает
     const acts = [["wave", 1700], ["eat", 2600], ["think", 1800], ["thumb", 1400], ["eat", 2600]];
     const [n, ms] = acts[Math.floor(Math.random() * acts.length)];
     hostAct(n, ms);
@@ -533,8 +538,9 @@ function hostHTML(title, inner) {
   const fig = window.friendFigureSVG ? window.friendFigureSVG(profile ? profile.gender : "m") : "";
   setTimeout(() => hostAct("talk", 1300), 60);   // говорит — жестикулирует и открывает рот
   hostIdle();
+  const isImg = fig.indexOf('class="ci') >= 0;                // друг-картинка (chars.js) — свой размер, без шаурмы в руке
   return `<h2 class="ex-title">${title}</h2>` + (inner ? `<div class="host">
-      <div class="host-fig">${fig}<img class="host-food" src="assets/gift-shawarma.png" alt=""></div>
+      <div class="host-fig${isImg ? " ci-host" : ""}">${fig}${isImg ? "" : `<img class="host-food" src="assets/gift-shawarma.png" alt="">`}</div>
       <div class="host-bubble">${inner}</div>
     </div>` : "");
 }
@@ -560,10 +566,16 @@ function pickable(box, go) {
   });
 }
 
+// отвлекающие варианты: не совпадают с ответом и между собой (ни переводом, ни ивритом)
+function distractors(word, n) {
+  const seen = new Set([word.ru, word.he]), out = [];
+  shuffle(lesson.words.filter(w => w !== word)).forEach(w => { if (out.length < n && !seen.has(w.ru) && !seen.has(w.he)) { seen.add(w.ru); seen.add(w.he); out.push(w); } });
+  return out;
+}
+
 function showChooseTranslation(ex) {
   const word = lesson.words[ex.word];
-  const others = lesson.words.filter(w => w !== word);
-  const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
+  const options = shuffle([word, ...distractors(word, 3)]);
 
   screen.innerHTML = hostHTML(TASK.tr, `
       <div class="word" dir="rtl">${word.he}</div>
@@ -592,8 +604,7 @@ function showChooseTranslation(ex) {
 // --- Мини-игра «Как это на иврите?» (обратное направление: русское слово → выбрать иврит) ---
 function showChooseHebrew(ex) {
   const word = lesson.words[ex.word];
-  const others = lesson.words.filter(w => w !== word);
-  const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
+  const options = shuffle([word, ...distractors(word, 3)]);
 
   const pic = typeof wordIcon === "function" ? wordIcon(word, 72) : "";
   screen.innerHTML = hostHTML(TASK.he, `${pic ? `<div class="q-pic">${pic}</div>` : ""}<div class="q-ru">${word.ru}</div>`) + `
@@ -640,8 +651,7 @@ function setNoListen(on) {
 
 function showListen(ex) {
   const word = lesson.words[ex.word];
-  const others = lesson.words.filter(w => w !== word && w.ru !== word.ru);
-  const options = shuffle([word, ...shuffle(others).slice(0, 3)]);
+  const options = shuffle([word, ...distractors(word, 3)]);
   screen.innerHTML = hostHTML(TASK.listen, `
       <button class="listen big" id="listen" aria-label="Послушать">🔊</button>
       <div class="word reveal" dir="rtl" id="reveal" hidden>${word.he}</div>`) + `
@@ -715,8 +725,11 @@ function showBuildPhrase(ex) {
 // --- «Найди пары»: иврит слева, перевод справа ---
 function showMatchPairs(ex) {
   const seen = new Set();
-  const pairs = shuffle(lesson.words.slice(0, lesson.newCount || lesson.words.length)).concat(shuffle(lesson.words))
-    .filter(w => !seen.has(w.ru) && seen.add(w.ru)).slice(0, 4);   // сначала новые слова урока
+  // сначала новые слова урока; в частях «знакомство» (1–2) — только уже показанные слова (их может быть 3)
+  const nPairs = lesson.part === 0 || lesson.part === 1 ? Math.max(2, Math.min(4, lesson.newCount || 4)) : 4;
+  const pairs = shuffle(lesson.words.slice(0, lesson.newCount || lesson.words.length))
+    .concat(lesson.part === 0 || lesson.part === 1 ? [] : shuffle(lesson.words))
+    .filter(w => !seen.has(w.ru) && !seen.has(w.he) && seen.add(w.ru) && seen.add(w.he)).slice(0, nPairs);
   screen.innerHTML = hostHTML(TASK.match, "") + `
     <div class="match">
       <div class="match-col" id="mHe"></div>
@@ -782,11 +795,14 @@ function showBlitz(ex) {
       ring = HAnim.play("blitz", { el: document.getElementById("blRing"), seconds: BLITZ_SEC, onPeak: () => playSound("pop") });
     }
     const timer = setInterval(() => {
+      // вышли из урока (✕ или «Назад») — блиц останавливается и ничего не засчитывает
+      if (!box.isConnected || lessonView.hidden) { over = true; clearInterval(timer); if (ring && ring.stop) ring.stop(); return; }
       left--; document.getElementById("blTime").textContent = left;
       if (left <= 5) document.getElementById("blTime").classList.add("hot");
       if (left <= 0) finish();
     }, 1000);
     const next = () => {
+      if (over) return;                                    // блиц уже закончился (или вышли из урока)
       let w; do { w = random(pool); } while (pool.length > 1 && w === last);
       last = w;
       const wrong = random(pool.filter(x => x !== w));
@@ -824,6 +840,7 @@ function showBlitz(ex) {
 
 // --- 3. Проверяем ответ ---
 function checkAnswer(btn, isRight, ex, word, wrongDetail) {
+  if (lessonView.hidden) return;                                     // ответ «из прошлого» (таймер), а урока уже нет на экране
   document.querySelectorAll(".ex-bottom").forEach(e => e.remove());   // кнопка «ПРОВЕРИТЬ» уступает место плашке
   if (!isRight && window.Hearts) Hearts.lose();                      // ошибка — минус сердечко
   const all = document.querySelectorAll(".option");
@@ -895,6 +912,9 @@ function showFeedback(good, title, detail) {
 }
 function hideFeedback() { feedback.classList.remove("show"); const b = document.querySelector(".ha-banner"); if (b) b.remove();
   document.querySelectorAll(".ex-bottom").forEach(e => e.remove()); }
+// отступ снизу под «ПРОВЕРИТЬ» — только пока урок на экране (следим только за атрибутом hidden у #lesson)
+new MutationObserver(() => document.body.classList.toggle("in-lesson", !lessonView.hidden))
+  .observe(lessonView, { attributes: true, attributeFilter: ["hidden"] });
 // Флажок «пожаловаться» на плашке: запоминаем задание (уходит на сервер вместе с прогрессом — потом можно посмотреть)
 function reportTask() {
   const ex = queue[step] || {}, list = store.get("reports", []);
@@ -1017,7 +1037,7 @@ function showFinish() {
         ${window.HAnim ? `<div class="bird" id="finBird"></div>` : `<img class="bird" src="assets/udod.png" alt="Удод">`}
       </div>
 
-      <h2 class="done${perfect ? " gold" : ""}">${partTitle ? (perfect ? partTitle.replace("!", " без ошибок! ⭐") : partTitle) : pr.gold ? "Идеальный урок! 🏆" : perfect ? "Без единой ошибки! ⭐" : "Урок пройден!"}</h2>
+      <h2 class="done${perfect ? " gold" : ""}">${String(lesson.id).startsWith("exam-") ? `${lesson.title} сдан! 🎓` : partTitle ?(perfect ? partTitle.replace("!", " без ошибок! ⭐") : partTitle) : pr.gold ? "Идеальный урок! 🏆" : perfect ? "Без единой ошибки! ⭐" : "Урок пройден!"}</h2>
       <p class="task">«${lesson.title}» · Ошибок: ${mistakes}</p>
       ${isPart ? `<div class="part-dots">${Array.from({ length: lesson.partsTotal }, (_, i) => `<i class="${i <= lesson.part || i < partsDoneOf(lesson.id, lesson.partsTotal) ? "on" : ""}${i === lesson.part ? " now" : ""}"></i>`).join("")}</div>` : ""}
       ${pr.gold ? `<div class="perfect-badge">Все части без единой ошибки — урок стал <b>золотым</b>, очки <b>×2</b></div>`
@@ -1042,16 +1062,18 @@ function showFinish() {
   screen.classList.remove("slide-out");
   screen.classList.add("slide-in");
   const finNext = document.getElementById("finNext"), finAgain = document.getElementById("finAgain");
-  const lid = lesson.id, lpart = lesson.part, lpractice = !!lesson.practice;
+  const lid = lesson.id, lpart = lesson.part, lpractice = !!lesson.practice, lexam = String(lesson.id).startsWith("exam-");
   if (finNext) finNext.onclick = () => startLessonPart(lid, pr.next);
-  if (finAgain) finAgain.onclick = () => lpractice ? showPath() : isPart ? startLessonPart(lid, lpart) : startLesson(lid);
-  if (finAgain && lpractice) finAgain.textContent = "На дорожку";
+  // ещё раз: часть урока — та же часть; экзамен — собрать заново; обычный урок — по файлу
+  if (finAgain) finAgain.onclick = () => isPart ? startLessonPart(lid, lpart)
+    : lexam && window.startExam && course ? startExam(course.chapters[0]) : startLesson(lid);
+  if (finAgain && lpractice) finAgain.remove();                      // в тренировке хватит одной кнопки «Дальше»
   setTimeout(() => playSound("finish"), 900);   // фанфара — когда удод сел на ветку
   // Праздник (anim.js): Хибри ликует на весь экран → «идеальный урок ×2» → экран серии дня
   if (window.HAnim) {
     const fb = document.getElementById("finBird");
     if (fb) { const m = HAnim.mascot(fb, "idle", { size: 120 }); setTimeout(() => { if (fb.isConnected) m.set("happy", { size: 120 }); }, 2300); }
-    HAnim.play("lessonEnd", { cards: false, title: partTitle || (pr.gold ? "Идеальный урок!" : "Урок пройден!") })
+    HAnim.play("lessonEnd", { cards: false, title: String(lesson.id).startsWith("exam-") ? lesson.title + " сдан!" : partTitle || (pr.gold ? "Идеальный урок!" : "Урок пройден!") })
       .then(() => perfect ? HAnim.play("perfect", { xp: lessonPoints / 2, onPeak: () => playSound("combo") }) : null)
       .then(() => { window.streakHold = false; return window.streakShow ? streakShow() : null; })
       .catch(() => { window.streakHold = false; });

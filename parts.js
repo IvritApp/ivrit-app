@@ -181,6 +181,34 @@
   };
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
+  // ---------- ЭКЗАМЕН ГЛАВЫ (21.11): 40 заданий (~15 минут) по словам и фразам всей главы, можно поймать огонь 15х ----------
+  // id урока "exam-<глава>" (в done после сдачи). Слова — по 3 с каждого уровня, фразы — по одной.
+  window.startExam = function (ch) {
+    const ids = [].concat(...ch.levels.map(l => l.lessons || []));
+    Promise.all(ids.map(id => getLesson(id).catch(() => null))).then(all => {
+      const byLvl = ch.levels.map(l => all.filter((d, i) => d && (l.lessons || []).includes(ids[i])));
+      const words = [], phrases = [], seen = new Set();
+      byLvl.forEach(list => {
+        const pool = shuf([].concat(...list.map(d => d.words.slice(0, d.newCount || d.words.length))));
+        pool.filter(w => !seen.has(w.he) && seen.add(w.he)).slice(0, 3).forEach(w => words.push(w));
+        const ph = shuf([].concat(...list.map(d => d.phrases || [])));
+        if (ph[0]) phrases.push(ph[0]);
+      });
+      const W = shuf(words).slice(0, 28), P = shuf(phrases).slice(0, 9);
+      if (W.length < 4) { showToast("Не получилось собрать экзамен — проверь интернет 😕"); return; }
+      const T = ["choose_translation", "listen", "choose_hebrew", "build_phrase", "choose_translation", "listen", "match_pairs", "choose_hebrew",
+        "build_phrase", "listen", "choose_translation", "choose_hebrew", "build_phrase", "blitz", "listen", "choose_hebrew",
+        "choose_translation", "build_phrase", "match_pairs", "listen",
+        "choose_hebrew", "build_phrase", "listen", "choose_translation", "match_pairs", "choose_hebrew", "build_phrase", "listen",
+        "choose_translation", "choose_hebrew", "blitz", "build_phrase", "listen", "choose_translation", "match_pairs", "choose_hebrew",
+        "build_phrase", "listen", "choose_translation", "build_phrase"];
+      let wi = 0, pi = 0;
+      const ex = T.map(t => t === "build_phrase" ? (P.length ? { type: t, phrase: (pi++) % P.length } : { type: "choose_hebrew", word: (wi++) % W.length })
+        : t === "match_pairs" || t === "blitz" ? { type: t } : { type: t, word: (wi++) % W.length });
+      startLesson({ id: "exam-" + ch.id, level: ch.id, title: ch.exam.title, words: W, newCount: W.length, phrases: P, exercises: ex, exam: true });
+    }).catch(() => showToast("Не получилось собрать экзамен 😕"));
+  };
+
   // Пройденный урок: выбрать, какую часть повторить
   window.partsPicker = function (id) {
     getLesson(id).then(data => {

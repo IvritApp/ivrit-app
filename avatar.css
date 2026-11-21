@@ -73,3 +73,29 @@
 .act-cheer .hb-avatar .hs-head, .av-joy .hb-avatar .hs-head { animation: avHop .45s cubic-bezier(.3, 1.6, .5, 1) 2 !important; }
 @keyframes avHop { 50% { transform: translateY(-7px) rotate(-3deg); } }
 @media (prefers-reduced-motion: reduce) { .hs-person.hb-avatar .hs-head, .talking .hb-avatar .av-mouth, .act-talk .hb-avatar .av-mouth { animation: none !important; } }
+
+/* =====================================================
+   21.11 ПЕРСОНАЖИ-КАРТИНКИ (chars.js): кадры стопкой, виден один
+   ===================================================== */
+.ci { position: relative; height: 100%; aspect-ratio: 282 / 768; margin: 0 auto; transform-origin: 50% 100%; animation: ciBreath 3.4s ease-in-out infinite; }
+.ci-f { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.ci .ci-neutral { opacity: 1; }
+.ci.ci-blinking .ci-neutral { opacity: 0; } .ci.ci-blinking .ci-blink { opacity: 1; }
+/* говорит: рот открывается-закрывается */
+.talking .ci .ci-talk, .act-talk .ci .ci-talk, .ci.talking .ci-talk { animation: ciTalk .34s steps(1) infinite; }
+@keyframes ciTalk { 0% { opacity: 1; } 50% { opacity: 0; } }
+/* радуется / «ой» — свой кадр, остальные прячем */
+.act-cheer .ci .ci-f, .ci.ci-happy .ci-f, .act-oops .ci .ci-f, .ci.ci-oops .ci-f { opacity: 0 !important; animation: none !important; }
+.act-cheer .ci .ci-happy, .ci.ci-happy .ci-happy { opacity: 1 !important; }
+.act-oops .ci .ci-oops, .ci.ci-oops .ci-oops { opacity: 1 !important; }
+.act-cheer .ci { animation: ciHop .5s cubic-bezier(.3, 1.6, .5, 1) 2; }
+@keyframes ciBreath { 50% { transform: scaleY(1.012); } }
+@keyframes ciHop { 50% { transform: translateY(-10px); } }
+/* в уроке: друг-картинка чуть выше, руки-жесты SVG к нему не относятся */
+.host-fig .ci { height: 100%; }
+#screen.ex .host-fig.ci-host { width: 92px; height: 250px; margin-bottom: -10px; }
+.host-fig.ci-host .host-food { display: none; }
+@media (prefers-reduced-motion: reduce) { .ci, .act-cheer .ci { animation: none; } .talking .ci .ci-talk, .act-talk .ci .ci-talk { animation: none; } }
+/* лист B: думает / машет / показывает / слушает / удивлён */
+.act-think .ci .ci-f, .act-wave .ci .ci-f, .ci.ci-think .ci-f, .ci.ci-wave .ci-f, .ci.ci-point .ci-f, .ci.ci-listen .ci-f, .ci.ci-surprised .ci-f { opacity: 0 !important; animation: none !important; }
+.act-think .ci .ci-think, .ci.ci-think .ci-think, .act-wave .ci .ci-wave, .ci.ci-wave .ci-wave, .ci.ci-point .ci-point, .ci.ci-listen .ci-listen, .ci.ci-surprised .ci-surprised { opacity: 1 !important; }

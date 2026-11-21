@@ -146,12 +146,16 @@ body.theme-dark .cd-newtag { background: #2c2450; color: #c7b8ff; }
 /* кольцо из отрезков вокруг кружка урока: 1 отрезок = 1 часть */
 .p-track { position: relative; }
 .p-node { position: relative; }
-.p-ring { position: absolute; left: -13px; top: -13px; width: calc(100% + 26px); height: calc(100% + 26px); pointer-events: none; overflow: visible; }
+/* кольцо по центру «кружок + нижний бортик 6px» (иначе бортик заезжает под кольцо) */
+.p-ring { position: absolute; left: -16px; top: -13px; width: calc(100% + 32px); height: calc(100% + 32px); pointer-events: none; overflow: visible; }
+/* у текущего урока — без старого светлого ореола: его роль играет кольцо частей */
+.p-node.current { box-shadow: 0 6px 0 var(--blue-dark); }
 .p-ring-s { fill: none; stroke: #dfe6ee; stroke-width: 7; stroke-linecap: round; }
 body.theme-dark .p-ring-s { stroke: #2a3546; }
-.p-ring-s.on { stroke: #58cc02; animation: ringIn .5s var(--cd-spring) both; animation-delay: calc(.25s + var(--i) * .08s); }
-.p-ring-s.gold { stroke: #f5b400; animation: ringIn .5s var(--cd-spring) both; animation-delay: calc(.25s + var(--i) * .08s); }
-@keyframes ringIn { from { opacity: 0; stroke-width: 2; } }
+.p-ring-s.on { stroke: #58cc02; animation: ringIn .5s var(--cd-spring) backwards; animation-delay: calc(.25s + var(--i) * .08s); }
+.p-ring-s.gold { stroke: #f5b400; animation: ringIn .5s var(--cd-spring) backwards; animation-delay: calc(.25s + var(--i) * .08s); }
+/* без opacity: если анимация не запустится (свернул Telegram), кольцо всё равно видно */
+@keyframes ringIn { from { stroke-width: 2; } }
 .p-node.locked .p-ring-s { opacity: .6; }
 .p-node.current { animation: none; }
 .p-node-wrap.cur .p-node.current { animation: nodeBreath 2.2s ease-in-out infinite; }
@@ -202,3 +206,6 @@ body.theme-dark .cd-pair-he b { color: #8cc4f5; }
 @keyframes cdPing { 40% { transform: scale(1.18); } }
 .cd-pair-tip { margin: 14px 0 0; font-size: 14px; color: var(--hint); }
 @media (max-width: 360px) { .cd-pair-row { grid-template-columns: 1fr; } .cd-pair-eq { display: none; } }
+
+/* подпись под кружком — ниже кольца */
+.p-node-wrap .p-label { margin-top: 20px; }

@@ -3,7 +3,7 @@
    ✕ + полоска + ❤️ сверху · задание крупно · друг с облачком · крупные кнопки внизу · «ПРОВЕРИТЬ» под пальцем
    ===================================================== */
 #lesson .topbar { margin-bottom: 14px; gap: 12px; }
-.ex-close { flex: none; width: 34px; height: 34px; border: none; background: none; color: #a7b3c0; font-size: 24px; font-weight: 700;
+.ex-close { flex: none; width: 44px; height: 44px; margin: -5px 0 -5px -6px; border: none; background: none; color: #a7b3c0; font-size: 24px; font-weight: 700;
   line-height: 1; cursor: pointer; border-radius: 10px; padding: 0; }
 .ex-close:active { background: var(--soft); }
 .hearts { flex: none; display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 18px; color: #ff4b4b; min-width: 42px; }
@@ -16,7 +16,7 @@
 /* высота = экран − отступ сверху − шапка − кнопка «ПРОВЕРИТЬ» (≈100px) — чтобы варианты не уходили под кнопку */
 #screen.ex { display: flex; flex-direction: column; min-height: calc(100vh - 190px); min-height: calc(100dvh - 190px); text-align: left; }
 #lesson { padding-bottom: 0; }
-body:has(#lesson:not([hidden])) { padding-bottom: 110px; }
+body.in-lesson { padding-bottom: 110px; }   /* класс ставит showStep (app.js) — без :has для старых телефонов */
 .ex-title { margin: 2px 0 12px; font-size: 24px; font-weight: 800; line-height: 1.2; color: var(--text); animation: moRise .35s cubic-bezier(.22,1,.36,1) both; }
 #screen.ex .host { margin: 0 0 12px; align-items: center; }
 #screen.ex .host-fig { width: 84px; height: 168px; }
@@ -68,3 +68,46 @@ body.theme-dark .ex-check:disabled { background: #263142; color: #66758a; border
 .ex-leave { color: #e5484d !important; }
 
 @media (prefers-reduced-motion: reduce) { .ex-bottom, .ex-title, .ho-heart, .hearts.lost svg { animation: none; } }
+
+/* =====================================================
+   21.11 КВЕСТЫ «ДЛЯ ТУПЫХ»: цель, шкала шагов, перевод сразу, ответы с переводом, «скажи вслух» по желанию,
+   подсказка мини-игры крупно сверху
+   ===================================================== */
+.q-goal { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 6px 0 2px; animation: moRise .4s cubic-bezier(.22,1,.36,1) both; }
+.q-goal-k { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #ef7b2a; }
+.q-goal-t { font-size: 22px; font-weight: 800; line-height: 1.25; color: var(--text); }
+.q-goal-s { font-size: 14px; color: #6b7889; }
+.q-goal-go { margin-top: 6px !important; font-size: 18px !important; font-weight: 900 !important; padding: 15px !important; background: #58cc02 !important; border-bottom: 5px solid #46a302 !important; }
+.q-prog { position: absolute; z-index: 26; top: 12px; left: 12px; right: 140px; display: flex; gap: 4px; pointer-events: none; }
+.q-prog i { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.75); box-shadow: inset 0 0 0 1px rgba(30,60,110,.15); }
+.q-prog i.on { background: #58cc02; box-shadow: none; }
+.q-prog i.now { background: #ffcf3f; box-shadow: none; animation: qNow 1.2s ease-in-out infinite; }
+@keyframes qNow { 50% { opacity: .55; } }
+.q-ru-line { font-size: 15px !important; color: #5f6e82 !important; margin-top: 2px; }
+.q-opt { flex-wrap: wrap; row-gap: 2px; }
+.q-opt-ru { flex-basis: 100%; font-size: 14px; color: #6b7889; font-weight: 500; }
+.q-opt.right .q-opt-ru { color: inherit; }
+.q-aloud { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; animation: moRise .35s cubic-bezier(.22,1,.36,1) both; }
+.q-say-k { font-size: 15px; font-weight: 800; color: #3a8ad6; }
+.q-say-he { font-size: 30px; font-weight: 600; color: var(--text); }
+.q-say-tr { font-size: 15px; color: #6b7889; margin-bottom: 4px; }
+.q-mic.ok { background: #58cc02; box-shadow: 0 4px 0 #46a302; }
+.q-say-skip { border: 0; background: none; color: #6b7889; font: 600 15px Arial, sans-serif; padding: 10px; cursor: pointer; }
+.q-say-skip.big { color: #fff; background: #58cc02; border-radius: 14px; padding: 12px 20px; box-shadow: 0 4px 0 #46a302; font-weight: 800; }
+/* подсказка мини-игры — крупно сверху, а не мелко внизу */
+.gm .gm-how { order: -1; margin: 0 0 4px !important; padding: 10px 14px; border-radius: 14px; font-size: 17px; font-weight: 800; line-height: 1.3;
+  opacity: 1 !important; color: #1b2533 !important; background: rgba(255,255,255,.94); box-shadow: 0 4px 14px rgba(0,0,0,.12); width: 100%; max-width: 440px; }
+.gm .gm-how::before { content: "👉 "; }
+
+/* 21.11 экзамен главы на дорожке */
+button.p-exam { width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; }
+button.p-exam.open { background: linear-gradient(135deg, #ffe7a8, #ffd166); color: #6b4a00; box-shadow: 0 4px 0 #e0a400; animation: nodeBreath 2.4s ease-in-out infinite; }
+button.p-exam.locked { opacity: .75; }
+
+/* 21.11 новичок: без медалей и правил «золотого уровня», пока не пройден ни один урок */
+#path.p-fresh .p-medals, #path.p-fresh .p-level-hint { display: none; }
+
+/* низкие экраны (≤700px): друг-картинка меньше, чтобы все варианты помещались без прокрутки */
+@media (max-height: 700px) { #screen.ex .host-fig.ci-host { height: 170px; width: 64px; } #screen.ex .ex-title { font-size: 21px; margin-bottom: 8px; } }
+
+body.theme-dark .q-goal-s { color: #9aa7b8; }

@@ -180,8 +180,7 @@
         }
       ],
       "exam": {
-        "title": "Экзамен A1",
-        "soon": true
+        "title": "Экзамен A1"
       },
       "next": "A2"
     }

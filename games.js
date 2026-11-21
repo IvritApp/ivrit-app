@@ -54,13 +54,19 @@
     }, 900);
   }
   // произнести и показать фразу (кнопка 🔊 и «перевод»)
-  function line(who, x, cls) {
+  // hideRu = true — в играх «пойми иврит» (план, врач, рецепт, начальник): перевод только по кнопке, иначе ответ виден сразу
+  function line(who, x, cls, hideRu) {
     const id = "gl" + Math.floor(Math.random() * 1e6);
     const he = g(x.he);
+    const say = `<button class="gm-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊 Ещё раз</button>`;
+    const ruBtn = x.ru && hideRu ? `<button class="gm-tool" onclick="event.stopPropagation();document.getElementById('${id}').hidden=false;this.remove()">Перевод</button>` : "";
+    // 21.11: в диалогах перевод виден сразу (для новичка)
     return `<div class="gm-line ${cls || ""}">${who ? `<b class="gm-who">${who}</b>` : ""}<div class="he" dir="rtl">${he}</div>${x.tr ? `<div class="tr">${g(x.tr)}</div>` : ""}
-      <div class="gm-tools"><button class="gm-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊</button>${x.ru ? `<button class="gm-tool" onclick="event.stopPropagation();document.getElementById('${id}').hidden=false;this.remove()">Перевод</button>` : ""}</div>
-      ${x.ru ? `<div class="ru" id="${id}" hidden>${g(x.ru)}</div>` : ""}</div>`;
+      ${x.ru ? `<div class="ru q-ru-line" id="${id}"${hideRu ? " hidden" : ""}>${g(x.ru)}</div>` : ""}
+      <div class="gm-tools">${say}${ruBtn}</div></div>`;
   }
+  // «21 шекель», «22 шекеля», «25 шекелей»
+  function shekels(n) { const a = n % 10, b = n % 100; return n + (a === 1 && b !== 11 ? " шекель" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? " шекеля" : " шекелей"); }
   // ---------- перетаскивание пальцем (и запасной способ: нажал предмет → нажал место) ----------
   function dragKit(root, onDrop) {
     let sel = null, ghost = null, start = null, moved = false;
@@ -155,7 +161,7 @@
       <div class="pl2-plan">${c.rooms.map(r => `<div class="pl2-room r-${r.id}" data-drop="${r.id}"><span class="pl2-name">${heTxt(r)}</span><div class="pl2-in"></div></div>`).join("")}</div>
       <div class="pl2-tray">${c.items.map(x => `<div class="pl2-item" data-drag="${x.id}">${ICON(x.id, 46)}</div>`).join("")}</div>
       <div class="gm-how">Тащи мебель в нужную комнату</div>`;
-    const ask = () => { const s = c.steps[k]; B.querySelector(".pl2-say").innerHTML = line(friendName(), s); speak(g(s.he)); };
+    const ask = () => { const s = c.steps[k]; B.querySelector(".pl2-say").innerHTML = line(friendName(), s, "", true); speak(g(s.he)); };
     ask();
     dragKit(B, (it, t) => {
       if (token !== stageToken) return;
@@ -247,7 +253,7 @@
       const need = c.need.find(x => x.id === s.id);
       if (!need || bought) { deal.innerHTML = need ? "" : `<div class="hg-skip">Этого нет в списке — листай дальше</div>`; return; }
       const steps = Object.keys(NUM).map(Number).filter(n => n <= s.price && n >= Math.floor(s.price / 3));
-      deal.innerHTML = `<div class="hg-seller">${line("Продавец", { he: `${NUM[s.price] ? NUM[s.price][0] : s.price} שְׁקָלִים!`, tr: `${NUM[s.price] ? NUM[s.price][1] : s.price} шкалим!`, ru: `${s.price} шекелей!` })}</div>
+      deal.innerHTML = `<div class="hg-seller">${line("Продавец", { he: `${NUM[s.price] ? NUM[s.price][0] : s.price} שְׁקָלִים!`, tr: `${NUM[s.price] ? NUM[s.price][1] : s.price} шкалим!`, ru: `${shekels(s.price)}!` })}</div>
         <div class="hg-offer"><input type="range" id="hgR2" min="0" max="${steps.length - 1}" value="${steps.length - 1}" step="1"><div class="hg-val" id="hgV"></div></div>
         <button class="gm-btn" id="hgGo">🤝 Предложить</button>`;
       const r = deal.querySelector("#hgR2"), v = deal.querySelector("#hgV");
@@ -296,7 +302,7 @@
     const Z = { head: [30, 1, 40, 14], ear: [64, 10, 12, 8], eye: [36, 9, 28, 6], throat: [40, 22, 20, 7], belly: [32, 40, 36, 14], hand: [6, 44, 18, 12], leg: [30, 66, 40, 30], back: [26, 28, 48, 12], nose: [44, 13, 12, 5] };
     B.innerHTML = `<div class="bd-say"></div><div class="bd-fig">${sv}${c.parts.map(p => { const z = Z[p.id] || [0, 0, 0, 0]; return `<div class="bd-zone" data-id="${p.id}" style="left:${z[0]}%;top:${z[1]}%;width:${z[2]}%;height:${z[3]}%"></div>`; }).join("")}</div>
       <div class="gm-how">Нажми на себе, где болит</div>`;
-    const ask = () => { const s = c.parts[k]; B.querySelector(".bd-say").innerHTML = line(stage.hostName || "Врач", s); speak(g(s.he)); };
+    const ask = () => { const s = c.parts[k]; B.querySelector(".bd-say").innerHTML = line(stage.hostName || "Врач", s, "", true); speak(g(s.he)); };
     ask();
     B.querySelectorAll(".bd-zone").forEach(z => z.onclick = () => {
       if (token !== stageToken) return;
@@ -318,7 +324,7 @@
     const B = el.querySelector(".gm-body");
     const slots = [{ id: "m", he: "בֹּקֶר", tr: "бокер", e: "🌅" }, { id: "d", he: "צָהֳרַיִם", tr: "цохораим", e: "☀️" }, { id: "e", he: "עֶרֶב", tr: "эрев", e: "🌙" }];
     const put = { m: 0, d: 0, e: 0 };
-    B.innerHTML = `<div class="pi-rx"><div class="pi-rx-h">℞ מִרְשָׁם · рецепт</div>${line("", c.rx)}</div>
+    B.innerHTML = `<div class="pi-rx"><div class="pi-rx-h">℞ מִרְשָׁם · рецепт</div>${line("", c.rx, "", true)}</div>
       <div class="pi-box">${slots.map(s => `<div class="pi-slot" data-drop="${s.id}"><span class="pi-e">${s.e}</span>${heTxt(s)}<div class="pi-in"></div></div>`).join("")}</div>
       <div class="pi-tray">${Array.from({ length: 4 }, (_, i) => `<div class="pi-pill" data-drag="p${i}">💊</div>`).join("")}</div>
       <div class="pi-bar"><button class="gm-btn ghost" id="piReset">↺ Заново</button><button class="gm-btn" id="piOk">Готово ✓</button></div>`;
@@ -351,7 +357,7 @@
     const msgs = B.querySelector("#dkMsgs"), bar = B.querySelector("#dkT");
     const say = () => {
       const s = c.tasks[k];
-      msgs.insertAdjacentHTML("beforeend", `<div class="dk-msg">${line("", s)}</div>`);
+      msgs.insertAdjacentHTML("beforeend", `<div class="dk-msg">${line("", s, "", true)}</div>`);
       msgs.scrollTop = 1e6;
       speak(g(s.he));
       t0 = Date.now();
