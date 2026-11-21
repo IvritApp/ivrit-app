@@ -98,7 +98,7 @@
   document.getElementById("rndBig").onclick = function () { var s = rnd("epic"); run({ kind: "big", steps: s, reward: rewFor(s[s.length - 1]) }); };
 
   document.getElementById("rm").onchange = function () { if (window.HAnim) HAnim.setReduced(this.checked); };
-  window.addEventListener("hanim:peak", function (e) { if (e.detail && e.detail.chest) say("🔊 hanim:peak · " + e.detail.rarity); });
+  window.addEventListener("hanim:peak", function (e) { if (e.detail && e.detail.chest) say("🔊 hanim:peak · " + e.detail.rarity + " · " + (e.detail.mode === "img" ? "картинки" : "SVG")); });
 })();
 </script>
 </body>

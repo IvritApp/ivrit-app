@@ -6,6 +6,10 @@
  *   («Уровень повышен!»), иначе через 1–2 касания сундук раскрывается и показывает награду.
  *   Promise выполняется, когда игрок нажал «Забрать».
  * Ещё: ChestFX.RARITY (имена и цвета), ChestFX.label(reward) → «+35 бурекасов», ChestFX.ORDER.
+ * КАРТИНКИ (3D): assets/items/chest_<rarity>_closed|open.webp, cur_bur, cur_gem, rw_hearts, rw_freeze, rw_plus,
+ *   rw_nick_coupon, badge_<…> (скин с id badge_*). Перед показом проверяется, есть ли файлы (кэш на сессию, ждём ≤0,9 с);
+ *   есть все кадры сундука → <img> (кроссфейд при повышении, closed → open при раскрытии), иначе — SVG; награда так же.
+ *   ChestFX.preload() — заранее прогреть все картинки (например, при входе в «Сундуки»). ChestFX.src(name) можно подменить.
  * Звук: в момент раскрытия window событие "hanim:peak" с detail {rarity, chest:true}.
  * Хибри (HAnim.mascot) — только на эпическом и выше; на легендарном салют и конфетти (HAnim.confetti).
  */
@@ -120,6 +124,50 @@
       "</svg>";
   }
 
+  /* ───────── картинки (3D от Codex): assets/items/<имя>.webp; нет файла → SVG/эмодзи ───────── */
+  var PROBE = {};                                  /* url → Promise(url|null), кэш на всю сессию */
+  function probe(name) {
+    var url = W.ChestFX.src(name);
+    if (!PROBE[url]) PROBE[url] = new Promise(function (res) {
+      var im = new Image();
+      im.onload = function () { res(im.naturalWidth ? url : null); };
+      im.onerror = function () { res(null); };
+      im.src = url;
+    });
+    return PROBE[url];
+  }
+  function upTo(p, ms) { return Promise.race([p, new Promise(function (r) { setTimeout(function () { r(null); }, ms); })]); }
+  var RW_IMG = { bur: "cur_bur", gems: "cur_gem", hearts: "rw_hearts", freeze: "rw_freeze", plus: "rw_plus", nick_coupon: "rw_nick_coupon" };
+  function rewardImg(rw) {
+    rw = rw || {};
+    var it = rw.item || {};
+    if (rw.type === "skin") return /^badge_/.test(it.id || "") ? it.id : null;   /* рамки и цвета ника — как раньше */
+    return RW_IMG[rw.type] || null;
+  }
+  /* что из картинок есть для этого сундука: {closed:{rarity:url}, open:url, reward:url} */
+  function prepare(steps, reward) {
+    var last = steps[steps.length - 1];
+    var names = steps.map(function (r) { return "chest_" + r + "_closed"; }).concat(["chest_" + last + "_open"]);
+    var rn = rewardImg(reward);
+    if (rn) names.push(rn);
+    return Promise.all(names.map(function (n) { return upTo(probe(n), 900); })).then(function (urls) {
+      var pics = { reward: rn ? urls[urls.length - 1] : null };
+      var chest = urls.slice(0, steps.length + 1);
+      if (chest.every(Boolean)) {                  /* только если есть ВСЕ кадры этого сундука — без смеси стилей */
+        pics.closed = {};
+        steps.forEach(function (r, j) { pics.closed[r] = chest[j]; });
+        pics.open = chest[steps.length];
+      }
+      return pics;
+    });
+  }
+  function preload() {
+    var n = [];
+    ORDER.forEach(function (r) { n.push("chest_" + r + "_closed", "chest_" + r + "_open"); });
+    for (var k in RW_IMG) n.push(RW_IMG[k]);
+    return Promise.all(n.map(probe));
+  }
+
   /* ───────── эффекты ───────── */
   function sparks(host, n, o) {
     if (reduced()) return;
@@ -159,9 +207,13 @@
   /* ───────── экран ───────── */
   function play(o) {
     o = o || {};
-    if (active) active.finish();
     var steps = (o.steps || []).filter(function (s) { return RARITY[s]; });
     if (!steps.length) steps = [o.rarity && RARITY[o.rarity] ? o.rarity : "rare"];
+    return prepare(steps, o.reward).catch(function () { return {}; }).then(function (pics) { return show(o, steps, pics); });
+  }
+  function show(o, steps, pics) {
+    if (active) active.finish();
+    var IMG = !!pics.closed;
     var kind = KIND[o.kind] ? o.kind : "chest", reward = o.reward || {}, v = view(reward);
     var RM = reduced(), timers = [], i = 0, topTaps = 0, need = Math.random() < .5 ? 1 : 2, busy = false, phase = "tap", lastTap = 0;
     function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
@@ -174,8 +226,12 @@
         ORDER.map(function (r) { return '<i class="cx-pip" style="--pc:' + RARITY[r].color + '"></i>'; }).join("") + "</div></div>" +
       '<div class="cx-up">⬆ Уровень повышен!</div>' +
       '<div class="cx-stage"><div class="cx-rays"></div><div class="cx-beam"></div>' +
-        '<div class="cx-chest" data-k="' + kind + '"><div class="cx-wrap"><div class="cx-body">' + chestSVG(kind) + "</div></div></div>" +
-        '<div class="cx-reward"><div class="cx-ico">' + (v.frame ? '<span class="cx-frame"></span>' : '<span class="cx-emo">' + v.icon + "</span>") + "</div>" +
+        '<div class="cx-chest' + (IMG ? " cx-imgmode" : "") + '" data-k="' + kind + '"><div class="cx-wrap"><div class="cx-body">' +
+          (IMG ? '<div class="cx-pic"><span class="cx-shadow"></span><img class="cx-im" alt="" draggable="false" src="' + esc(pics.closed[steps[0]]) + '"></div>' : chestSVG(kind)) +
+        "</div></div></div>" +
+        '<div class="cx-reward"><div class="cx-ico">' +
+          (pics.reward ? '<img class="cx-rimg" alt="" draggable="false" src="' + esc(pics.reward) + '">' :
+            v.frame ? '<span class="cx-frame"></span>' : '<span class="cx-emo">' + v.icon + "</span>") + "</div>" +
           '<div class="cx-title">' + (v.n != null ? '<span class="cx-num">+0</span> ' + esc(v.word) : esc(v.title)) + "</div>" +
           (v.sub ? '<div class="cx-sub">' + esc(v.sub) + "</div>" : "") + '<div class="cx-rtag"></div></div>' +
       "</div>" +
@@ -195,6 +251,14 @@
       if (pop) restart(rname, "cx-pop");
     }
     function cols() { var r = RARITY[steps[i]]; return [r.glow, "#ffffff", r.light]; }
+    /* режим картинок: новая картинка ложится сверху и проявляется, старая уходит */
+    function swapPic(url, cls) {
+      var box = q(".cx-pic"); if (!box || !url) return;
+      var olds = box.querySelectorAll(".cx-im");
+      var im = el("img", "cx-im " + cls); im.alt = ""; im.draggable = false; im.src = url;
+      box.appendChild(im);
+      later(function () { for (var j = 0; j < olds.length; j++) olds[j].remove(); }, RM ? 0 : 480);
+    }
     function showBird(mood, opt) {
       if (!W.HAnim || !W.HAnim.mascot) return;
       bird.classList.add("cx-show");
@@ -211,6 +275,7 @@
       var r = steps[i], n = ORDER.indexOf(r);
       hit();
       setRarity(r, true);
+      if (IMG) swapPic(pics.closed[r], "cx-fadein");
       restart(flash, "cx-go"); ring(stage); restart(up, "cx-go");
       rays.classList.add("cx-burst"); later(function () { rays.classList.remove("cx-burst"); }, 520);
       sparks(stage, 16 + n * 4, { colors: cols(), dist: 190 });
@@ -227,10 +292,11 @@
       later(function () {
         restart(flash, "cx-go");
         ov.classList.add("cx-open");
+        if (IMG) swapPic(pics.open, "cx-openin");
         ring(stage);
         sparks(stage, 30 + n * 6, { colors: cols(), dist: 230, lift: -40 });
         vib(n >= 3 ? "heavy" : "success");
-        try { W.dispatchEvent(new CustomEvent("hanim:peak", { detail: { rarity: r, chest: true, kind: kind, reward: reward.type } })); } catch (e) {}
+        try { W.dispatchEvent(new CustomEvent("hanim:peak", { detail: { rarity: r, chest: true, kind: kind, reward: reward.type, mode: IMG ? "img" : "svg" } })); } catch (e) {}
         later(function () { ov.classList.add("cx-shown"); }, RM ? 0 : 200);
         if (v.n != null) later(roll, RM ? 0 : 520);
         if (n >= 2) later(function () { showBird("cheer", { then: "dance" }); }, RM ? 0 : 450);
@@ -314,5 +380,9 @@
     return promise;
   }
 
-  W.ChestFX = { play: play, label: label, RARITY: RARITY, ORDER: ORDER, KIND: KIND };
+  W.ChestFX = {
+    play: play, label: label, preload: preload, RARITY: RARITY, ORDER: ORDER, KIND: KIND,
+    base: "assets/items/",
+    src: function (name) { return W.ChestFX.base + name + ".webp"; }   /* можно подменить (тесты) */
+  };
 })();
