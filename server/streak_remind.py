@@ -70,8 +70,8 @@ def send(token, chat_id, text):
         "chat_id": chat_id, "text": text,
         "reply_markup": {"inline_keyboard": [[{"text": "Пройти урок — 3 минуты", "web_app": {"url": APP_URL}}]]},
     }).encode()
-    req = urllib.request.Request(f"{TG_API}/bot{token}/sendMessage", data=body,
-                                 headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(f"{TG_API}/bot{token}/sendMessage", data=body,      # User-Agent — иначе Cloudflare отвечает 403
+                                 headers={"Content-Type": "application/json", "User-Agent": "HirbisBot/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
             return json.loads(r.read()).get("ok", False), ""

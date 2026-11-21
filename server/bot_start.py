@@ -88,8 +88,9 @@ HELP_TEXT = ("Как это работает:\n\n"
 
 def api(token, method, payload=None, timeout=20):
     body = json.dumps(payload or {}).encode()
+    # User-Agent обязателен: Cloudflare (наш посредник) отвечает 403 на запросы без «имени программы»
     req = urllib.request.Request(f"{TG_API}/bot{token}/{method}", data=body,
-                                 headers={"Content-Type": "application/json"})
+                                 headers={"Content-Type": "application/json", "User-Agent": "HirbisBot/1.0"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())
 

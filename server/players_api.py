@@ -507,7 +507,8 @@ def create_invoice_link(price, payload, title=None, desc=None):
     body = json.dumps({"title": title, "description": desc or "Бесконечные сердечки ❤️ на 30 дней. Учись без остановок!",
                        "payload": payload, "provider_token": "", "currency": "XTR",
                        "prices": [{"label": title, "amount": price}]}).encode()
-    req = urllib.request.Request(f"{tg_api()}/bot{token()}/createInvoiceLink", data=body, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(f"{tg_api()}/bot{token()}/createInvoiceLink", data=body,      # User-Agent — иначе Cloudflare отвечает 403
+                                 headers={"Content-Type": "application/json", "User-Agent": "HirbisBot/1.0"})
     with urllib.request.urlopen(req, timeout=12) as r:
         res = json.loads(r.read())
     return res.get("result") if res.get("ok") else None
