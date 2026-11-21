@@ -27,6 +27,8 @@ APP_URL = os.environ.get("HIRBIS_APP_URL", "https://ivritapp.github.io/ivrit-app
 # From a server in Russia api.telegram.org may be blocked — then put the address of our proxy abroad
 # into /etc/hirbis/tg_api (one line, e.g. https://tg.example.com) or the env var HIRBIS_TG_API.
 def _tg_api():
+    if os.environ.get("HIRBIS_TG_API"):            # the env var wins over the file (tests use a fake Telegram)
+        return os.environ["HIRBIS_TG_API"].rstrip("/")
     try:
         with open("/etc/hirbis/tg_api") as f:
             v = f.read().strip()

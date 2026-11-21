@@ -45,7 +45,10 @@ PROMO_RE = re.compile(r"^[A-Z0-9_-]{3,32}$")
 
 
 def tg_api():
-    """Адрес Telegram Bot API. Из Москвы api.telegram.org недоступен → посредник (Cloudflare Worker) в /etc/hirbis/tg_api."""
+    """Адрес Telegram Bot API. Из Москвы api.telegram.org недоступен → посредник (Cloudflare Worker) в /etc/hirbis/tg_api.
+    Переменная HIRBIS_TG_API важнее файла (так тесты подставляют поддельный Telegram)."""
+    if os.environ.get("HIRBIS_TG_API"):
+        return os.environ["HIRBIS_TG_API"].rstrip("/")
     try:
         with open("/etc/hirbis/tg_api") as f:
             v = f.read().strip()
@@ -535,7 +538,6 @@ CATALOG = {
     "frame_purple":  {"name": "Фиолетовая рамка", "icon": "🟣", "cur": "gems", "price": 120, "slot": "frame"},
     "frame_fire":    {"name": "Огненная рамка", "icon": "🔥", "cur": "gems", "price": 180, "slot": "frame"},
     "frame_gold":    {"name": "Золотая рамка", "icon": "🟡", "cur": "gems", "price": 250, "slot": "frame"},
-    "frame_rainbow": {"name": "Радужная рамка", "icon": "🌈", "cur": "gems", "price": 300, "slot": "frame"},
     "color_blue":    {"name": "Синий ник", "icon": "🔷", "cur": "gems", "price": 30, "slot": "color"},
     "color_purple":  {"name": "Фиолетовый ник", "icon": "🟪", "cur": "gems", "price": 50, "slot": "color"},
     "color_red":     {"name": "Красный ник", "icon": "🟥", "cur": "gems", "price": 70, "slot": "color"},

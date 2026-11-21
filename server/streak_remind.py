@@ -21,6 +21,8 @@ APP_URL = os.environ.get("HIRBIS_APP_URL", "https://ivritapp.github.io/ivrit-app
 MSK = timezone(timedelta(hours=3))
 # api.telegram.org may be blocked from a server in Russia — proxy address abroad goes into /etc/hirbis/tg_api
 def _tg_api():
+    if os.environ.get("HIRBIS_TG_API"):            # переменная важнее файла (тесты)
+        return os.environ["HIRBIS_TG_API"].rstrip("/")
     try:
         with open("/etc/hirbis/tg_api") as f:
             v = f.read().strip()

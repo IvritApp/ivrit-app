@@ -29,7 +29,6 @@
     { id: "frame_purple", kind: "frame", name: "Фиолетовая", price: { gems: 120 } },
     { id: "frame_fire", kind: "frame", name: "Огненная", price: { gems: 180 } },
     { id: "frame_gold", kind: "frame", name: "Золотая", price: { gems: 250 } },
-    { id: "frame_rainbow", kind: "frame", name: "Радужная", price: { gems: 300 } },
     { id: "color_blue", kind: "color", name: "Синий", price: { gems: 30 } },
     { id: "color_purple", kind: "color", name: "Фиолетовый", price: { gems: 50 } },
     { id: "color_red", kind: "color", name: "Красный", price: { gems: 70 } },
@@ -49,13 +48,14 @@
   const PACKS = [{ id: "g100", stars: 50, gems: 100 }, { id: "g350", stars: 150, gems: 350 }, { id: "g1000", stars: 400, gems: 1000 }];
   const BY_ID = Object.fromEntries(CAT.map(x => [x.id, x]));
   const MAX_FREEZES = 2;
+  const HIDDEN = ["frame_rainbow"];             // убрано по решению владельца (21.11) — не показываем, даже если сервер пришлёт
 
   // каталог: с сервера ({id: {name, icon, cur, price, kind?, slot?}} и packs {id: {stars, gems}}) + наши короткие имена; цены сервера главнее
   function catalog() {
     const m = me(), c = m && m.catalog, pk = m && m.packs;
     let items = CAT, packs = PACKS;
     if (c && typeof c === "object" && !Array.isArray(c) && Object.keys(c).length) {
-      items = Object.entries(c).filter(([id, v]) => v && typeof v === "object" && /^[a-z0-9_]{1,32}$/.test(id)).map(([id, v]) => {
+      items = Object.entries(c).filter(([id, v]) => v && typeof v === "object" && /^[a-z0-9_]{1,32}$/.test(id) && !HIDDEN.includes(id)).map(([id, v]) => {
         const base = BY_ID[id] || {};
         const kind = v.slot || (v.kind === "chest" ? "chest" : base.kind || id);
         const price = v.cur && v.price != null ? { [v.cur === "gems" ? "gems" : "bur"]: +v.price } : base.price || {};

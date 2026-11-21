@@ -99,7 +99,6 @@ body.theme-dark .eco-chip.gem b { color: #b79cff; }
 @keyframes skNeon { 50% { box-shadow: 0 0 0 3px #ff3fd0, 0 0 12px #ff3fd0, 0 0 20px #8b5cf6; } }
 .sk-f-frame_fire { box-shadow: 0 0 0 3px #ffb23f, 0 0 0 6px #e5484d, 0 0 16px rgba(255, 122, 47, .8); }
 .sk-f-frame_gold { box-shadow: 0 0 0 4px #f2b630, 0 0 0 6px #fff3c4, 0 0 0 8px #d4961f, 0 0 16px rgba(242, 182, 48, .7); }
-.sk-f-frame_rainbow { box-shadow: 0 0 0 2px #e5484d, 0 0 0 4px #ffb23f, 0 0 0 6px #f2d630, 0 0 0 8px #3cae5c, 0 0 0 10px #3a8ad6, 0 0 0 12px #8b5cf6; }
 .fr-ava[class*="sk-f-"] { margin: 6px; }
 
 /* цвет ника */
