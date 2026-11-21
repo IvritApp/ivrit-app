@@ -104,6 +104,10 @@ def db():
     c.execute("CREATE TABLE IF NOT EXISTS inventory (tg_id INTEGER, item TEXT, at REAL, PRIMARY KEY (tg_id, item))")
     c.execute("CREATE TABLE IF NOT EXISTS equip (tg_id INTEGER PRIMARY KEY, frame TEXT DEFAULT '', color TEXT DEFAULT '', badge TEXT DEFAULT '')")
     c.execute("CREATE TABLE IF NOT EXISTS ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, cur TEXT, delta INTEGER, why TEXT)")
+    # уведомления игроку от администрации (22.11): mood — happy / sad / info
+    c.execute("""CREATE TABLE IF NOT EXISTS notices (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, text TEXT,
+        note TEXT DEFAULT '', mood TEXT DEFAULT 'info', read INTEGER DEFAULT 0)""")
+    c.execute("CREATE INDEX IF NOT EXISTS notices_user ON notices (tg_id, read)")
     if "nick_limit" not in cols:
         c.execute(f"ALTER TABLE players ADD COLUMN nick_limit INTEGER DEFAULT {DEFAULT_NICKS}")
     # перенос старых данных: основной ник каждого игрока → в таблицу ников
@@ -680,6 +684,80 @@ def short_nick_ok(c, uid, h, is_admin):
     return ""
 
 
+# ---------- УВЕДОМЛЕНИЯ ИГРОКУ (22.11): «к сожалению, твой ник передан…», «подписку сняли» и т. п. ----------
+# Хранятся в таблице notices; приходят в каждом ответе me() (поле notices — непрочитанные), телефон показывает окно «📬».
+# Если игрок нажимал «Старт» у бота — то же сообщение уходит и в Telegram (в фоне, после ответа; через посредника tg_api).
+TG_OUTBOX = []                    # (tg_id, text) — отправляется после ответа, без блокировки базы
+TG_OUTBOX_LOCK = threading.Lock()
+
+
+def notify(c, uid, text, mood="info", note=None):
+    note = str(note or "").strip()[:300]
+    c.execute("INSERT INTO notices (tg_id, at, text, note, mood, read) VALUES (?,?,?,?,?,0)", (uid, time.time(), text[:400], note, mood))
+    try:
+        started = c.execute("SELECT 1 FROM bot_started WHERE tg_id=?", (uid,)).fetchone()
+    except sqlite3.OperationalError:              # таблицу создаёт бот; если бота ещё не было — не пишем
+        started = None
+    if started:
+        with TG_OUTBOX_LOCK:
+            TG_OUTBOX.append((uid, "📬 " + text + (f"\n\n💬 {note}" if note else "")))
+
+
+def admin_notices(what):
+    """Что сказать игроку по списку изменений админа. → [(текст, настроение)]"""
+    out = []
+    if "nick.take_from_other" in what:
+        out.append((f"🎉 Тебе передали ник @{what['nick.take_from_other']}!", "happy"))
+    if "nick.add" in what:
+        out.append((f"🎁 Тебе выдали новый ник @{what['nick.add']}!", "happy"))
+    if "nick.remove" in what:
+        out.append((f"К сожалению, ник @{what['nick.remove']} у тебя забрали.", "sad"))
+    if "nick.main" in what:
+        out.append((f"Твой основной ник теперь @{what['nick.main']}.", "info"))
+    if "plus.add_days" in what:
+        d = what["plus.add_days"]
+        out.append((f"✨ Тебе подарили Hirbis Plus на {d} {'день' if d % 10 == 1 and d % 100 != 11 else 'дня' if 2 <= d % 10 <= 4 and not 12 <= d % 100 <= 14 else 'дней'} — сердечки бесконечные!", "happy"))
+    if "plus.remove" in what:
+        out.append(("К сожалению, подписку Hirbis Plus сняли. Сердечки снова считаются.", "sad"))
+    for key, icon, name in (("addBur", "🥐", "бурекасов"), ("addGems", "💎", "хибриллиантов")):
+        if key in what:
+            n = what[key]
+            out.append((f"{icon} Тебе начислили +{n} {name}!", "happy") if n > 0 else (f"К сожалению, у тебя списали {-n} {name}.", "sad"))
+    if "addPoints" in what:
+        n = what["addPoints"]
+        out.append((f"⭐ Тебе начислили +{n} очков!", "happy") if n > 0 else (f"У тебя списали {-n} очков.", "sad"))
+    if any(k.startswith("streak.") for k in what):
+        out.append(("🔥 Администрация поправила твою серию и заморозки.", "info"))
+    if "resetProgress" in what:
+        out.append(("К сожалению, твой прогресс был сброшен администрацией. Начнём заново — ты справишься! 💪", "sad"))
+    if "unban" in what:
+        out.append(("✅ Блокировка снята. С возвращением!", "happy"))
+    if "admin" in what:
+        out.append((("👑 Тебе выдали права администратора." if what["admin"] else "Права администратора сняты."), "info"))
+    if "nickLimit" in what:
+        out.append((f"🏷 Теперь у тебя может быть ников: {what['nickLimit']}.", "info"))
+    return out
+
+
+def tg_send_outbox():
+    """Отправить накопленные уведомления в Telegram (вызывается после ответа клиенту)."""
+    with TG_OUTBOX_LOCK:
+        items = TG_OUTBOX[:]
+        TG_OUTBOX.clear()
+    if not items:
+        return
+    import urllib.request
+    for uid, text in items:
+        try:
+            body = json.dumps({"chat_id": uid, "text": text,
+                               "reply_markup": {"inline_keyboard": [[{"text": "🐦 Открыть Hirbis", "web_app": {"url": "https://ivritapp.github.io/ivrit-app/"}}]]}}).encode()
+            req = urllib.request.Request(f"{tg_api()}/bot{token()}/sendMessage", data=body,
+                                         headers={"Content-Type": "application/json", "User-Agent": "HirbisBot/1.0"})
+            urllib.request.urlopen(req, timeout=10).read()
+        except Exception:
+            pass                                  # игрок заблокировал бота или нет связи — в приложении всё равно увидит
+
+
 class Handler(BaseHTTPRequestHandler):
     def cors(self):
         o = self.headers.get("Origin", "")
@@ -737,6 +815,8 @@ class Handler(BaseHTTPRequestHandler):
                 link = None
             res = (200, {"link": link, "price": inv["price"]} if link else {"error": "Оплата сейчас недоступна. Попробуй позже 🙏"})
         self.send_json(*res)
+        if TG_OUTBOX:                             # уведомления в Telegram — уже после ответа, в фоне
+            threading.Thread(target=tg_send_outbox, daemon=True).start()
 
     # ---------- логика ----------
     def route(self, c, route, user, p):
@@ -770,7 +850,9 @@ class Handler(BaseHTTPRequestHandler):
             rr = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
             return dict({"handle": rr["handle"], "nicks": nicks_of(c, uid), "nick_limit": limit_of(rr),
                          "admin": bool(rr["admin"]), "pin_set": bool(rr["admin"] and rr["admin_pin"]), "tg_id": uid,
-                         "plus_until": plus_until(c, uid)}, **extra)
+                         "plus_until": plus_until(c, uid),
+                         "notices": [dict(x) for x in c.execute("SELECT id, at, text, note, mood FROM notices WHERE tg_id=? AND read=0 ORDER BY id LIMIT 20", (uid,)).fetchall()]},
+                        **extra)
 
         if r["banned_until"] and r["banned_until"] > now and not r["admin"]:
             return 200, me(banned={"until": r["banned_until"], "reason": r["ban_reason"]})
@@ -790,6 +872,12 @@ class Handler(BaseHTTPRequestHandler):
 
         if route == "/hapi/reset":
             return 200, me(ver=self.save(c, uid, {}, r["ver"]), state={})
+
+        if route == "/hapi/notices/read":                         # игрок прочитал уведомления
+            ids = [int(x) for x in (p.get("ids") or []) if str(x).isdigit()][:50]
+            if ids:
+                c.execute(f"UPDATE notices SET read=1 WHERE tg_id=? AND id IN ({','.join('?' * len(ids))})", (uid, *ids))
+            return 200, me(ok=True)
 
         # ----- Hirbis Plus -----
         if route == "/hapi/plus/status":
@@ -1324,6 +1412,8 @@ class Handler(BaseHTTPRequestHandler):
                 if o is not None and o != tid:
                     if n.get("force"):                         # забрать у другого и отдать этому
                         take_nick(c, o, h); give_nick(c, tid, h); what["nick.take_from_other"] = h
+                        notify(c, o, f"К сожалению, твой ник @{h} передан другому игроку. Твои остальные ники и весь прогресс на месте.", "sad",
+                               p.get("note"))
                     else:
                         err = f"@{h} уже у другого игрока. Нажми «Забрать и отдать», чтобы передать."
                 else:
@@ -1377,6 +1467,13 @@ class Handler(BaseHTTPRequestHandler):
                 c.execute("UPDATE players SET admin=? WHERE tg_id=?", (1 if p["admin"] else 0, tid)); what["admin"] = bool(p["admin"])
         if state_changed:
             c.execute("UPDATE players SET state=?, ver=ver+1 WHERE tg_id=?", (json.dumps(st, ensure_ascii=False), tid))
+        # уведомления игроку о том, что сделала администрация (в приложении + в Telegram, если он нажимал «Старт» у бота)
+        for text, mood in admin_notices(what):
+            # причина при передаче ника — для того, у кого забрали, а не для нового владельца
+            notify(c, tid, text, mood, None if mood == "happy" and "передали ник" in text else p.get("note"))
+        if not what and p.get("note") and p.get("noteOnly"):                       # просто сообщение от администрации
+            notify(c, tid, "Сообщение от команды Hirbis:", "info", p.get("note"))
+            what["note"] = str(p["note"])[:300]
         return what, err
 
     def log_message(self, *args):

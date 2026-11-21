@@ -37,6 +37,16 @@
 .mg-price.free { background: var(--soft); color: var(--text); }
 .mg-price.ok { background: #3cae5c; color: #fff; }
 
+/* «Буквы по кругу» закрыта, пока мало знакомых слов */
+.mg-game.locked { margin-bottom: 0; border-radius: 20px 20px 0 0; box-shadow: none; }
+.mg-game.locked .mg-ic { filter: grayscale(.7); opacity: .7; }
+.mg-game.locked .mg-price { background: var(--soft); color: var(--text); font-size: 18px; }
+.mg-lock { margin: 0 0 12px; padding: 12px 14px 14px; border: 2px solid var(--soft); border-top: none; border-radius: 0 0 20px 20px; background: var(--bg); text-align: left; }
+.mg-lock-bar { height: 12px; border-radius: 6px; background: var(--soft); overflow: hidden; }
+.mg-lock-bar i { display: block; height: 100%; min-width: 12px; border-radius: 6px; background: linear-gradient(90deg, #3cae5c, #7ad48f); transition: width .6s; }
+.mg-lock-t { margin: 8px 2px 10px; font-size: 15px; color: var(--text); }
+.mg-lock .btn { margin: 0; }
+
 /* Карточка на главной */
 .card.games-card .icon { font-size: 24px; }
 

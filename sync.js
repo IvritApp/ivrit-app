@@ -55,6 +55,31 @@
     if (res.handle) { me = { handle: res.handle, nicks: res.nicks || [res.handle], nick_limit: res.nick_limit == null ? 3 : res.nick_limit, admin: !!res.admin, pin_set: !!res.pin_set, tg_id: res.tg_id }; lsSet("sync_me", me); }
     if (res.banned) showBan(res.banned);
     if (typeof res.plus_until === "number" && window.Plus) Plus.setUntil(res.plus_until);   // Hirbis Plus — срок знает только сервер
+    if (res.notices && res.notices.length) showNotices(res.notices);
+  }
+
+  // --- 📬 уведомления от администрации (22.11): «к сожалению, твой ник передан…», «тебе подарили Plus» ---
+  const noticeShown = new Set();
+  function showNotices(list) {
+    const fresh = list.filter(n => !noticeShown.has(n.id));
+    if (!fresh.length) return;
+    fresh.forEach(n => noticeShown.add(n.id));
+    const old = document.getElementById("syNotice");
+    const prev = old && old.classList.contains("show") ? JSON.parse(old.dataset.items || "[]") : [];
+    const items = prev.concat(fresh);
+    const sad = items.some(n => n.mood === "sad"), happy = items.every(n => n.mood === "happy");
+    const box = sheet("syNotice", `<div class="sy-ntc-bird" id="syNtcBird"></div>
+      <div class="set-head"><b>📬 Новости для тебя</b></div>
+      ${items.map(n => `<div class="sy-ntc ${esc(n.mood)}"><div>${esc(n.text)}</div>${n.note ? `<div class="sy-ntc-note">💬 ${esc(n.note)}</div>` : ""}
+        <span>${new Date(n.at * 1000).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</span></div>`).join("")}
+      <button class="btn blue sy-wide" id="syNtcOk">Понятно</button>`);
+    box.dataset.items = JSON.stringify(items);
+    if (window.HAnim) HAnim.mascot(box.querySelector("#syNtcBird"), sad ? "sad" : happy ? "cheer" : "talk", { size: 80 });
+    if (typeof vibrate === "function") vibrate(sad ? "warning" : "success");
+    box.querySelector("#syNtcOk").onclick = async () => {
+      box.classList.remove("show");
+      try { await api("/notices/read", { ids: items.map(n => n.id) }); } catch (e) {}
+    };
   }
 
   // --- главная функция: сверить прогресс с сервером ---
@@ -392,6 +417,10 @@
       <div class="set-title">Права</div>
       ${isMe ? `<div class="set-note">Ты владелец 👑</div>` : `<button class="btn ghost sy-wide" id="syAdm">${p.admin ? "Снять права админа" : "👑 Сделать админом"}</button>`}
 
+      <div class="set-title">📬 Сообщение игроку</div>
+      <div class="set-test"><input id="syNote" maxlength="300" placeholder="Причина или пару слов (необязательно)"><button class="btn ghost" id="syNoteSend">Отправить</button></div>
+      <div class="set-note">Игрок сам получит уведомление о каждом изменении (ник, Plus, валюта, сброс…) — в приложении и в Telegram. Этот текст добавится к уведомлению. «Отправить» — просто сообщение, без изменений.</div>
+
       <div class="set-title">Опасно</div>
       <button class="btn ghost sy-wide" id="syReset">Стереть прогресс игрока</button>
       <div class="sy-savebar" id="sySaveBar"><span id="syPendN">Нет изменений</span><button class="btn ghost" id="syCancel" hidden>Отменить</button><button class="btn blue" id="sySaveAll" disabled>💾 Сохранить</button></div>
@@ -480,6 +509,13 @@
     const rs = card.querySelector("#syReset");
     rs.onclick = confirm2(rs, "Точно стереть? Нажми ещё раз", () => { pend.resetProgress = true; labels.reset = "стереть прогресс"; mark(rs, "✓ сотрём при сохранении"); refresh(); });
     card.querySelector("#syCancel").onclick = () => renderCard(box, res, back);
+    card.querySelector("#syNoteSend").onclick = async () => {
+      const note = card.querySelector("#syNote").value.trim();
+      if (!note) { showToast("Напиши сообщение"); return; }
+      try { const r = await api("/admin/set", { handle: p.handle, noteOnly: true, note }); if (r.error) { showToast(r.error); return; } }
+      catch (e) { showToast(e.server ? "Сервер: " + e.message : "Нет связи с сервером"); return; }
+      card.querySelector("#syNote").value = ""; showToast("📬 Сообщение отправлено");
+    };
     const saveBtn = card.querySelector("#sySaveAll");
     saveBtn.onclick = async () => {
       const first = Object.assign(progressDiff(), pend);
@@ -487,6 +523,8 @@
       if (Object.keys(first).length || !nickOps.length) calls.push(first);
       nickOps.forEach(o => calls.push({ nick: o.nick }));
       if (!calls.length || (calls.length === 1 && !Object.keys(calls[0]).length)) { showToast("Ничего не изменено"); return; }
+      const note = card.querySelector("#syNote").value.trim();              // причина — добавится к уведомлению игроку
+      if (note) calls.forEach(b => { if (Object.keys(b).length) b.note = note; });
       saveBtn.disabled = true; saveBtn.textContent = "Сохраняю…";
       let last = null; const errs = [];
       try {

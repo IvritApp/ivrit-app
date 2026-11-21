@@ -77,7 +77,10 @@
 /* =====================================================
    21.11 ПЕРСОНАЖИ-КАРТИНКИ (chars.js): кадры стопкой, виден один
    ===================================================== */
-.ci { position: relative; height: 100%; aspect-ratio: 360 / 768; margin: 0 auto; transform-origin: 50% 100%; animation: ciBreath 3.4s ease-in-out infinite; }
+/* 22.11: дыхание — лёгкий сдвиг вверх (translateY), а не растяжение: картинку не надо пересчитывать каждый кадр (на слабых телефонах не тормозит);
+   свой слой (will-change) + contain — смена кадров не перерисовывает остальной экран */
+.ci { position: relative; height: 100%; aspect-ratio: 360 / 768; margin: 0 auto; transform-origin: 50% 100%; animation: ciBreath 3.4s ease-in-out infinite;
+  will-change: transform; contain: layout paint; }
 .ci-f { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .ci .ci-neutral { opacity: 1; }
 .ci.ci-blinking .ci-neutral { opacity: 0; } .ci.ci-blinking .ci-blink { opacity: 1; }
@@ -89,7 +92,7 @@
 .act-cheer .ci .ci-happy, .ci.ci-happy .ci-happy { opacity: 1 !important; }
 .act-oops .ci .ci-oops, .ci.ci-oops .ci-oops { opacity: 1 !important; }
 .act-cheer .ci { animation: ciHop .5s cubic-bezier(.3, 1.6, .5, 1) 2; }
-@keyframes ciBreath { 50% { transform: scaleY(1.012); } }
+@keyframes ciBreath { 50% { transform: translateY(-1.5px); } }
 @keyframes ciHop { 50% { transform: translateY(-10px); } }
 /* в уроке: друг-картинка чуть выше, руки-жесты SVG к нему не относятся */
 .host-fig .ci { height: 100%; }

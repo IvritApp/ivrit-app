@@ -22,8 +22,8 @@
   }
   function msToNext() { const s = state(); return s.n >= MAX ? 0 : Math.max(0, REGEN_MS - (Date.now() - s.t)); }
   function minsText(ms) { const m = Math.ceil(ms / 60000); return m + " мин"; }
-  // ❤️ не тратятся: тренировка, повторение, части «знакомство со словами» (1–2), тестировщик
-  const spends = () => lesson && !lesson.practice && !lesson.review && !(lesson.part === 0 || lesson.part === 1) && !unlimited();
+  // 22.11 (владелец): ❤️ тратятся во ВСЕХ частях урока, включая «знакомство» (1–2); без потерь — только тренировка и повторение
+  const spends = () => lesson && !lesson.practice && !lesson.review && !unlimited();
 
   const Hearts = {
     n: () => (unlimited() ? Infinity : state().n),

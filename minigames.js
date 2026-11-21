@@ -60,7 +60,22 @@
     if (window.Eco) Eco.refresh();                       // свежий баланс с сервера
     document.getElementById("mgWordle").onclick = () => { wdFromMenu = true; mgView = null; openWordle(); };
     document.getElementById("mgWheel").onclick = () => { if (window.openWheel) { mgView = "wheel"; openWheel(view()); } };
+    // «Буквы по кругу» — только из знакомых слов: мало слов → замок и прогресс (бурекасы не трогаем)
+    if (!going && window.wheelStatus) wheelStatus().then(st => {
+      const b = document.getElementById("mgWheel"); if (!b || st.ok) return;
+      const total = st.doneLessons + st.need, pct = total ? Math.round(st.doneLessons / total * 100) : 0;
+      b.classList.add("locked");
+      b.querySelector(".mg-price").textContent = "🔒";
+      b.querySelector(".mg-tx small").textContent = "Откроется, когда выучишь больше слов";
+      b.insertAdjacentHTML("afterend", `<div class="mg-lock" id="mgLock">
+          <div class="mg-lock-bar"><i style="width:${pct}%"></i></div>
+          <div class="mg-lock-t">Пройди ещё <b>${st.need} ${lessonsWord(st.need)}</b></div>
+          <button class="btn blue" id="mgLockGo">🎯 К урокам</button></div>`);
+      b.onclick = () => { vibrate("warning"); const l = document.getElementById("mgLock"); if (l && window.HAnim) HAnim.shake(l); };
+      document.getElementById("mgLockGo").onclick = () => { mgView = null; showPath(); };
+    }).catch(() => {});
   };
+  function lessonsWord(n) { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? "урок" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? "урока" : "уроков"; }
   // wordwheel.js сообщает, что игра открыта/закрыта (для кнопки «Назад»)
   window.mgSetView = (v) => { mgView = v; };
 

@@ -434,7 +434,7 @@ function startLesson(id) {
   if (given) id = given.id;
   // сердечки кончились — урок не начинаем (тренировка и повторение — можно)
   // (части «знакомство» 0–1 сердечки не тратят — туда пускаем и с нулём)
-  if (window.Hearts && !(given && (given.practice || given.review || given.part === 0 || given.part === 1)) && Hearts.n() <= 0) { Hearts.outModal(); return; }
+  if (window.Hearts && !(given && (given.practice || given.review)) && Hearts.n() <= 0) { Hearts.outModal(); return; }
   stopHomeBird();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "lesson");
   if (tg && tg.BackButton) tg.BackButton.show();

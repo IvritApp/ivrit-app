@@ -1,11 +1,16 @@
 // =====================================================
 // «БУКВЫ ПО КРУГУ» — своя игра Hirbis. 5–6 букв иврита по кругу: ведёшь пальцем по буквам — собираешь слово.
 // Найденное слово вписывается в маленький кроссворд над кругом, звучит и показывает перевод.
-// Слова — ТОЛЬКО из курса (уроки course.json + wordle.json), без огласовок. Конечные буквы (ך ם ן ף ץ) = обычные,
-// в конце слова ставятся сами. Головоломка собирается в браузере: берём слово курса из 5–6 букв,
-// ищем другие слова курса из его букв и раскладываем их в кроссворд (жадно, по пересечениям).
-// Раунд стоит WHEEL_PRICE очков из кошелька (minigames.js, Wallet). Очков дня игра не даёт.
-// Прогресс: store "wheel" = { round: {...текущий раунд}, seen: [последние слова-основы] }.
+// Слова ИНДИВИДУАЛЬНЫЕ — только те, что игрок уже учил (словарь игрока, knownWords()):
+//   • пройденные уроки (done) — все слова урока;
+//   • начатые (store "parts"): 1 часть — первая половина новых слов, 2+ части — все новые слова (как в parts.js).
+// Искать в сетке и «⭐ Бонус» — только знакомые слова. Буквы на круге (основа, 5–6 букв) — знакомое слово,
+// а если такого нет — слово из уроков курса ДО текущего урока игрока включительно (само оно в сетку не попадает).
+// Без огласовок; конечные буквы (ך ם ן ף ץ) = обычные, в конце слова ставятся сами.
+// Раунд = основа + ≥3 знакомых слова в кроссворде (жадная раскладка по пересечениям). Нельзя собрать ни одного —
+// игра закрыта (замок в списке мини-игр, бурекасы не списываются), wheelStatus() считает, сколько уроков пройти.
+// Раунд стоит WHEEL_PRICE 🥐 (minigames.js → Eco). Очков дня игра не даёт.
+// Прогресс: store "wheel" = { round: {...текущий раунд}, seen: [основы, свежие первыми] } — основы чередуются.
 // =====================================================
 (function () {
   const PRICE = 30, MAX_W = 8, MAX_H = 7, MAX_WORDS = 6;
@@ -16,34 +21,92 @@
   const shape = (s) => [...s].map((c, i, a) => (i === a.length - 1 ? (TO_FINAL[c] || c) : c)).join("");
   const shuf = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-  let DICT = null, BY = null, BASES = null;     // словарь курса: [{key, he, tr, ru, audio}], key — буквы без огласовок
+  let COURSE = null, BY = null;   // уроки по порядку курса: [{id, all:[слова], fresh:[новые слова]}]; BY — все слова курса по ключу
   let R = null, box = null, els = [], path = [], drawing = false, ptr = null, busy = false;
+  const MIN_WORDS = 3;             // слов в кроссворде (минимум)
+  let MIN_BASE = 5;                // букв на круге (минимум; основа — 5–6 букв)
+  const cache = new Map();         // готовые раунды для набора знакомых слов
 
   // ---------- СЛОВА КУРСА ----------
+  // одно слово 2–6 букв без огласовок → { key, he, tr, ru, audio } (key — буквы, конечные = обычные)
+  function entry(w) {
+    if (!w || !w.he || !w.ru || /[{}\/'׳"״]/.test(w.he)) return null;
+    const plain = w.he.replace(/־/g, " ").replace(/[֑-ׇ]/g, "").replace(/[?!.,]/g, "").trim();
+    if (!/^[א-ת]{2,6}$/.test(plain)) return null;
+    return { key: [...plain].map(norm).join(""), he: w.he, tr: w.tr || "", ru: w.ru, audio: w.audio };
+  }
   async function loadDict() {
-    if (DICT) return;
+    if (COURSE) return;
     const c = (typeof course !== "undefined" && course) || await fetch(`content/${COURSE_LANG}/course.json`).then(r => r.json());
     const ids = [];
     c.chapters.forEach(ch => (ch.levels || []).forEach(l => (l.lessons || []).forEach(id => ids.push(id))));
     const get = (id) => (window.getLesson ? getLesson(id) : fetch(`content/${COURSE_LANG}/lessons/${id}.json`).then(r => r.json()));
     const lessons = await Promise.all(ids.map(id => get(id).catch(() => null)));
-    let wl = [];
-    try { wl = (await fetch(`content/${COURSE_LANG}/wordle.json`).then(r => r.json())).words || []; } catch (e) {}
-    const map = new Map();
-    const add = (w) => {
-      if (!w || !w.he || !w.ru || /[{}\/'׳"״]/.test(w.he)) return;
-      const plain = w.he.replace(/־/g, " ").replace(/[֑-ׇ]/g, "").replace(/[?!.,]/g, "").trim();
-      if (!/^[א-ת]{2,6}$/.test(plain)) return;              // одно слово, 2–6 букв
-      const key = [...plain].map(norm).join("");
-      if (!map.has(key)) map.set(key, { key, he: w.he, tr: w.tr || "", ru: w.ru, audio: w.audio });
-    };
-    lessons.forEach(L => L && (L.words || []).forEach(add));
-    wl.forEach(add);
-    DICT = [...map.values()];
-    BY = new Map(DICT.map(w => [w.key, w]));
-    // основы — слова из 5–6 букв, из букв которых собирается ещё хотя бы 2 слова курса
-    BASES = DICT.filter(b => b.key.length >= 5).map(b => ({ b, sub: DICT.filter(w => w !== b && fits(w.key, b.key)) })).filter(x => x.sub.length >= 2);
+    BY = new Map();
+    COURSE = ids.map((id, i) => {
+      const L = lessons[i] || { words: [] }, words = L.words || [], n = L.newCount || words.length;
+      const conv = (list) => list.map(entry).filter(Boolean).map(e => { if (!BY.has(e.key)) BY.set(e.key, e); return BY.get(e.key); });
+      return { id, all: conv(words), fresh: conv(words.slice(0, n)), half: conv(words.slice(0, Math.ceil(n / 2))) };
+    });
   }
+  // можно ли собрать слово w из букв base (каждую букву — не больше, чем она есть)
+  function fits(w, base) {
+    const cnt = {};
+    for (const ch of base) cnt[ch] = (cnt[ch] || 0) + 1;
+    for (const ch of w) { if (!cnt[ch]) return false; cnt[ch]--; }
+    return true;
+  }
+
+  // ---------- СЛОВАРЬ ИГРОКА ----------
+  // prog = { done: Set, parts: {урок: частей} } (по умолчанию — из store). → { known: Map key→слово, last: индекс текущего урока }
+  function progress() { return { done: new Set(store.get("done", []) || []), parts: store.get("parts", {}) || {} }; }
+  function knownWords(prog) {
+    prog = prog || progress();
+    const known = new Map(); let last = -1;
+    COURSE.forEach((L, i) => {
+      const p = +prog.parts[L.id] || 0;
+      const list = prog.done.has(L.id) ? L.all : p >= 2 ? L.fresh : p === 1 ? L.half : null;
+      if (!list) return;
+      last = i;
+      list.forEach(e => known.set(e.key, e));
+    });
+    return { known, last };
+  }
+  // все возможные раунды для этого словаря: [{ b: основа, sub: знакомые слова из её букв }]
+  function rounds(k) {
+    const sig = MIN_BASE + ":" + k.last + ":" + [...k.known.keys()].sort().join(",");
+    if (cache.has(sig)) return cache.get(sig);
+    const pool = new Map();
+    k.known.forEach(e => { if (e.key.length >= MIN_BASE) pool.set(e.key, e); });
+    for (let i = 0; i <= k.last; i++) COURSE[i].all.forEach(e => { if (e.key.length >= MIN_BASE && !pool.has(e.key)) pool.set(e.key, e); });
+    const words = [...k.known.values()], out = [];
+    pool.forEach(b => {
+      const sub = words.filter(w => fits(w.key, b.key));
+      if (sub.length < MIN_WORDS) return;
+      for (let t = 0; t < 6; t++) if (layout(order(sub)).length >= MIN_WORDS) { out.push({ b, sub }); return; }
+    });
+    cache.set(sig, out);
+    return out;
+  }
+  // сначала длинные слова, внутри одной длины — случайно
+  const order = (sub) => shuf(sub).sort((a, c) => c.key.length - a.key.length);
+
+  // Можно ли играть: { ok, rounds, need (сколько уроков ещё пройти до первого раунда), doneLessons }
+  window.wheelStatus = async function () {
+    await loadDict();
+    const prog = progress(), k = knownWords(prog), n = rounds(k).length;
+    const doneLessons = COURSE.filter(L => prog.done.has(L.id)).length;
+    if (n) return { ok: true, rounds: n, need: 0, doneLessons, known: k.known.size };
+    // сколько ещё уроков по порядку курса нужно пройти, чтобы появился хотя бы один раунд
+    const sim = { done: new Set(prog.done), parts: prog.parts };
+    let need = 0;
+    for (const L of COURSE) {
+      if (sim.done.has(L.id)) continue;
+      sim.done.add(L.id); need++;
+      if (rounds(knownWords(sim)).length) break;
+    }
+    return { ok: false, rounds: 0, need, doneLessons, known: k.known.size };
+  };
   // можно ли собрать слово w из букв base (каждую букву — не больше, чем она есть)
   function fits(w, base) {
     const cnt = {};
@@ -106,14 +169,15 @@
 
   function makeRound() {
     const st = store.get("wheel", {}), seen = st.seen || [];
-    let pool = BASES.filter(x => !seen.includes(x.b.key));
-    if (pool.length < 5) pool = BASES;
+    const all = rounds(knownWords());
+    if (!all.length) return null;
+    // новые основы — первыми; все уже были — та, что была давнее всех (основы чередуются)
+    let pool = all.filter(x => !seen.includes(x.b.key));
+    if (!pool.length) { const far = Math.max(...all.map(x => seen.indexOf(x.b.key))); pool = all.filter(x => seen.indexOf(x.b.key) === far); }
     for (let t = 0; t < 40; t++) {
       const { b, sub } = pool[Math.floor(Math.random() * pool.length)];
-      // сначала длинные слова, внутри одной длины — случайно
-      const others = shuf(sub).sort((a, c) => c.key.length - a.key.length);
-      const placed = layout([b, ...others]);
-      if (placed.length < 3) continue;
+      const placed = layout(order(sub));                     // в сетке — только знакомые слова
+      if (placed.length < MIN_WORDS) continue;
       let letters = shuf([...b.key]);
       for (let k = 0; k < 5 && letters.join("") === b.key; k++) letters = shuf(letters);
       return { base: b.key, words: placed, letters, found: [], open: [], bonus: [], hintFree: true, done: false };
@@ -127,7 +191,7 @@
   window.openWheel = async function (el) {
     box = el;
     if (window.mgSetView) mgSetView("wheel");
-    if (!DICT) {
+    if (!COURSE) {
       if (window.showLoading) showLoading(box, "Раскладываем буквы"); else box.textContent = "Загрузка…";
       try { await loadDict(); } catch (e) { box.innerHTML = `<p class="task">Не удалось загрузить слова 😕</p>`; return; }
     }
@@ -140,14 +204,15 @@
   async function newRound() {
     if (!window.Wallet || paying) return;
     const r = makeRound();
-    if (!r) { showToast("Не получилось собрать головоломку 😕"); return; }
+    // знакомых слов пока мало — игра закрыта, бурекасы НЕ списываем
+    if (!r) { showToast("🔒 Выучи ещё слова — и игра откроется"); if (window.openMinigames) openMinigames(); return; }
     paying = true;
     const ok = await Wallet.spend(PRICE);                     // 🥐 списывает сервер (eco.js); не хватило — окно «Нужно ещё…»
     paying = false;
     if (!ok) { if (!document.getElementById("wwBoard") && window.openMinigames) openMinigames(); return; }
     R = r;
     const st = store.get("wheel", {});
-    st.seen = [r.base, ...(st.seen || []).filter(k => k !== r.base)].slice(0, 40);
+    st.seen = [r.base, ...(st.seen || []).filter(k => k !== r.base)].slice(0, 300);
     st.round = R; store.set("wheel", st);
     showToast(`−${PRICE} 🥐 · удачи!`);
     render();
@@ -310,7 +375,7 @@
       return;
     }
     if (inGrid || R.bonus.includes(word)) { bad(g("Это слово уже есть 👍"), false); return; }
-    if (BY.has(word)) {                                       // слово курса, которого нет в кроссворде, — бонус (без очков)
+    if (knownWords().known.has(word)) {                       // знакомое слово, которого нет в кроссворде, — бонус (без очков)
       R.bonus.push(word); save();
       const e = BY.get(word);
       info(e, "⭐ Бонус"); say(e);
@@ -398,6 +463,18 @@
     if (window.HAnim) HAnim.mascot(document.getElementById("wwBird"), fresh ? "cheer" : "happy", { size: 100 });
   }
 
-  // для автотестов: решить текущий раунд (window.wwTest.solve())
-  window.wwTest = { round: () => R, check: (k) => check(k), dict: () => DICT, bases: () => BASES };
+  // для автотестов: wwTest.known() — словарь игрока, wwTest.rounds() — возможные раунды, wwTest.status() = wheelStatus(),
+  // wwTest.ladder() — сколько раундов после 1, 2, … уроков по порядку курса (для порога в osnova.md)
+  window.wwTest = {
+    round: () => R, check: (k) => check(k), course: () => COURSE,
+    known: () => [...knownWords().known.keys()], rounds: () => rounds(knownWords()).map(x => x.b.key), status: () => wheelStatus(),
+    async ladder(minBase) {
+      await loadDict();
+      const keep = MIN_BASE; if (minBase) MIN_BASE = minBase;
+      const out = [], done = new Set();
+      COURSE.forEach((L, i) => { done.add(L.id); const k = knownWords({ done, parts: {} }); out.push({ lessons: i + 1, id: L.id, words: k.known.size, rounds: rounds(k).length }); });
+      MIN_BASE = keep;
+      return out;
+    }
+  };
 })();

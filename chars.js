@@ -8,7 +8,7 @@
 // Пока у персонажа нет картинок — рисуется прежний SVG (avatar.js).
 // =====================================================
 (function () {
-  const V = "20261121h";
+  const V = "20261122a";      // 22.11: кадры talk/blink выровнены по голове (align_frames.ps1) — персонаж больше не «прыгает»
   // какие кадры уже есть (исходники — Desktop\Клод\Фото от ChatGPT\sheetNN_*.png).
   // Все кадры — холст 360×768, один масштаб, ступни на одной линии (slice_sheet.ps1)
   const A = ["neutral", "talk", "blink", "happy", "oops"], AB = A.concat(["think", "wave", "point", "listen", "surprised"]);
@@ -19,13 +19,14 @@
     if (!has(id)) return "";
     const b = CHARS[id].includes("think") ? " ci-b" : "";   // есть лист B (думает, машет…)
     return `<div class="ci${b} ${cls || ""}" data-char="${id}">${CHARS[id].map(f =>
-      `<img class="ci-f ci-${f}" src="assets/chars/${id}_${f}.webp?v=${V}" alt="" draggable="false">`).join("")}</div>`;
+      `<img class="ci-f ci-${f}" src="assets/chars/${id}_${f}.webp?v=${V}" width="360" height="768" decoding="async" alt="" draggable="false">`).join("")}</div>`;
   };
 
   // моргание: всем видимым персонажам-картинкам по очереди
   setInterval(() => {
     document.querySelectorAll(".ci").forEach(el => {
-      if (Math.random() < .45 && el.offsetParent) { el.classList.add("ci-blinking"); setTimeout(() => el.classList.remove("ci-blinking"), 160); }
+      // без offsetParent — он заставляет браузер пересчитывать раскладку
+      if (Math.random() < .45 && !el.closest("[hidden]")) { el.classList.add("ci-blinking"); setTimeout(() => el.classList.remove("ci-blinking"), 160); }
     });
   }, 1700);
 
