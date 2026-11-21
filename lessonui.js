@@ -8,7 +8,8 @@
 (function () {
   const MAX = 5, REGEN_MS = 36 * 60 * 1000;            // 21.11: полная шкала (5 ❤️) — за 3 часа, 1 ❤️ каждые 36 мин
   const HEART = `<svg viewBox="0 0 24 22" aria-hidden="true"><path d="M12 21.2 10.6 20C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.4 3c1.8 0 3.5.8 4.6 2.1C13.1 3.8 14.8 3 16.6 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.6 11.6z" fill="currentColor"/><path d="M6.4 6.6c.9-.9 2.2-1.1 3.2-.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".55"/></svg>`;
-  const unlimited = () => typeof testMode === "function" && testMode();
+  // ∞ сердечек: тестировщик или подписка Hirbis Plus (plus.js)
+  const unlimited = () => (typeof testMode === "function" && testMode()) || !!(window.Plus && Plus.active());
 
   function state() {
     const s = Object.assign({ n: MAX, t: Date.now() }, store.get("hearts", {}));
@@ -30,8 +31,9 @@
       const el = document.getElementById("hearts");
       if (!el) return;
       const n = Hearts.n();
-      el.className = "hearts" + (n === 0 ? " empty" : "") + (bump ? " lost" : "");
+      el.className = "hearts" + (n === 0 ? " empty" : "") + (bump ? " lost" : "") + (window.Plus && Plus.active() ? " plus" : "");
       el.innerHTML = HEART + `<b>${n === Infinity ? "∞" : n}</b>`;
+      el.onclick = () => { if (window.Plus) Plus.open("hearts"); };       // нажал на сердечки → Hirbis Plus
     },
     lose() {
       if (!spends()) return;
@@ -57,6 +59,7 @@
           <div class="ho-heart">${HEART}</div>
           <h2>Сердечки кончились</h2>
           <p>Новое ❤️ через <b id="hoLeft">${minsText(msToNext())}</b></p>
+          ${window.Plus ? `<button class="btn plus-btn" id="hoPlus">✨ Hirbis Plus: ∞ ❤️</button>` : ""}
           ${practiceIds.length ? `<button class="btn blue" id="hoPractice">💪 Тренировка: +1 ❤️</button>` : ""}
           <button class="btn ghost" id="hoWait">Подожду</button>
         </div>`;
@@ -67,6 +70,8 @@
       const tick = setInterval(() => { const el = document.getElementById("hoLeft"); if (!el) return clearInterval(tick); el.textContent = minsText(msToNext()); }, 20000);
       const close = () => { clearInterval(tick); w.classList.remove("show"); setTimeout(() => w.remove(), 250); };
       w.querySelector("#hoWait").onclick = () => { close(); (onClose || showPath)(); };
+      const hp = w.querySelector("#hoPlus");
+      if (hp) hp.onclick = () => { close(); Plus.open("out", () => (onClose || showPath)()); };
       const pb = w.querySelector("#hoPractice");
       if (pb) pb.onclick = () => { close(); startPractice(practiceIds[Math.floor(Math.random() * practiceIds.length)]); };
     }

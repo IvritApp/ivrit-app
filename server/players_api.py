@@ -15,7 +15,12 @@
 #   /hapi/nicks/add|main|remove {handle}
 #   /hapi/chat/list {with|team, since}  /hapi/chat/send {with|team, text}  /hapi/chat/unread  /hapi/chat/report {id}
 #   /hapi/team/me  /hapi/team/create {name, emoji}  /hapi/team/join {code}  /hapi/team/leave  /hapi/team/kick {handle}  /hapi/team/top
+#   /hapi/plus/status  /hapi/plus/promo {code}  /hapi/plus/invoice {code?}   — подписка Hirbis Plus (∞ сердечек)
 #   /hapi/admin/list {q}  /hapi/admin/get {handle}  /hapi/admin/set {handle, ...}  /hapi/admin/log {}
+#   /hapi/admin/promo/list  /hapi/admin/promo/create {code?, kind, value, max_uses, days_valid, note}  /hapi/admin/promo/delete {code}
+# HIRBIS PLUS (21.11): 50 ⭐ = 30 дней, разовая оплата (Telegram Stars, валюта XTR). Счёт создаёт этот сервер
+# (createInvoiceLink), оплату принимает бот (bot_start.py: pre_checkout_query → successful_payment → таблица plus).
+# Промокоды: kind "discount" (скидка value %, 100 % = бесплатно) или "days" (сразу value дней Plus). Один код — один раз на игрока.
 # Команды на сервере:
 #   python3 players_api.py make-admin <ник>   |   remove-admin <ник>   |   list
 # =====================================================
@@ -34,6 +39,21 @@ UNLIMITED = -1
 LOCK = threading.Lock()
 HANDLE_RE = re.compile(r"^[a-z0-9_]{3,32}$")
 BAD_NICK = "Ник: 3–32 символа, латинские буквы, цифры и _"
+PLUS_PRICE = 50               # ⭐ за PLUS_DAYS дней
+PLUS_DAYS = 30
+PROMO_RE = re.compile(r"^[A-Z0-9_-]{3,32}$")
+
+
+def tg_api():
+    """Адрес Telegram Bot API. Из Москвы api.telegram.org недоступен → посредник (Cloudflare Worker) в /etc/hirbis/tg_api."""
+    try:
+        with open("/etc/hirbis/tg_api") as f:
+            v = f.read().strip()
+            if v:
+                return v.rstrip("/")
+    except Exception:
+        pass
+    return os.environ.get("HIRBIS_TG_API", "https://api.telegram.org").rstrip("/")
 
 
 def db():
@@ -64,6 +84,13 @@ def db():
     c.execute("CREATE TABLE IF NOT EXISTS team_members (tg_id INTEGER PRIMARY KEY, team_id INTEGER, joined REAL)")
     c.execute("CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, tg_id INTEGER, until REAL)")
     c.execute("CREATE TABLE IF NOT EXISTS rec_tries2 (tg_id INTEGER PRIMARY KEY, fails INTEGER, lock REAL, at REAL)")   # кто пытается восстановить
+    # Hirbis Plus (21.11): до какого времени; промокоды; кто каким кодом пользовался; оплаты (charge_id — от Telegram)
+    c.execute("CREATE TABLE IF NOT EXISTS plus (tg_id INTEGER PRIMARY KEY, until REAL)")
+    c.execute("""CREATE TABLE IF NOT EXISTS promos (code TEXT PRIMARY KEY, kind TEXT, value INTEGER, max_uses INTEGER DEFAULT 0,
+        used INTEGER DEFAULT 0, expires REAL DEFAULT 0, created REAL, by TEXT, note TEXT DEFAULT '')""")
+    c.execute("CREATE TABLE IF NOT EXISTS promo_uses (code TEXT, tg_id INTEGER, at REAL, PRIMARY KEY (code, tg_id))")
+    c.execute("""CREATE TABLE IF NOT EXISTS payments (charge_id TEXT PRIMARY KEY, tg_id INTEGER, stars INTEGER, days INTEGER,
+        code TEXT DEFAULT '', at REAL)""")
     if "nick_limit" not in cols:
         c.execute(f"ALTER TABLE players ADD COLUMN nick_limit INTEGER DEFAULT {DEFAULT_NICKS}")
     # перенос старых данных: основной ник каждого игрока → в таблицу ников
@@ -291,6 +318,7 @@ def player_public(c, r):
         "points_total": points, "points_today": int(js(f"points_{d.year}-{d.month}-{d.day}", 0) or 0),
         "done": len(js("done", [])), "perfect": len(js("perfect", [])), "medals": js("medals", {}),
         "quests": len([k for k in st if k.startswith("quest_q-")]),
+        "plus_until": plus_until(c, r["tg_id"]),
     }
 
 
@@ -409,6 +437,67 @@ def relation(c, me_id, other_id):
     return "none"
 
 
+# ---------- Hirbis Plus (21.11) ----------
+def plus_until(c, uid):
+    r = c.execute("SELECT until FROM plus WHERE tg_id=?", (uid,)).fetchone()
+    return float(r[0]) if r and r[0] else 0.0
+
+
+def grant_plus(c, uid, days):
+    """Добавить дни Plus (к текущему сроку, если он ещё идёт). Возвращает новый срок."""
+    until = max(time.time(), plus_until(c, uid)) + days * 86400
+    c.execute("INSERT INTO plus (tg_id, until) VALUES (?, ?) ON CONFLICT(tg_id) DO UPDATE SET until=excluded.until", (uid, until))
+    return until
+
+
+def norm_code(x):
+    return re.sub(r"\s+", "", str(x or "")).upper()[:32]
+
+
+def promo_check(c, code, uid):
+    """Можно ли этому игроку применить код. → (строка promos, ошибка)."""
+    code = norm_code(code)
+    pr = c.execute("SELECT * FROM promos WHERE code=?", (code,)).fetchone() if code else None
+    if not pr:
+        return None, "Такого промокода нет"
+    if pr["expires"] and pr["expires"] < time.time():
+        return None, "Срок промокода закончился"
+    if pr["max_uses"] and pr["used"] >= pr["max_uses"]:
+        return None, "Промокод уже использовали все"
+    if c.execute("SELECT 1 FROM promo_uses WHERE code=? AND tg_id=?", (code, uid)).fetchone():
+        return None, "Ты уже использовал этот промокод"
+    return pr, ""
+
+
+def promo_use(c, code, uid):
+    c.execute("INSERT OR IGNORE INTO promo_uses VALUES (?,?,?)", (code, uid, time.time()))
+    c.execute("UPDATE promos SET used=used+1 WHERE code=?", (code,))
+
+
+def plus_price(pr):
+    """Цена в ⭐ с учётом скидки промокода (минимум 1 ⭐, если скидка не 100 %)."""
+    if not pr or pr["kind"] != "discount":
+        return PLUS_PRICE
+    return max(0, round(PLUS_PRICE * (100 - pr["value"]) / 100)) if pr["value"] < 100 else 0
+
+
+def promo_public(pr):
+    return {"code": pr["code"], "kind": pr["kind"], "value": pr["value"], "max_uses": pr["max_uses"], "used": pr["used"],
+            "expires": pr["expires"], "created": pr["created"], "by": pr["by"], "note": pr["note"]}
+
+
+def create_invoice_link(price, payload):
+    """Счёт Telegram Stars (XTR). provider_token для звёзд — пустой."""
+    import urllib.request
+    body = json.dumps({"title": "Hirbis Plus · 30 дней", "description": "Бесконечные сердечки ❤️ на 30 дней. Учись без остановок!",
+                       "payload": payload, "provider_token": "", "currency": "XTR",
+                       "prices": [{"label": "Hirbis Plus", "amount": price}]}).encode()
+    req = urllib.request.Request(f"{tg_api()}/bot{token()}/createInvoiceLink", data=body, headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=12) as r:
+        res = json.loads(r.read())
+    return res.get("result") if res.get("ok") else None
+
+
 class Handler(BaseHTTPRequestHandler):
     def cors(self):
         o = self.headers.get("Origin", "")
@@ -458,6 +547,13 @@ class Handler(BaseHTTPRequestHandler):
                 c.commit()
             finally:
                 c.close()
+        inv = res[1].pop("_invoice", None) if isinstance(res[1], dict) else None
+        if inv:                                   # счёт создаём уже без блокировки базы (это запрос в Telegram)
+            try:
+                link = create_invoice_link(inv["price"], inv["payload"])
+            except Exception:
+                link = None
+            res = (200, {"link": link, "price": inv["price"]} if link else {"error": "Оплата сейчас недоступна. Попробуй позже 🙏"})
         self.send_json(*res)
 
     # ---------- логика ----------
@@ -489,7 +585,8 @@ class Handler(BaseHTTPRequestHandler):
         def me(**extra):
             rr = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
             return dict({"handle": rr["handle"], "nicks": nicks_of(c, uid), "nick_limit": limit_of(rr),
-                         "admin": bool(rr["admin"]), "pin_set": bool(rr["admin"] and rr["admin_pin"]), "tg_id": uid}, **extra)
+                         "admin": bool(rr["admin"]), "pin_set": bool(rr["admin"] and rr["admin_pin"]), "tg_id": uid,
+                         "plus_until": plus_until(c, uid)}, **extra)
 
         if r["banned_until"] and r["banned_until"] > now and not r["admin"]:
             return 200, me(banned={"until": r["banned_until"], "reason": r["ban_reason"]})
@@ -509,6 +606,31 @@ class Handler(BaseHTTPRequestHandler):
 
         if route == "/hapi/reset":
             return 200, me(ver=self.save(c, uid, {}, r["ver"]), state={})
+
+        # ----- Hirbis Plus -----
+        if route == "/hapi/plus/status":
+            return 200, me(price=PLUS_PRICE, days=PLUS_DAYS, now=now)
+        if route == "/hapi/plus/promo":                           # применить промокод
+            pr, err = promo_check(c, p.get("code"), uid)
+            if err:
+                return 200, me(error=err)
+            if pr["kind"] == "days" or plus_price(pr) == 0:
+                days = pr["value"] if pr["kind"] == "days" else PLUS_DAYS
+                grant_plus(c, uid, days)
+                promo_use(c, pr["code"], uid)
+                return 200, me(ok=True, granted=days, price=PLUS_PRICE, days=PLUS_DAYS)
+            return 200, me(ok=True, code=pr["code"], discount=pr["value"], price=plus_price(pr), days=PLUS_DAYS)
+        if route == "/hapi/plus/invoice":                         # ссылка на оплату звёздами (код — по желанию)
+            pr = None
+            if p.get("code"):
+                pr, err = promo_check(c, p.get("code"), uid)
+                if err:
+                    return 200, {"error": err}
+            price = plus_price(pr)
+            if price <= 0:
+                return 200, {"error": "С этим кодом платить не нужно — нажми «Применить»"}
+            payload = json.dumps({"u": uid, "p": price, "d": PLUS_DAYS, "c": pr["code"] if pr else ""}, separators=(",", ":"))
+            return 200, {"_invoice": {"price": price, "payload": payload}}
 
         # ----- ники игрока -----
         if route in ("/hapi/handle", "/hapi/nicks/add", "/hapi/nicks/main", "/hapi/nicks/remove"):
@@ -769,6 +891,37 @@ class Handler(BaseHTTPRequestHandler):
             if route == "/hapi/admin/log":
                 rows = c.execute("SELECT * FROM admin_log ORDER BY at DESC LIMIT 100").fetchall()
                 return 200, {"log": [dict(x) for x in rows]}
+            # промокоды Hirbis Plus
+            if route == "/hapi/admin/promo/list":
+                rows = c.execute("SELECT * FROM promos ORDER BY created DESC LIMIT 500").fetchall()
+                return 200, {"promos": [promo_public(x) for x in rows], "price": PLUS_PRICE, "days": PLUS_DAYS}
+            if route == "/hapi/admin/promo/create":
+                code = norm_code(p.get("code")) or "".join(random.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(8))
+                kind = p.get("kind")
+                try:
+                    value, max_uses, days_valid = int(p.get("value") or 0), int(p.get("max_uses") or 0), float(p.get("days_valid") or 0)
+                except (TypeError, ValueError):
+                    return 200, {"error": "Числа введены неверно"}
+                if not PROMO_RE.match(code):
+                    return 200, {"error": "Код: 3–32 символа, латинские буквы, цифры, - и _"}
+                if kind not in ("discount", "days"):
+                    return 200, {"error": "Выбери вид промокода"}
+                if kind == "discount" and not 1 <= value <= 100:
+                    return 200, {"error": "Скидка — от 1 до 100 %"}
+                if kind == "days" and not 1 <= value <= 3650:
+                    return 200, {"error": "Дней — от 1 до 3650"}
+                if c.execute("SELECT 1 FROM promos WHERE code=?", (code,)).fetchone():
+                    return 200, {"error": f"Код {code} уже есть"}
+                c.execute("INSERT INTO promos (code, kind, value, max_uses, used, expires, created, by, note) VALUES (?,?,?,?,0,?,?,?,?)",
+                          (code, kind, value, max(0, max_uses), now + days_valid * 86400 if days_valid > 0 else 0, now, r["handle"],
+                           str(p.get("note") or "")[:100]))
+                c.execute("INSERT INTO admin_log VALUES (?,?,?,?)", (now, r["handle"], "", json.dumps({"promo.create": code, "kind": kind, "value": value}, ensure_ascii=False)))
+                return 200, {"ok": True, "promo": promo_public(c.execute("SELECT * FROM promos WHERE code=?", (code,)).fetchone())}
+            if route == "/hapi/admin/promo/delete":
+                code = norm_code(p.get("code"))
+                c.execute("DELETE FROM promos WHERE code=?", (code,))
+                c.execute("INSERT INTO admin_log VALUES (?,?,?,?)", (now, r["handle"], "", json.dumps({"promo.delete": code})))
+                return 200, {"ok": True}
             h = norm(p.get("handle"))
             o = owner_of(c, h)
             t = c.execute("SELECT * FROM players WHERE tg_id=?", (o,)).fetchone() if o is not None else None
@@ -834,6 +987,12 @@ class Handler(BaseHTTPRequestHandler):
         c.execute("UPDATE chat_read SET peer=? WHERE peer=?", (f"u{uid}", f"u{old_id}"))
         c.execute("UPDATE team_members SET tg_id=? WHERE tg_id=?", (uid, old_id))
         c.execute("UPDATE teams SET owner=? WHERE owner=?", (uid, old_id))
+        # подписка и промокоды тоже переезжают
+        best = max(plus_until(c, uid), plus_until(c, old_id))
+        c.execute("DELETE FROM plus WHERE tg_id IN (?, ?)", (uid, old_id))
+        if best:
+            c.execute("INSERT INTO plus VALUES (?, ?)", (uid, best))
+        c.execute("UPDATE OR IGNORE promo_uses SET tg_id=? WHERE tg_id=?", (uid, old_id))
         c.execute("INSERT INTO admin_log VALUES (?,?,?,?)", (now, hit["handle"], hit["handle"], json.dumps({"recover": {"from_tg": old_id, "to_tg": uid}})))
         r = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
         return 200, {"ok": True, "handle": r["handle"], "ver": r["ver"]}
@@ -922,6 +1081,16 @@ class Handler(BaseHTTPRequestHandler):
                 until = time.time() + days * 86400 if days > 0 else 4102444800
                 c.execute("UPDATE players SET banned_until=?, ban_reason=? WHERE tg_id=?", (until, str(b.get("reason", ""))[:200], tid))
                 what["ban"] = {"days": days, "reason": b.get("reason", "")}
+        # Hirbis Plus: добавить дни (0 или меньше — снять подписку)
+        if "plusDays" in p:
+            try:
+                days = int(p["plusDays"])
+            except (TypeError, ValueError):
+                days = 0
+            if days > 0:
+                grant_plus(c, tid, min(days, 3650)); what["plus.add_days"] = days
+            else:
+                c.execute("DELETE FROM plus WHERE tg_id=?", (tid,)); what["plus.remove"] = True
         # права админа
         if "admin" in p:
             if tid == admin_uid and not p["admin"]:

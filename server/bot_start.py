@@ -13,6 +13,10 @@
 # Who pressed Start is saved in players.db (table bot_started) — only these
 # people can receive messages from the bot (streak reminder etc.).
 #
+# PAYMENTS (Hirbis Plus, 21.11): the app gets an invoice link from players_api.py (/hapi/plus/invoice);
+# Telegram asks the bot "may I take the money?" (pre_checkout_query) — we check the payload and say yes
+# within 10 s; after "successful_payment" we add 30 days to the table plus (same players.db) and say thanks.
+#
 # Logs:  journalctl -u hirbis-bot -n 30 --no-pager
 # =====================================================
 import json, os, sqlite3, sys, time, urllib.error, urllib.request
@@ -47,7 +51,21 @@ SHORT_DESCRIPTION = "Разговорный иврит для русскоязы
 COMMANDS = [
     {"command": "start", "description": "Открыть приложение"},
     {"command": "help", "description": "Как это работает"},
+    {"command": "paysupport", "description": "Помощь с оплатой"},
 ]
+
+
+def pay_support_text():
+    """Who to write to about payments: one line in /etc/hirbis/support (e.g. @username). The owner sets it himself."""
+    try:
+        with open("/etc/hirbis/support") as f:
+            who = f.read().strip()
+    except Exception:
+        who = ""
+    return ("Помощь с оплатой Hirbis Plus 💳\n\n"
+            "Если звёзды списались, а подписка не включилась, или нужен возврат — "
+            + (f"напиши {who}" if who else "напиши нам в этот чат") +
+            ", укажи свой ник в Hirbis и дату оплаты. Ответим в течение 24 часов.")
 
 
 def start_text(name):
@@ -108,10 +126,80 @@ def remember(db, user, payload):
         print("не записал в базу:", str(e)[:80], flush=True)
 
 
+# ---------- payments: Hirbis Plus ----------
+def ensure_tables(db):
+    db.execute("""CREATE TABLE IF NOT EXISTS bot_started (
+                    tg_id INTEGER PRIMARY KEY, first_at INTEGER, last_at INTEGER, payload TEXT, name TEXT)""")
+    # same tables as players_api.py
+    db.execute("CREATE TABLE IF NOT EXISTS plus (tg_id INTEGER PRIMARY KEY, until REAL)")
+    db.execute("""CREATE TABLE IF NOT EXISTS promos (code TEXT PRIMARY KEY, kind TEXT, value INTEGER, max_uses INTEGER DEFAULT 0,
+        used INTEGER DEFAULT 0, expires REAL DEFAULT 0, created REAL, by TEXT, note TEXT DEFAULT '')""")
+    db.execute("CREATE TABLE IF NOT EXISTS promo_uses (code TEXT, tg_id INTEGER, at REAL, PRIMARY KEY (code, tg_id))")
+    db.execute("""CREATE TABLE IF NOT EXISTS payments (charge_id TEXT PRIMARY KEY, tg_id INTEGER, stars INTEGER, days INTEGER,
+        code TEXT DEFAULT '', at REAL)""")
+    db.commit()
+
+
+def parse_payload(s):
+    try:
+        p = json.loads(s or "{}")
+        return {"u": int(p["u"]), "p": int(p["p"]), "d": int(p["d"]), "c": str(p.get("c") or "")}
+    except Exception:
+        return None
+
+
+def promo_ok(db, code, uid):
+    if not code:
+        return True
+    r = db.execute("SELECT expires, max_uses, used FROM promos WHERE code=?", (code,)).fetchone()
+    if not r or (r[0] and r[0] < time.time()) or (r[1] and r[2] >= r[1]):
+        return False
+    return not db.execute("SELECT 1 FROM promo_uses WHERE code=? AND tg_id=?", (code, uid)).fetchone()
+
+
+def pre_checkout(token, db, q):
+    """Telegram asks: may we charge? Answer within 10 seconds."""
+    p = parse_payload(q.get("invoice_payload"))
+    uid = (q.get("from") or {}).get("id")
+    good = (p is not None and p["u"] == uid and q.get("currency") == "XTR" and q.get("total_amount") == p["p"]
+            and 1 <= p["d"] <= 366 and promo_ok(db, p["c"], uid))
+    ans = {"pre_checkout_query_id": q.get("id"), "ok": bool(good)}
+    if not good:
+        ans["error_message"] = "Не получилось оформить подписку. Открой Hirbis и попробуй ещё раз 🙏"
+    api(token, "answerPreCheckoutQuery", ans)
+    print("оплата: проверка", "ok" if good else "ОТКАЗ", uid, flush=True)
+
+
+def paid(token, db, msg):
+    """Money received: add days of Hirbis Plus (once per payment)."""
+    sp = msg["successful_payment"]
+    uid = (msg.get("from") or {}).get("id")
+    p = parse_payload(sp.get("invoice_payload")) or {"u": uid, "p": sp.get("total_amount"), "d": 30, "c": ""}
+    charge = sp.get("telegram_payment_charge_id") or ""
+    now = time.time()
+    cur = db.execute("INSERT OR IGNORE INTO payments VALUES (?,?,?,?,?,?)", (charge, uid, sp.get("total_amount"), p["d"], p["c"], now))
+    if cur.rowcount == 0:                        # this payment was already counted
+        db.rollback()                            # close the transaction, or the database stays locked for players_api
+        return
+    row = db.execute("SELECT until FROM plus WHERE tg_id=?", (uid,)).fetchone()
+    until = max(now, float(row[0]) if row and row[0] else 0) + p["d"] * 86400
+    db.execute("INSERT INTO plus (tg_id, until) VALUES (?, ?) ON CONFLICT(tg_id) DO UPDATE SET until=excluded.until", (uid, until))
+    if p["c"]:
+        db.execute("INSERT OR IGNORE INTO promo_uses VALUES (?,?,?)", (p["c"], uid, now))
+        db.execute("UPDATE promos SET used=used+1 WHERE code=?", (p["c"],))
+    db.commit()
+    print("оплата: получено", sp.get("total_amount"), "⭐ от", uid, flush=True)
+    day = time.strftime("%d.%m.%Y", time.gmtime(until + 3 * 3600))
+    api(token, "sendMessage", {"chat_id": msg["chat"]["id"], "reply_markup": app_button(),
+                               "text": f"Спасибо! ✨ Hirbis Plus включён до {day}.\nСердечки теперь бесконечные ❤️ Учись сколько хочешь!"})
+
+
 def handle(token, db, msg):
     chat = msg.get("chat") or {}
     if chat.get("type") != "private":            # in groups the bot stays silent
         return
+    if msg.get("successful_payment"):
+        return paid(token, db, msg)
     user = msg.get("from") or {}
     text = (msg.get("text") or "").strip()
     name = user.get("first_name") or ""
@@ -121,6 +209,8 @@ def handle(token, db, msg):
         reply = start_text(name)
     elif text.startswith("/help"):
         reply = HELP_TEXT
+    elif text.startswith("/paysupport"):         # Telegram requires this command for bots that sell for Stars
+        reply = pay_support_text()
     else:
         reply = "Учиться удобнее в приложении 🙂 Жми кнопку 👇"
     api(token, "sendMessage", {"chat_id": chat.get("id"), "text": reply, "reply_markup": app_button()})
@@ -136,9 +226,7 @@ def main():
         print("Нет ключа бота (/etc/hirbis/bot.token)", flush=True)
         return 1
     db = sqlite3.connect(DB, timeout=10)
-    db.execute("""CREATE TABLE IF NOT EXISTS bot_started (
-                    tg_id INTEGER PRIMARY KEY, first_at INTEGER, last_at INTEGER, payload TEXT, name TEXT)""")
-    db.commit()
+    ensure_tables(db)
     # Long polling does not work while a webhook is set — remove it (we never use webhooks)
     try:
         api(token, "deleteWebhook", {"drop_pending_updates": False})
@@ -151,9 +239,14 @@ def main():
     offset = 0
     while True:
         try:
-            res = api(token, "getUpdates", {"offset": offset, "timeout": 50, "allowed_updates": ["message"]}, timeout=65)
+            res = api(token, "getUpdates", {"offset": offset, "timeout": 50, "allowed_updates": ["message", "pre_checkout_query"]}, timeout=65)
             for upd in res.get("result", []):
                 offset = upd["update_id"] + 1
+                if "pre_checkout_query" in upd:
+                    try:
+                        pre_checkout(token, db, upd["pre_checkout_query"])
+                    except Exception as e:
+                        print("ошибка проверки оплаты:", str(e)[:120], flush=True)
                 if "message" in upd:
                     try:
                         handle(token, db, upd["message"])

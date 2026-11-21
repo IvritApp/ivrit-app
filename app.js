@@ -1189,6 +1189,7 @@ function openSettings() {
       <input type="range" min="0" max="100" step="10" data-k="${key}" value="${settings[key]}"><b>${settings[key]}</b></label>`;
   box.innerHTML = `<div class="set-sheet">
       <div class="set-head"><b>⚙️ Настройки</b><button class="set-x" id="setClose">✕</button></div>
+      ${window.Plus ? Plus.settingsHTML() : ""}
       <div class="set-title">Тема</div>${seg("theme", [["auto", "Как в Telegram"], ["light", "Светлая"], ["dark", "Тёмная"]])}
       <div class="set-title">Звук</div>
       ${slider("sfx", "Звуки (верно, ошибка, огоньки)")}

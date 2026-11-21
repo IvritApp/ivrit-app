@@ -8,7 +8,7 @@
 // =====================================================
 (function () {
   const API = "https://89-23-99-107.sslip.io/hapi";
-  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru", "autoplay"];
+  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru", "autoplay", "plus"];
   const P = "hirbis_";
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;
@@ -54,6 +54,7 @@
   function gotMe(res) {
     if (res.handle) { me = { handle: res.handle, nicks: res.nicks || [res.handle], nick_limit: res.nick_limit == null ? 3 : res.nick_limit, admin: !!res.admin, pin_set: !!res.pin_set, tg_id: res.tg_id }; lsSet("sync_me", me); }
     if (res.banned) showBan(res.banned);
+    if (typeof res.plus_until === "number" && window.Plus) Plus.setUntil(res.plus_until);   // Hirbis Plus — срок знает только сервер
   }
 
   // --- главная функция: сверить прогресс с сервером ---
@@ -256,7 +257,7 @@
   const dt = t => t ? new Date(t * 1000).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
   function openAdmin(handle) {
     const box = sheet("syAdminSheet", `<div class="set-head"><b>👑 Админ-панель</b><button class="set-x" id="syAx">✕</button></div>
-      <div class="set-seg" id="syTabs"><button data-t="find" class="on">Игроки</button><button data-t="log">Журнал</button></div>
+      <div class="set-seg" id="syTabs"><button data-t="find" class="on">Игроки</button><button data-t="promo">🎟 Промокоды</button><button data-t="log">Журнал</button></div>
       <div class="set-test"><input id="syFind" placeholder="ник, имя или ID" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syGo">Найти</button></div>
       <div id="syCard"></div>`, true);
     box.querySelector("#syAx").onclick = () => box.classList.remove("show");
@@ -283,10 +284,57 @@
         card.innerHTML = (res.log || []).map(x => `<div class="sy-log"><b>${dt(x.at)}</b> @${esc(x.admin)} → @${esc(x.target)}<span>${esc(x.what)}</span></div>`).join("") || `<p class="sy-p">Пока пусто</p>`;
       } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; }
     };
+    // 🎟 промокоды Hirbis Plus: создать (скидка % или дни Plus), список, удалить
+    const promos = async () => {
+      card.innerHTML = `<p class="sy-p">Загружаю…</p>`;
+      let res;
+      try { res = await api("/admin/promo/list", {}); } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; return; }
+      if (res.error) { card.innerHTML = `<p class="sy-p">${esc(res.error)}</p>`; return; }
+      const now = Date.now() / 1000;
+      card.innerHTML = `<div class="set-title">Новый промокод</div>
+        <div class="set-seg" id="syPrKind"><button data-k="days" class="on">🎁 Дни Plus бесплатно</button><button data-k="discount">💸 Скидка %</button></div>
+        <label class="sy-f"><span id="syPrValL">Сколько дней Plus</span><input type="number" min="1" id="syPrVal" value="30"></label>
+        <label class="sy-f"><span>Код (пусто — придумаю сам)</span><input id="syPrCode" maxlength="32" placeholder="HIRBIS2027" autocapitalize="characters"></label>
+        <label class="sy-f"><span>Сколько раз можно (0 — без ограничений)</span><input type="number" min="0" id="syPrMax" value="100"></label>
+        <label class="sy-f"><span>Действует дней (0 — всегда)</span><input type="number" min="0" id="syPrDays" value="30"></label>
+        <label class="sy-f"><span>Заметка для себя</span><input id="syPrNote" maxlength="100" placeholder="для блогера, для друзей…"></label>
+        <button class="btn blue sy-wide" id="syPrMake">Создать промокод</button>
+        <div class="set-note">Цена Plus: ${res.price} ⭐ за ${res.days} дней. Скидка 100% = бесплатно. Каждый игрок может применить код один раз.</div>
+        <div class="set-title">Все промокоды (${res.promos.length})</div>
+        ${res.promos.map(x => {
+          const dead = (x.expires && x.expires < now) || (x.max_uses && x.used >= x.max_uses);
+          return `<div class="sy-log ${dead ? "sy-dead" : ""}"><b>${esc(x.code)}</b> ${x.kind === "days" ? `🎁 ${x.value} дн. Plus` : `💸 −${x.value}%`}
+            <span>использован ${x.used}${x.max_uses ? " из " + x.max_uses : ""} · ${x.expires ? "до " + dt(x.expires) : "бессрочно"}${x.note ? " · " + esc(x.note) : ""}${dead ? " · закончился" : ""}</span>
+            <button class="btn ghost sy-prdel" data-c="${esc(x.code)}">Удалить</button></div>`;
+        }).join("") || `<p class="sy-p">Пока нет</p>`}`;
+      const kind = card.querySelector("#syPrKind");
+      kind.onclick = (e) => {
+        const b = e.target.closest("button"); if (!b) return;
+        kind.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+        const d = b.dataset.k === "days";
+        card.querySelector("#syPrValL").textContent = d ? "Сколько дней Plus" : "Скидка, % (100 — бесплатно)";
+        card.querySelector("#syPrVal").value = d ? 30 : 50;
+      };
+      card.querySelector("#syPrMake").onclick = async () => {
+        const body = { kind: kind.querySelector(".on").dataset.k, value: +card.querySelector("#syPrVal").value,
+          code: card.querySelector("#syPrCode").value.trim(), max_uses: +card.querySelector("#syPrMax").value,
+          days_valid: +card.querySelector("#syPrDays").value, note: card.querySelector("#syPrNote").value.trim() };
+        let r; try { r = await api("/admin/promo/create", body); } catch (e) { showToast("Нет связи с сервером"); return; }
+        if (r.error) { showToast(r.error); return; }
+        showToast("Промокод " + r.promo.code + " создан 🎟");
+        try { if (navigator.clipboard) await navigator.clipboard.writeText(r.promo.code); } catch (e) {}
+        promos();
+      };
+      card.querySelectorAll(".sy-prdel").forEach(b => b.onclick = async () => {
+        if (!b.classList.contains("confirm")) { b.classList.add("confirm"); b.textContent = "Точно?"; return; }
+        try { await api("/admin/promo/delete", { code: b.dataset.c }); } catch (e) { showToast("Нет связи с сервером"); return; }
+        promos();
+      });
+    };
     box.querySelector("#syTabs").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
       box.querySelectorAll("#syTabs button").forEach(x => x.classList.toggle("on", x === b));
-      b.dataset.t === "log" ? log() : list();
+      b.dataset.t === "log" ? log() : b.dataset.t === "promo" ? promos() : list();
     };
     box.querySelector("#syGo").onclick = list;
     inp.onkeydown = (e) => { if (e.key === "Enter") list(); };
@@ -313,6 +361,7 @@
         <span>Медали</span><b>${Object.values(p.medals || {}).join(" ") || "—"}</b>
         <span>Очки</span><b>${p.points_total} (сегодня ${p.points_today})</b>
         <span>Серия</span><b>🔥 ${s.count} · лучшая ${s.best} · ❄️ ${s.freezes}</b>
+        <span>Hirbis Plus</span><b>${p.plus_until > now ? "✨ до " + dt(p.plus_until) : "—"}</b>
         <span>Статус</span><b>${banned ? "⛔ заблокирован " + (p.banned_until > 4.1e9 ? "навсегда" : "до " + dt(p.banned_until)) + (p.ban_reason ? " — " + esc(p.ban_reason) : "") : "✅ активен"}</b>
       </div>
 
@@ -336,6 +385,9 @@
         : isMe ? `<div class="set-note">Себя заблокировать нельзя</div>`
         : `<div class="set-seg" id="syDays"><button data-d="1">1 день</button><button data-d="7" class="on">7 дней</button><button data-d="30">30 дней</button><button data-d="0">Навсегда</button></div>
         <div class="set-test"><input id="syReason" placeholder="Причина" maxlength="200"><button class="btn ghost" id="syBanGo">⛔ Заблок.</button></div>`}
+
+      <div class="set-title">Hirbis Plus</div>
+      <div class="set-seg" id="syPlus"><button data-d="7">+7 дней</button><button data-d="30">+30 дней</button><button data-d="365">+1 год</button>${p.plus_until > now ? `<button data-d="0">Снять</button>` : ""}</div>
 
       <div class="set-title">Права</div>
       ${isMe ? `<div class="set-note">Ты владелец 👑</div>` : `<button class="btn ghost sy-wide" id="syAdm">${p.admin ? "Снять права админа" : "👑 Сделать админом"}</button>`}
@@ -410,6 +462,13 @@
       note.querySelector("#syForceYes").onclick = () => addNickOp(h, true, o.handle);
     };
     card.querySelector("#syLim").onchange = (e) => { pend.nickLimit = e.target.value === "inf" ? "inf" : +e.target.value; labels.nickLimit = "лимит ников"; refresh(); };
+    // Hirbis Plus: подарить дни / снять
+    const pl = card.querySelector("#syPlus");
+    pl.onclick = (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      pl.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+      pend.plusDays = +b.dataset.d; labels.plus = +b.dataset.d ? "Plus +" + b.dataset.d + " дн." : "снять Plus"; refresh();
+    };
     // бан, права, сброс
     const days = card.querySelector("#syDays");
     if (days) days.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; days.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); };
@@ -456,7 +515,8 @@
   }
   function chooseHandle(h) { if (h) lsSet("sync_want", String(h).replace(/^@/, "").toLowerCase()); lsSet("sync_ok", true); sync(); }
 
-  window.hirbisSync = { sync, reset, settingsHTML, settingsBind, openAdmin, checkHandle, chooseHandle, active: !!initData, me: () => me };
+  window.hirbisSync = { sync, reset, settingsHTML, settingsBind, openAdmin, checkHandle, chooseHandle, active: !!initData, me: () => me,
+    api, gotMe };
   // окно согласия — только тем, кто уже играл (новички соглашаются на шаге «ник»)
   if (initData) {
     if (lsGet("sync_ok", false)) sync();

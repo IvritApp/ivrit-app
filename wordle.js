@@ -189,12 +189,12 @@
         <div class="wd-dist">${s.dist.map((c, i) => `<div class="wd-dr"><i>${i + 1}</i><b class="${won && n === i + 1 ? "me" : ""}" style="--w:${Math.max(8, c / max * 100)}%">${c}</b></div>`).join("")}</div>
         <div class="wd-next">Новое слово через <b id="wdLeft"></b></div>
         <button class="btn blue" id="wdShare">Поделиться результатом</button>
-        <button class="btn ghost" id="wdHome">На главную</button>
+        <button class="btn ghost" id="wdHome">${window.openMinigames ? "К мини-играм" : "На главную"}</button>
       </div>`;
     const say = () => speak(w.he, { audio: w.audio });
     document.getElementById("wdSay").onclick = say; if (fresh) setTimeout(say, 400);
     document.getElementById("wdShare").onclick = share;
-    document.getElementById("wdHome").onclick = () => showHome();
+    document.getElementById("wdHome").onclick = () => (window.openMinigames ? openMinigames() : showHome());
     if (window.HAnim) HAnim.mascot(document.getElementById("wdBird"), won ? (fresh ? "cheer" : "happy") : "sad", { size: 90 });
     const left = document.getElementById("wdLeft");
     const tick = () => {
