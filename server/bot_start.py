@@ -142,7 +142,9 @@ def ensure_tables(db):
         code TEXT DEFAULT '', at REAL)""")
     db.execute("""CREATE TABLE IF NOT EXISTS wallets (tg_id INTEGER PRIMARY KEY, bur INTEGER DEFAULT 0, gems INTEGER DEFAULT 0,
         counted INTEGER DEFAULT 0, lessons INTEGER DEFAULT 0, quests INTEGER DEFAULT 0, daily TEXT DEFAULT '',
-        nick_coupons INTEGER DEFAULT 0)""")
+        nick_coupons INTEGER DEFAULT 0, ready INTEGER DEFAULT 1)""")
+    if "ready" not in [x[1] for x in db.execute("PRAGMA table_info(wallets)")]:
+        db.execute("ALTER TABLE wallets ADD COLUMN ready INTEGER DEFAULT 1")
     db.execute("CREATE TABLE IF NOT EXISTS ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, cur TEXT, delta INTEGER, why TEXT)")
     db.commit()
 
@@ -191,28 +193,43 @@ def paid(token, db, msg):
     p = parse_payload(sp.get("invoice_payload")) or {"t": "plus", "u": uid, "p": sp.get("total_amount"), "d": 30, "c": ""}
     charge = sp.get("telegram_payment_charge_id") or ""
     now = time.time()
-    cur = db.execute("INSERT OR IGNORE INTO payments VALUES (?,?,?,?,?,?)",
-                     (charge, uid, sp.get("total_amount"), p["d"], p["c"] if p["t"] == "plus" else f"gems:{p['g']}", now))
+    try:
+        cur = db.execute("INSERT OR IGNORE INTO payments VALUES (?,?,?,?,?,?)",
+                         (charge, uid, sp.get("total_amount"), p["d"], p["c"] if p["t"] == "plus" else f"gems:{p['g']}", now))
+    except Exception as e:                       # база занята и т. п.: ничего не записали — громко в лог, начислить вручную
+        db.rollback()
+        print("!!! ОПЛАТА НЕ ЗАСЧИТАНА (payments)", uid, charge, sp.get("total_amount"), str(e)[:120], flush=True)
+        raise
     if cur.rowcount == 0:                        # this payment was already counted
         db.rollback()                            # close the transaction, or the database stays locked for players_api
         return
-    if p["t"] == "gems":                         # 💎 хибриллианты (the wallet exists: the invoice is made by /hapi/eco/gems_invoice)
-        w = db.execute("UPDATE wallets SET gems=gems+? WHERE tg_id=?", (p["g"], uid))
-        if w.rowcount == 0:
-            print("оплата 💎: нет кошелька у", uid, flush=True)
-        db.execute("INSERT INTO ledger (tg_id, at, cur, delta, why) VALUES (?,?,?,?,?)", (uid, now, "gems", p["g"], "stars:" + charge[:40]))
-        db.commit()
+    if p["t"] == "gems":                         # 💎 хибриллианты
+        try:
+            w = db.execute("UPDATE wallets SET gems=gems+? WHERE tg_id=?", (p["g"], uid))
+            if w.rowcount == 0:                  # кошелька нет — заводим (ready=0: сервер сам доделает его при первом заходе)
+                db.execute("INSERT INTO wallets (tg_id, bur, gems, ready) VALUES (?, 0, ?, 0)", (uid, p["g"]))
+            db.execute("INSERT INTO ledger (tg_id, at, cur, delta, why) VALUES (?,?,?,?,?)", (uid, now, "gems", p["g"], "stars:" + charge[:40]))
+            db.commit()
+        except Exception as e:
+            db.rollback()                        # ничего не записано (и платёж тоже) — повторно Telegram его не пришлёт, поэтому громко в лог: начислить вручную в админке
+            print("!!! ОПЛАТА 💎 НЕ ЗАСЧИТАНА", uid, charge, sp.get("total_amount"), str(e)[:120], flush=True)
+            raise
         print("оплата: получено", sp.get("total_amount"), "⭐ →", p["g"], "💎 от", uid, flush=True)
         api(token, "sendMessage", {"chat_id": msg["chat"]["id"], "reply_markup": app_button(),
                                    "text": f"Спасибо! 💎 +{p['g']} хибриллиантов уже в Hirbis. Загляни в магазин 🛒"})
         return
-    row = db.execute("SELECT until FROM plus WHERE tg_id=?", (uid,)).fetchone()
-    until = max(now, float(row[0]) if row and row[0] else 0) + p["d"] * 86400
-    db.execute("INSERT INTO plus (tg_id, until) VALUES (?, ?) ON CONFLICT(tg_id) DO UPDATE SET until=excluded.until", (uid, until))
-    if p["c"]:
-        db.execute("INSERT OR IGNORE INTO promo_uses VALUES (?,?,?)", (p["c"], uid, now))
-        db.execute("UPDATE promos SET used=used+1 WHERE code=?", (p["c"],))
-    db.commit()
+    try:
+        row = db.execute("SELECT until FROM plus WHERE tg_id=?", (uid,)).fetchone()
+        until = max(now, float(row[0]) if row and row[0] else 0) + p["d"] * 86400
+        db.execute("INSERT INTO plus (tg_id, until) VALUES (?, ?) ON CONFLICT(tg_id) DO UPDATE SET until=excluded.until", (uid, until))
+        if p["c"]:
+            db.execute("INSERT OR IGNORE INTO promo_uses VALUES (?,?,?)", (p["c"], uid, now))
+            db.execute("UPDATE promos SET used=used+1 WHERE code=?", (p["c"],))
+        db.commit()
+    except Exception as e:
+        db.rollback()                            # ничего не записано — громко в лог: выдать Plus вручную в админке
+        print("!!! ОПЛАТА PLUS НЕ ЗАСЧИТАНА", uid, charge, sp.get("total_amount"), str(e)[:120], flush=True)
+        raise
     print("оплата: получено", sp.get("total_amount"), "⭐ от", uid, flush=True)
     day = time.strftime("%d.%m.%Y", time.gmtime(until + 3 * 3600))
     api(token, "sendMessage", {"chat_id": msg["chat"]["id"], "reply_markup": app_button(),

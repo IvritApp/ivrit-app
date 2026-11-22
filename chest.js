@@ -60,7 +60,7 @@
       case "bur":   return { icon: "🥐", n: n, word: plural(n, "бурекас", "бурекаса", "бурекасов"), sub: "Трать на мини-игры, сундуки и полезные вещи" };
       case "gems":  return { icon: "💎", n: n, word: plural(n, "хибриллиант", "хибриллианта", "хибриллиантов"), sub: "Редкая валюта: скины, ники, большие сундуки" };
       case "plus":  return { icon: "👑", n: n || 1, word: plural(n || 1, "день", "дня", "дней") + " Hirbis Plus", sub: "Бесконечные ❤️ — учись без остановки" };
-      case "skin":  return { icon: it.icon || "🎨", frame: !it.icon, title: "Скин: " + (it.name || "новый"), sub: "Надень его в «Мои вещи»" };
+      case "skin":  return { icon: it.icon || "🎨", frame: !it.icon, title: "Скин: " + (it.name || "новый"), sub: "Надень его: Магазин → ✨ Скины" };
       case "hearts":return { icon: "❤️", title: "Полные сердечки", sub: "Все ❤️ снова полные" };
       case "freeze":return { icon: "❄️", title: "Заморозка серии", sub: "Серия не сгорит, если пропустишь день" };
       case "nick_coupon": return { icon: "🎟️", title: "Купон: редкий ник", sub: "Выбери себе особый ник" };

@@ -101,6 +101,25 @@ def db():
     c.execute("""CREATE TABLE IF NOT EXISTS chests (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, kind TEXT, src TEXT,
         at REAL, opened REAL DEFAULT 0, rarity TEXT DEFAULT '', reward TEXT DEFAULT '')""")
     c.execute("CREATE INDEX IF NOT EXISTS chests_user ON chests (tg_id, opened)")
+    # 22.11 защита от накрутки: какие дни (🥐) и какие уроки/квесты (сундуки) уже засчитаны
+    # миграция нужна, если таблицы eco_days ещё не было (а не по колонке ready: её может добавить и бот, если его перезапустят первым)
+    first_eco = not c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='eco_days'").fetchone()
+    c.execute("CREATE TABLE IF NOT EXISTS eco_days (tg_id INTEGER, day TEXT, pts INTEGER, PRIMARY KEY (tg_id, day))")
+    c.execute("CREATE TABLE IF NOT EXISTS eco_done (tg_id INTEGER, key TEXT, PRIMARY KEY (tg_id, key))")
+    wcols = [x[1] for x in c.execute("PRAGMA table_info(wallets)")]
+    if "ready" not in wcols:                      # 1 = кошелёк заведён как надо; 0 = его создал бот при оплате 💎 (eco_row доделает)
+        c.execute("ALTER TABLE wallets ADD COLUMN ready INTEGER DEFAULT 1")
+    if first_eco:
+        # кошельки, заведённые до защиты от накрутки: уже пройденное и сегодняшние/вчерашние очки — засчитаны (без сундуков задним числом)
+        for (wid,) in c.execute("SELECT tg_id FROM wallets").fetchall():
+            pr = c.execute("SELECT state FROM players WHERE tg_id=?", (wid,)).fetchone()
+            st0 = json.loads((pr[0] if pr else "{}") or "{}")
+            ls, qs = eco_progress(st0)
+            for key in ["lesson:" + x for x in ls] + ["quest:" + x for x in qs]:
+                c.execute("INSERT OR IGNORE INTO eco_done VALUES (?,?)", (wid, key))
+            for sh in (0, -1):
+                dk = day_key(sh)
+                c.execute("INSERT OR IGNORE INTO eco_days VALUES (?,?,?)", (wid, dk, min(EARN_DAY_CAP, safe_int(st0.get("points_" + dk, "0")))))
     c.execute("CREATE TABLE IF NOT EXISTS inventory (tg_id INTEGER, item TEXT, at REAL, PRIMARY KEY (tg_id, item))")
     c.execute("CREATE TABLE IF NOT EXISTS equip (tg_id INTEGER PRIMARY KEY, frame TEXT DEFAULT '', color TEXT DEFAULT '', badge TEXT DEFAULT '')")
     c.execute("CREATE TABLE IF NOT EXISTS ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, cur TEXT, delta INTEGER, why TEXT)")
@@ -108,6 +127,9 @@ def db():
     c.execute("""CREATE TABLE IF NOT EXISTS notices (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, text TEXT,
         note TEXT DEFAULT '', mood TEXT DEFAULT 'info', read INTEGER DEFAULT 0)""")
     c.execute("CREATE INDEX IF NOT EXISTS notices_user ON notices (tg_id, read)")
+    # отзывы тестеров (22.11, бета): «💬 Написать отзыв» в приложении → вкладка «Отзывы» в админке + сообщение админам в Telegram
+    c.execute("""CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, text TEXT,
+        place TEXT DEFAULT '', info TEXT DEFAULT '', done INTEGER DEFAULT 0)""")
     if "nick_limit" not in cols:
         c.execute(f"ALTER TABLE players ADD COLUMN nick_limit INTEGER DEFAULT {DEFAULT_NICKS}")
     # перенос старых данных: основной ник каждого игрока → в таблицу ников
@@ -322,7 +344,7 @@ def player_public(c, r):
         except Exception:
             return d
     streak = js("streak", {})
-    points = sum(int(js(k, 0) or 0) for k in st if k.startswith("points_"))
+    points = sum(safe_int(st[k]) for k in st if k.startswith("points_"))
     d = today_msk()
     return {
         "handle": r["handle"], "nicks": nicks_of(c, r["tg_id"]), "nick_limit": limit_of(r), "nick_limit_raw": r["nick_limit"],
@@ -332,7 +354,7 @@ def player_public(c, r):
         "profile": js("profile", None),
         "streak": {"count": streak.get("count", 0), "best": streak.get("best", 0),
                    "freezes": streak.get("freezes", 1), "last": streak.get("last")},
-        "points_total": points, "points_today": int(js(f"points_{d.year}-{d.month}-{d.day}", 0) or 0),
+        "points_total": points, "points_today": safe_int(st.get(f"points_{d.year}-{d.month}-{d.day}", "0")),
         "done": len(js("done", [])), "perfect": len(js("perfect", [])), "medals": js("medals", {}),
         "quests": len([k for k in st if k.startswith("quest_q-")]),
         "plus_until": plus_until(c, r["tg_id"]),
@@ -361,7 +383,7 @@ def profile_card(c, r, full=True):
     out = {"handle": r["handle"], "name": prof.get("name") or (r["name"] or "").split(" ")[0], "gender": prof.get("gender"),
            "avatar": prof.get("avatar"), "streak": streak_alive(streak),
            "skin": {"frame": eq[0], "color": eq[1], "badge": eq[2]} if eq else {},
-           "points": sum(int(js(k, 0) or 0) for k in st if k.startswith("points_")), "admin": bool(r["admin"])}
+           "points": sum(safe_int(st[k]) for k in st if k.startswith("points_")), "admin": bool(r["admin"])}
     if full:
         out.update({"nicks": nicks_of(c, r["tg_id"]), "best": streak.get("best", 0), "done": len(js("done", [])),
                     "perfect": len(js("perfect", [])), "medals": js("medals", {}), "created": r["created"],
@@ -499,7 +521,7 @@ def plus_price(pr):
     """Цена в ⭐ с учётом скидки промокода (минимум 1 ⭐, если скидка не 100 %)."""
     if not pr or pr["kind"] != "discount":
         return PLUS_PRICE
-    return max(0, round(PLUS_PRICE * (100 - pr["value"]) / 100)) if pr["value"] < 100 else 0
+    return max(1, round(PLUS_PRICE * (100 - pr["value"]) / 100)) if pr["value"] < 100 else 0
 
 
 def promo_public(pr):
@@ -557,41 +579,85 @@ SKINS = [k for k, v in CATALOG.items() if v.get("slot")]
 SHORT_NICK = 5                       # ники короче 5 знаков — только по купону (у админа без ограничений)
 
 
-def eco_row(c, uid, r=None):
-    """Кошелёк игрока; при первом обращении создаём: бурекасы = очки − потраченное в старом кошельке мини-игр,
-    уже пройденные уроки/уровни сундуков не дают (дарим один приветственный сундук)."""
-    w = c.execute("SELECT * FROM wallets WHERE tg_id=?", (uid,)).fetchone()
-    if w:
-        return w
-    st = json.loads((r["state"] if r else "{}") or "{}")
-    earned, lessons, quests = eco_progress(st)
+# ЗАЩИТА ОТ НАКРУТКИ (22.11, по критику): прогресс присылает телефон, поэтому
+#  • 🥐 начисляем только за СЕГОДНЯ и ВЧЕРА (по Москве), не больше EARN_DAY_CAP за день, каждый день — один раз (таблица eco_days);
+#  • сундук за урок — только за настоящие уроки главы A1 (a1-<уровень 1–10>-<урок 1–7>), каждый урок — один раз (eco_done);
+#  • большой сундук за уровень — максимум 10 квестов;
+#  • в день не больше LESSON_CHESTS_DAY сундуков за уроки и LEVEL_CHESTS_DAY за уровни (остальные придут на следующий день).
+LESSON_RE = re.compile(r"^a1-(10|[1-9])-[1-7]$")
+LESSON_CHESTS_DAY = 12
+LEVEL_CHESTS_DAY = 3
+
+
+def safe_int(v, d=0):
     try:
-        spent = int(json.loads(st.get("wallet_spent", "0")) or 0)
+        return int(json.loads(v) if isinstance(v, str) else v or 0)
     except Exception:
-        spent = 0
-    c.execute("INSERT INTO wallets (tg_id, bur, gems, counted, lessons, quests) VALUES (?,?,0,?,?,?)",
-              (uid, max(0, earned - spent), earned, lessons, quests))
-    c.execute("INSERT INTO ledger (tg_id, at, cur, delta, why) VALUES (?,?,?,?,?)", (uid, time.time(), "bur", max(0, earned - spent), "start"))
+        return d
+
+
+APP_START = datetime(2026, 11, 9, tzinfo=MSK)          # раньше этой даты очков быть не может
+START_CAP = 30000                                       # потолок стартовых 🥐 при заведении кошелька
+
+
+def start_points(c, uid, st):
+    """Очки из прогресса для стартового баланса: только настоящие даты (от запуска приложения или от регистрации − 7 дней
+    до сегодня), каждый день один раз и не больше EARN_DAY_CAP, всего не больше START_CAP."""
+    pr = c.execute("SELECT created FROM players WHERE tg_id=?", (uid,)).fetchone()
+    first = max(APP_START, datetime.fromtimestamp((pr[0] if pr and pr[0] else time.time()) - 7 * 86400, MSK)).date()
+    last = today_msk().date()
+    days = {}
+    for k, v in st.items():
+        m = re.match(r"^points_(\d{4})-(\d{1,2})-(\d{1,2})$", k)
+        if not m:
+            continue
+        try:
+            dte = datetime(int(m[1]), int(m[2]), int(m[3])).date()
+        except ValueError:
+            continue
+        if first <= dte <= last:
+            days[dte] = max(days.get(dte, 0), max(0, min(EARN_DAY_CAP, safe_int(v))))
+    return min(START_CAP, sum(days.values()))
+
+
+def day_key(shift=0):
+    d = today_msk(shift)
+    return f"{d.year}-{d.month}-{d.day}"          # как в ключах прогресса points_Г-М-Д
+
+
+def eco_row(c, uid, r=None):
+    """Кошелёк игрока; при первом обращении (или если его создал бот при оплате — ready=0) заводим:
+    бурекасы = очки (каждый день ≤ EARN_DAY_CAP) − потраченное в старом кошельке мини-игр; уже пройденные уроки и уровни
+    отмечаем как «засчитанные» (сундуков задним числом нет) и дарим один приветственный сундук."""
+    w = c.execute("SELECT * FROM wallets WHERE tg_id=?", (uid,)).fetchone()
+    if w and w["ready"]:
+        return w
+    st = json.loads((r["state"] if r else None) or (c.execute("SELECT state FROM players WHERE tg_id=?", (uid,)).fetchone() or ["{}"])[0] or "{}")
+    start = max(0, start_points(c, uid, st) - safe_int(st.get("wallet_spent", "0")))
+    if w:
+        c.execute("UPDATE wallets SET bur=bur+?, ready=1 WHERE tg_id=?", (start, uid))
+    else:
+        c.execute("INSERT INTO wallets (tg_id, bur, gems, ready) VALUES (?,?,0,1)", (uid, start))
+    c.execute("INSERT INTO ledger (tg_id, at, cur, delta, why) VALUES (?,?,?,?,?)", (uid, time.time(), "bur", start, "start"))
+    for sh in (0, -1):                                         # сегодня и вчера уже учтены в стартовых бурекасах
+        dk = day_key(sh)
+        c.execute("INSERT OR REPLACE INTO eco_days VALUES (?,?,?)", (uid, dk, min(EARN_DAY_CAP, safe_int(st.get("points_" + dk, "0")))))
+    lessons, quests = eco_progress(st)
+    for key in ["lesson:" + x for x in lessons] + ["quest:" + x for x in quests]:
+        c.execute("INSERT OR IGNORE INTO eco_done VALUES (?,?)", (uid, key))
     c.execute("INSERT INTO chests (tg_id, kind, src, at) VALUES (?,?,?,?)", (uid, "welcome", "welcome", time.time()))
     return c.execute("SELECT * FROM wallets WHERE tg_id=?", (uid,)).fetchone()
 
 
 def eco_progress(st):
-    """Из прогресса: очки (каждый день не больше EARN_DAY_CAP), пройденные уроки, пройденные уровни (квесты)."""
-    earned = 0
-    for k, v in st.items():
-        if re.match(r"^points_\d{4}-\d{1,2}-\d{1,2}$", k):
-            try:
-                earned += max(0, min(EARN_DAY_CAP, int(json.loads(v) or 0)))
-            except Exception:
-                pass
+    """Из прогресса: настоящие пройденные уроки главы A1 и пройденные квесты (не больше 10)."""
     try:
         done = json.loads(st.get("done", "[]")) or []
     except Exception:
         done = []
-    lessons = len({x for x in done if isinstance(x, str) and re.match(r"^a\d+-\d+-\d+$", x)})
-    quests = len([k for k in st if k.startswith("quest_q-")])
-    return earned, lessons, quests
+    lessons = sorted({x for x in done if isinstance(x, str) and LESSON_RE.match(x)})
+    quests = sorted(k[len("quest_"):] for k in st if k.startswith("quest_q-") and len(k) < 40 and safe_int(st[k], 1))[:10]
+    return lessons, quests
 
 
 def eco_add(c, uid, cur, delta, why):
@@ -606,20 +672,45 @@ def eco_chest_add(c, uid, kind, src):
     n = c.execute("SELECT COUNT(*) FROM chests WHERE tg_id=? AND opened=0", (uid,)).fetchone()[0]
     if n < CHEST_QUEUE_MAX:
         c.execute("INSERT INTO chests (tg_id, kind, src, at) VALUES (?,?,?,?)", (uid, kind, src, time.time()))
+        return True
+    return False
 
 
 def eco_catch_up(c, uid, r):
-    """Новые очки → бурекасы; новые пройденные уроки → сундук, новые уровни → большой сундук."""
-    w = eco_row(c, uid, r)
-    earned, lessons, quests = eco_progress(json.loads(r["state"] or "{}"))
-    if earned > w["counted"]:
-        eco_add(c, uid, "bur", earned - w["counted"], "learn")
-    for _ in range(max(0, min(10, lessons - w["lessons"]))):
-        eco_chest_add(c, uid, "chest", "lesson")
-    for _ in range(max(0, min(5, quests - w["quests"]))):
-        eco_chest_add(c, uid, "big", "level")
-    c.execute("UPDATE wallets SET counted=MAX(counted, ?), lessons=MAX(lessons, ?), quests=MAX(quests, ?) WHERE tg_id=?",
-              (earned, lessons, quests, uid))
+    """Новые очки (сегодня/вчера) → бурекасы; новые настоящие уроки → сундук, новые уровни → большой сундук (с дневным пределом)."""
+    eco_row(c, uid, r)
+    st = json.loads(r["state"] or "{}")
+    for sh in (0, -1):
+        dk = day_key(sh)
+        pts = min(EARN_DAY_CAP, max(0, safe_int(st.get("points_" + dk, "0"))))
+        row = c.execute("SELECT pts FROM eco_days WHERE tg_id=? AND day=?", (uid, dk)).fetchone()
+        got = row[0] if row else 0
+        if pts > got:
+            eco_add(c, uid, "bur", pts - got, "learn")
+            c.execute("INSERT OR REPLACE INTO eco_days VALUES (?,?,?)", (uid, dk, pts))
+    lessons, quests = eco_progress(st)
+    since = time.time() - 86400
+    for kind, src, keys, cap in (("chest", "lesson", ["lesson:" + x for x in lessons], LESSON_CHESTS_DAY),
+                                 ("big", "level", ["quest:" + x for x in quests], LEVEL_CHESTS_DAY)):
+        left = cap - c.execute("SELECT COUNT(*) FROM chests WHERE tg_id=? AND src=? AND at>?", (uid, src, since)).fetchone()[0]
+        if src == "level" and c.execute("SELECT COUNT(*) FROM eco_done WHERE tg_id=? AND key LIKE 'quest:%'", (uid,)).fetchone()[0] >= 10:
+            left = 0
+        for key in keys:
+            if left <= 0:
+                break
+            if c.execute("SELECT 1 FROM eco_done WHERE tg_id=? AND key=?", (uid, key)).fetchone():
+                continue
+            if not eco_chest_add(c, uid, kind, src):           # очередь сундуков полна — урок засчитаем позже
+                break
+            c.execute("INSERT INTO eco_done VALUES (?,?)", (uid, key))
+            left -= 1
+
+
+def eco_reset(c, uid):
+    """Только когда АДМИН стёр прогресс игрока: сундуки за уроки можно получить заново (дневной предел мешает злоупотреблению).
+    Игровое «Начать сначала» (/hapi/reset) это НЕ вызывает — иначе бесконечный фарм сундуков сбросами."""
+    c.execute("DELETE FROM eco_done WHERE tg_id=?", (uid,))
+    # eco_days НЕ чистим: иначе «сброс» снова давал бы 🥐 за сегодняшние очки (накрутка сбросами); завтра всё как обычно
 
 
 def msk_day():
@@ -805,6 +896,10 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 res = self.route(c, route, user, p)
                 c.commit()
+            except Exception as e:                # ошибка в обработке: ничего не сохраняем, отвечаем понятно (а не обрывом связи)
+                c.rollback()
+                print("ОШИБКА", route, type(e).__name__, str(e)[:200], file=sys.stderr, flush=True)
+                res = (200, {"error": "Что-то пошло не так на сервере. Попробуй ещё раз 🙏"})
             finally:
                 c.close()
         inv = res[1].pop("_invoice", None) if isinstance(res[1], dict) else None
@@ -837,6 +932,8 @@ class Handler(BaseHTTPRequestHandler):
 
         name = " ".join(x for x in [user.get("first_name"), user.get("last_name")] if x)[:60]
         r = c.execute("SELECT * FROM players WHERE tg_id=?", (uid,)).fetchone()
+        if not r and not (route == "/hapi/sync" and p.get("consent")):
+            return 200, {"error": "no_consent"}                   # 152-ФЗ: аккаунт — только после согласия (его даёт /sync)
         if not r:
             h = new_handle(c, user.get("username"))
             c.execute("INSERT INTO players (tg_id, handle, name, tg_username, created, last_seen, ver, state) VALUES (?,?,?,?,?,?,0,'{}')",
@@ -871,7 +968,26 @@ class Handler(BaseHTTPRequestHandler):
             return 200, me(ver=r["ver"])
 
         if route == "/hapi/reset":
+            # eco_done НЕ чистим (по критику: иначе сброс → снова сундуки → бесконечный фарм); за те же уроки сундука второй раз нет
             return 200, me(ver=self.save(c, uid, {}, r["ver"]), state={})
+
+        if route == "/hapi/feedback":                             # отзыв тестера (бета)
+            text = re.sub(r"\s+", " ", str(p.get("text") or "")).strip()[:1500]
+            if len(text) < 3:
+                return 200, {"error": "Напиши хотя бы пару слов 🙂"}
+            if c.execute("SELECT COUNT(*) FROM feedback WHERE tg_id=? AND at>?", (uid, now - 3600)).fetchone()[0] >= 10:
+                return 200, {"error": "Спасибо! Ты уже много написал за этот час — продолжим чуть позже 🙏"}
+            place, info = str(p.get("place") or "")[:60], str(p.get("info") or "")[:300]
+            c.execute("INSERT INTO feedback (tg_id, at, text, place, info) VALUES (?,?,?,?,?)", (uid, now, text, place, info))
+            for a in c.execute("SELECT tg_id FROM players WHERE admin=1").fetchall():       # админам — сразу в Telegram
+                try:
+                    started = c.execute("SELECT 1 FROM bot_started WHERE tg_id=?", (a[0],)).fetchone()
+                except sqlite3.OperationalError:
+                    started = None
+                if started:
+                    with TG_OUTBOX_LOCK:
+                        TG_OUTBOX.append((a[0], f"📝 Отзыв от @{r['handle']}" + (f" ({place})" if place else "") + f":\n\n{text}"))
+            return 200, {"ok": True}
 
         if route == "/hapi/notices/read":                         # игрок прочитал уведомления
             ids = [int(x) for x in (p.get("ids") or []) if str(x).isdigit()][:50]
@@ -934,6 +1050,8 @@ class Handler(BaseHTTPRequestHandler):
                     return 200, me(error="Такого товара нет", eco=eco_me(c, uid))
                 if it.get("slot") and c.execute("SELECT 1 FROM inventory WHERE tg_id=? AND item=?", (uid, key)).fetchone():
                     return 200, me(error="Это уже твоё 🙂", eco=eco_me(c, uid))
+                if key == "nick_slot" and r["nick_limit"] == UNLIMITED:
+                    return 200, me(error="У тебя и так ников без ограничений 🙂", eco=eco_me(c, uid))
                 have = w["bur"] if it["cur"] == "bur" else w["gems"]
                 if have < it["price"]:
                     return 200, me(error="not_enough", need=it["price"] - have, cur=it["cur"], eco=eco_me(c, uid))
@@ -1243,6 +1361,16 @@ class Handler(BaseHTTPRequestHandler):
             if route == "/hapi/admin/log":
                 rows = c.execute("SELECT * FROM admin_log ORDER BY at DESC LIMIT 100").fetchall()
                 return 200, {"log": [dict(x) for x in rows]}
+            # отзывы тестеров
+            if route == "/hapi/admin/feedback/list":
+                rows = c.execute("""SELECT f.*, p.handle FROM feedback f LEFT JOIN players p ON p.tg_id = f.tg_id
+                    ORDER BY f.done, f.id DESC LIMIT 300""").fetchall()
+                return 200, {"feedback": [{"id": x["id"], "at": x["at"], "text": x["text"], "place": x["place"], "info": x["info"],
+                                           "done": bool(x["done"]), "handle": x["handle"]} for x in rows],
+                             "open": c.execute("SELECT COUNT(*) FROM feedback WHERE done=0").fetchone()[0]}
+            if route == "/hapi/admin/feedback/done":
+                c.execute("UPDATE feedback SET done=? WHERE id=?", (1 if p.get("done", True) else 0, int(p.get("id") or 0)))
+                return 200, {"ok": True}
             # промокоды Hirbis Plus
             if route == "/hapi/admin/promo/list":
                 rows = c.execute("SELECT * FROM promos ORDER BY created DESC LIMIT 500").fetchall()
@@ -1346,7 +1474,7 @@ class Handler(BaseHTTPRequestHandler):
             c.execute("INSERT INTO plus VALUES (?, ?)", (uid, best))
         c.execute("UPDATE OR IGNORE promo_uses SET tg_id=? WHERE tg_id=?", (uid, old_id))
         # валюта, сундуки и вещи — тоже (у нового пустого аккаунта их стираем)
-        for tb in ("wallets", "equip", "inventory", "chests"):
+        for tb in ("wallets", "equip", "inventory", "chests", "eco_done", "eco_days"):
             c.execute(f"DELETE FROM {tb} WHERE tg_id=?", (uid,))
             c.execute(f"UPDATE {tb} SET tg_id=? WHERE tg_id=?", (uid, old_id))
         c.execute("UPDATE ledger SET tg_id=? WHERE tg_id=?", (uid, old_id))
@@ -1399,6 +1527,7 @@ class Handler(BaseHTTPRequestHandler):
             st["profile"] = json.dumps(cur, ensure_ascii=False); state_changed = True
         if p.get("resetProgress"):
             st = {k: v for k, v in st.items() if k in ("profile", "settings")}
+            eco_reset(c, tid)
             what["resetProgress"] = True; state_changed = True
         # ники
         n = p.get("nick")

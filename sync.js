@@ -13,7 +13,7 @@
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;
   let me = lsGet("sync_me", null);       // { handle, admin, tg_id }
-  let busy = false, again = false, timer = null, online = null;
+  let busy = false, again = false, timer = null, online = null, ecoT = null;
 
   function lsGet(k, d) { try { const v = localStorage.getItem(P + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(P + k, JSON.stringify(v)); } catch (e) {} }
@@ -35,8 +35,14 @@
   const admSess = () => { const a = lsGet("adminmode", null); return a && a.t && a.until * 1000 > Date.now() ? a.t : null; };
   async function api(path, body, keepalive) {
     const extra = path.startsWith("/admin/") ? { session: admSess() } : {};
-    const r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "text/plain" }, keepalive: !!keepalive,
-      body: JSON.stringify(Object.assign({ initData }, extra, body)) });
+    // 22.11: не ждать сервер дольше 15 с (иначе кнопки «Отправляю…» висят минутами, если VPS недоступен)
+    const ctl = typeof AbortController === "function" && !keepalive ? new AbortController() : null;
+    const tm = ctl ? setTimeout(() => ctl.abort(), 15000) : 0;
+    let r;
+    try {
+      r = await fetch(API + path, { method: "POST", headers: { "Content-Type": "text/plain" }, keepalive: !!keepalive,
+        body: JSON.stringify(Object.assign({ initData }, extra, body)), signal: ctl ? ctl.signal : undefined });
+    } finally { clearTimeout(tm); }
     if (!r.ok) {                                           // покажем настоящую причину (например, «нет прав»), а не «нет связи»
       let msg = "http " + r.status; try { const j = await r.json(); if (j && j.error) msg = j.error; } catch (e) {}
       const er = new Error(msg); er.server = true; throw er;
@@ -57,6 +63,36 @@
     if (typeof res.plus_until === "number" && window.Plus) Plus.setUntil(res.plus_until);   // Hirbis Plus — срок знает только сервер
     if (res.notices && res.notices.length) showNotices(res.notices);
   }
+
+  // --- 💬 ОТЗЫВ ТЕСТЕРА (22.11, бета): окно с полем → /hapi/feedback → админка «📝 Отзывы» + сообщение админу в Telegram ---
+  function appVer() { const s = document.querySelector('script[src*="app.js?v="]'); return s ? (s.getAttribute("src").split("v=")[1] || "") : ""; }
+  function openFeedback(place) {
+    if (!initData) { if (typeof showToast === "function") showToast("Отзыв можно отправить из приложения в Telegram"); return; }
+    const box = sheet("syFeedback", `<div class="set-head"><b>💬 Отзыв о Hirbis</b><button class="set-x" id="syFbX">✕</button></div>
+      <p class="sy-p">Это бета-версия — нам очень важно твоё мнение. Что понравилось? Что непонятно или сломалось? Пиши как есть 🙏</p>
+      <textarea id="syFbText" class="sy-fb-text" maxlength="1500" rows="5" placeholder="Например: «в уроке 3 кнопка не нажималась» или «квест с шаурмой — огонь!»"></textarea>
+      <button class="btn blue sy-wide" id="syFbSend">Отправить</button>`, true);
+    const ta = box.querySelector("#syFbText");
+    box.querySelector("#syFbX").onclick = () => box.classList.remove("show");
+    setTimeout(() => { try { ta.focus(); } catch (e) {} }, 300);
+    box.querySelector("#syFbSend").onclick = async () => {
+      const text = ta.value.trim();
+      if (text.length < 3) { showToast("Напиши хотя бы пару слов 🙂"); return; }
+      const btn = box.querySelector("#syFbSend"); btn.disabled = true; btn.textContent = "Отправляю…";
+      const tgp = tgApp ? (tgApp.platform || "") + " " + (tgApp.version || "") : "";
+      const info = `v=${appVer()} · ${tgp.trim()} · ${window.innerWidth}×${window.innerHeight} · ${document.body.classList.contains("theme-dark") ? "тёмная" : "светлая"}`;
+      let r = null;
+      try { r = await api("/feedback", { text, place: String(place || ""), info }); } catch (e) {}
+      if (!r || r.error) { btn.disabled = false; btn.textContent = "Отправить";
+        showToast(r && r.error === "no_consent" ? "Сначала разреши сохранять прогресс (⚙️ → Аккаунт)" : r && r.error ? r.error : "Нет связи с сервером — попробуй ещё раз"); return; }
+      box.classList.remove("show");
+      if (typeof vibrate === "function") vibrate("success");
+      showToast("Спасибо! Мы всё прочитаем 💛");
+    };
+  }
+  window.openFeedback = openFeedback;
+  const betaChip = document.getElementById("betaChip");
+  if (betaChip) betaChip.onclick = () => openFeedback("главная");
 
   // --- 📬 уведомления от администрации (22.11): «к сожалению, твой ник передан…», «тебе подарили Plus» ---
   const noticeShown = new Set();
@@ -103,6 +139,8 @@
         applyState(res.state, res.ver);
         if (!same) { location.reload(); return; }
       } else if (res.ver) { lsSet("sync_ver", res.ver); if (changed) lsSet("sync_hash", h); }
+      // прогресс сохранён на сервере → сундук за урок и 🥐 уже можно забирать (раньше /eco/me мог прийти до сохранения)
+      if (changed && window.Eco && Eco.refresh) { clearTimeout(ecoT); ecoT = setTimeout(() => { try { Eco.refresh(); } catch (e) {} }, 300); }
     } catch (e) { online = false; }
     finally { busy = false; if (again) { again = false; schedule(); } }
   }
@@ -151,14 +189,15 @@
     const nicks = (me && me.nicks) || (me ? [me.handle] : []);
     const lim = me ? me.nick_limit : 3, unl = lim === -1;
     const canAdd = me && (unl || nicks.length < lim);
-    return `<div class="set-title">Аккаунт</div>
+    return `<button class="btn ghost sy-wide sy-fb-open" id="syFbOpen">💬 Написать отзыв (бета)</button>
+      <div class="set-title">Аккаунт</div>
       ${me ? `<div class="sy-nicks">${nicks.map(n => `<span class="sy-chip ${n === me.handle ? "main" : ""}" data-n="${esc(n)}">@${esc(n)}${n === me.handle ? " ⭐" : ""}</span>`).join("")}</div>
       <div class="set-note">⭐ — основной ник, его видят друзья. Ников: ${nicks.length} из ${unl ? "∞" : lim}. Нажми на ник, чтобы сделать основным или удалить.</div>
       <div id="syNickAct"></div>
       ${canAdd ? `<div class="set-test"><input id="syNickNew" maxlength="32" placeholder="ещё один ник" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syNickAdd">Добавить</button></div>
         <div class="set-note">Только маленькие латинские буквы (a–z), цифры и _ — от 5 до 32 символов (короткие, 3–4 знака — по купону 🏷 из магазина). Ник уникальный: если его уже кто-то занял, взять его нельзя.</div>` : ""}` : `<div class="set-note">Ник появится, когда приложение свяжется с сервером.</div>`}
       <div class="set-note">${status}${!ok ? ` · <a href="#" id="syConsentOpen">включить</a>` : ""}</div>
-      ${!(me && me.admin) ? `<div class="set-note sy-lost"><a href="#" id="syLost">Потерял старый Telegram? Войти в свой аккаунт</a></div><div id="syLostBox"></div>` : ""}
+      ${!(me && me.admin) ? `<div class="set-note sy-lost"><a href="#" id="syLost">Потерял старый Telegram? Войти в свой аккаунт</a> <span class="sy-lost-hint">(только если ты заранее настроил восстановление; если нет — напиши в поддержку @hirbis_support)</span></div><div id="syLostBox"></div>` : ""}
       ${me && me.admin ? `<div class="set-title">👑 Режим админа</div>
         ${!me.pin_set
           ? `<div class="set-note">Придумай пароль админа (любой длины). Без него админ-панель не откроется, даже с твоего телефона.</div>
@@ -178,6 +217,7 @@
     } catch (e) { showToast("Нет связи с сервером"); }
   }
   function settingsBind(box) {
+    const fb = box.querySelector("#syFbOpen"); if (fb) fb.onclick = () => openFeedback("настройки");
     box.querySelectorAll(".sy-chip").forEach(ch => ch.onclick = () => {
       const n = ch.dataset.n, act = box.querySelector("#syNickAct");
       box.querySelectorAll(".sy-chip").forEach(x => x.classList.toggle("sel", x === ch));
@@ -282,7 +322,7 @@
   const dt = t => t ? new Date(t * 1000).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
   function openAdmin(handle) {
     const box = sheet("syAdminSheet", `<div class="set-head"><b>👑 Админ-панель</b><button class="set-x" id="syAx">✕</button></div>
-      <div class="set-seg" id="syTabs"><button data-t="find" class="on">Игроки</button><button data-t="promo">🎟 Промокоды</button><button data-t="log">Журнал</button></div>
+      <div class="set-seg" id="syTabs"><button data-t="find" class="on">Игроки</button><button data-t="fb">📝 Отзывы</button><button data-t="promo">🎟 Промокоды</button><button data-t="log">Журнал</button></div>
       <div class="set-test"><input id="syFind" placeholder="ник, имя или ID" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syGo">Найти</button></div>
       <div id="syCard"></div>`, true);
     box.querySelector("#syAx").onclick = () => box.classList.remove("show");
@@ -308,6 +348,22 @@
         const res = await api("/admin/log", {});
         card.innerHTML = (res.log || []).map(x => `<div class="sy-log"><b>${dt(x.at)}</b> @${esc(x.admin)} → @${esc(x.target)}<span>${esc(x.what)}</span></div>`).join("") || `<p class="sy-p">Пока пусто</p>`;
       } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; }
+    };
+    // 📝 отзывы тестеров: новые сверху; «✓ Разобрано» убирает вниз; нажатие на ник — карточка игрока
+    const feedbackList = async () => {
+      card.innerHTML = `<p class="sy-p">Загружаю…</p>`;
+      let res;
+      try { res = await api("/admin/feedback/list", {}); } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; return; }
+      if (res.error) { card.innerHTML = `<p class="sy-p">${esc(res.error)}</p>`; return; }
+      card.innerHTML = `<div class="set-note">Новых отзывов: <b>${res.open}</b> · всего ${res.feedback.length}</div>` +
+        (res.feedback.map(f => `<div class="sy-log ${f.done ? "sy-dead" : ""}"><b>${dt(f.at)}</b> <a href="#" class="sy-fb-who" data-h="${esc(f.handle || "")}">@${esc(f.handle || "?")}</a>${f.place ? " · " + esc(f.place) : ""}
+          <span class="sy-fb-msg">${esc(f.text)}</span><span>${esc(f.info)}</span>
+          <button class="btn ghost sy-prdel sy-fb-done" data-id="${f.id}" data-done="${f.done ? 0 : 1}">${f.done ? "Вернуть в новые" : "✓ Разобрано"}</button></div>`).join("") || `<p class="sy-p">Пока отзывов нет</p>`);
+      card.querySelectorAll(".sy-fb-done").forEach(b => b.onclick = async () => {
+        try { await api("/admin/feedback/done", { id: +b.dataset.id, done: b.dataset.done === "1" }); } catch (e) { showToast("Нет связи с сервером"); return; }
+        feedbackList();
+      });
+      card.querySelectorAll(".sy-fb-who").forEach(a => a.onclick = (ev) => { ev.preventDefault(); if (a.dataset.h) openPlayer(a.dataset.h); });
     };
     // 🎟 промокоды Hirbis Plus: создать (скидка % или дни Plus), список, удалить
     const promos = async () => {
@@ -359,7 +415,7 @@
     box.querySelector("#syTabs").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
       box.querySelectorAll("#syTabs button").forEach(x => x.classList.toggle("on", x === b));
-      b.dataset.t === "log" ? log() : b.dataset.t === "promo" ? promos() : list();
+      b.dataset.t === "log" ? log() : b.dataset.t === "promo" ? promos() : b.dataset.t === "fb" ? feedbackList() : list();
     };
     box.querySelector("#syGo").onclick = list;
     inp.onkeydown = (e) => { if (e.key === "Enter") list(); };
@@ -387,6 +443,7 @@
         <span>Очки</span><b>${p.points_total} (сегодня ${p.points_today})</b>
         <span>Серия</span><b>🔥 ${s.count} · лучшая ${s.best} · ❄️ ${s.freezes}</b>
         <span>Hirbis Plus</span><b>${p.plus_until > now ? "✨ до " + dt(p.plus_until) : "—"}</b>
+        <span>Валюта</span><b>${p.eco ? `🥐 ${p.eco.bur} · 💎 ${p.eco.gems}` : "— (ещё не заходил в магазин)"}</b>
         <span>Статус</span><b>${banned ? "⛔ заблокирован " + (p.banned_until > 4.1e9 ? "навсегда" : "до " + dt(p.banned_until)) + (p.ban_reason ? " — " + esc(p.ban_reason) : "") : "✅ активен"}</b>
       </div>
 
@@ -395,6 +452,8 @@
       <label class="sy-f"><span>🏆 Лучшая серия</span><input type="number" min="0" id="syBest" value="${s.best}"></label>
       <label class="sy-f"><span>❄️ Заморозки</span><input type="number" min="0" id="syFr" value="${s.freezes}"></label>
       <label class="sy-f"><span>➕ Добавить очков</span><input type="number" id="syPts" value="0"></label>
+      <label class="sy-f"><span>🥐 Добавить бурекасов (минус — забрать)</span><input type="number" id="syBurAdd" value="0"></label>
+      <label class="sy-f"><span>💎 Добавить хибриллиантов (минус — забрать)</span><input type="number" id="syGemAdd" value="0"></label>
       <label class="sy-f"><span>Имя в игре</span><input id="syName" value="${esc(prof.name || "")}" maxlength="20"></label>
       <div class="set-seg" id="syGender"><button data-g="m" class="${prof.gender === "m" ? "on" : ""}">Парень</button><button data-g="f" class="${prof.gender === "f" ? "on" : ""}">Девушка</button></div>
 
@@ -438,6 +497,8 @@
       if (n("#syFr") !== s.freezes) st2.freezes = n("#syFr");
       if (Object.keys(st2).length) body.streak = st2;
       if (n("#syPts")) body.addPoints = n("#syPts");
+      if (n("#syBurAdd")) body.addBur = n("#syBurAdd");
+      if (n("#syGemAdd")) body.addGems = n("#syGemAdd");
       const nm = card.querySelector("#syName").value.trim(), g = (gsel.querySelector(".on") || {}).dataset;
       const prf = {};
       if (nm && nm !== prof.name) prf.name = nm;
@@ -450,6 +511,8 @@
       const list = [];
       if (all.streak) list.push("серия");
       if (all.addPoints) list.push("очки");
+      if (all.addBur) list.push("🥐");
+      if (all.addGems) list.push("💎");
       if (all.profile) list.push("имя/пол");
       Object.keys(labels).forEach(k => list.push(labels[k]));
       nickOps.forEach(o => list.push(o.label));
@@ -459,7 +522,7 @@
       card.querySelector("#syCancel").hidden = !n;
       card.querySelector("#sySaveBar").classList.toggle("dirty", !!n);
     };
-    card.querySelectorAll("#syCount, #syBest, #syFr, #syPts, #syName").forEach(i => i.oninput = refresh);
+    card.querySelectorAll("#syCount, #syBest, #syFr, #syPts, #syBurAdd, #syGemAdd, #syName").forEach(i => i.oninput = refresh);
     gsel.onclick = (e) => { const b = e.target.closest("button"); if (b) { gsel.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); refresh(); } };
     const mark = (btn, text) => { btn.classList.add("pending"); btn.textContent = text; };
     // ники

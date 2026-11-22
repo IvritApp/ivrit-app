@@ -29,8 +29,8 @@
       `<img class="ci-f ci-${f}" src="assets/chars/${id}_${f}.webp?v=${V}" width="${w}" height="${h}" decoding="async" alt="" draggable="false">`).join("")}</div>`;
   };
 
-  // моргание: всем видимым персонажам-картинкам по очереди
-  setInterval(() => {
+  // моргание: всем видимым персонажам-картинкам по очереди (если картинки выключены — таймер не нужен)
+  if (ENABLED) setInterval(() => {
     document.querySelectorAll(".ci").forEach(el => {
       // без offsetParent — он заставляет браузер пересчитывать раскладку
       if (Math.random() < .45 && !el.closest("[hidden]")) { el.classList.add("ci-blinking"); setTimeout(() => el.classList.remove("ci-blinking"), 160); }

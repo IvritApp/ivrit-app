@@ -60,14 +60,22 @@ let settings = Object.assign({}, SET_DEFAULT, store.get("settings", {}));
 function saveSettings() { store.set("settings", settings); applySettings(); }
 function applySettings() {
   const b = document.body;
-  b.classList.toggle("theme-dark", settings.theme === "dark");
+  // «Как в Telegram»: тёмный Telegram → тоже тёмная тема (22.11, по критику — иначе правила body.theme-dark не срабатывали)
+  const twa = window.Telegram && window.Telegram.WebApp;
+  const tgDark = settings.theme === "auto" && twa && twa.initData && twa.colorScheme === "dark";
+  b.classList.toggle("theme-dark", settings.theme === "dark" || !!tgDark);
   b.classList.toggle("theme-light", settings.theme === "light");
   b.classList.toggle("no-tr", settings.translit === false);
 }
 
 // --- Telegram ---
 const tg = window.Telegram ? window.Telegram.WebApp : null;
-if (tg) { tg.ready(); tg.expand(); }
+if (tg) {
+  tg.ready(); tg.expand();
+  // свайп вниз не сворачивает приложение (мешал «Буквам по кругу» и перетаскиванию в играх)
+  if (typeof tg.disableVerticalSwipes === "function") { try { tg.disableVerticalSwipes(); } catch (e) {} }
+  if (typeof tg.onEvent === "function") tg.onEvent("themeChanged", () => applySettings());
+}
 
 // --- Состояние урока ---
 let lesson = null;     // данные урока из JSON-файла
@@ -136,7 +144,7 @@ function showOnboarding() {
     // 2. Имя и пол
     () => `
       <h1 class="ob-title">Как тебя зовут?</h1>
-      <input class="ob-input" id="ob-name" maxlength="20" placeholder="Твоё имя" value="${draft.name || ""}">
+      <input class="ob-input" id="ob-name" maxlength="20" placeholder="Твоё имя" value="${String(draft.name || "").replace(/[&"<>]/g, ch => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[ch])}">
       <p class="ob-text small">В иврите слова меняются в зависимости от того, кто говорит. Я буду учить тебя твоей форме.</p>
       <div class="ob-gender">
         <button class="g-card ${draft.gender === "m" ? "on" : ""}" data-g="m"><span>🙋‍♂️</span>Я парень</button>

@@ -59,3 +59,11 @@
 .sy-ntc.sad { background: rgba(239, 68, 68, .12); }
 .sy-ntc-note { margin-top: 6px; font-size: 15px; opacity: .85; }
 .sy-ntc span { display: block; margin-top: 4px; font-size: 12px; opacity: .55; }
+
+/* 💬 БЕТА: значок на главной и окно отзыва (sync.js openFeedback, 22.11) */
+.beta-chip { position: absolute; top: 7px; left: 10px; max-width: 30vw; white-space: nowrap; z-index: 3; padding: 7px 11px; border: 0; border-radius: 999px; font-weight: 700; font-size: 12px; line-height: 1; font-family: inherit; letter-spacing: .3px;
+  background: var(--bg); color: var(--text); box-shadow: 0 2px 8px rgba(0, 0, 0, .12); opacity: .9; }
+.beta-chip:active { transform: scale(.96); }
+.sy-fb-text { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 2px solid rgba(127, 127, 127, .3); background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.4; font-family: inherit; resize: vertical; margin: 6px 0 12px; }
+.sy-fb-open { margin-bottom: 6px; }
+.sy-fb-msg { display: block; margin: 6px 0 2px; font-size: 15px; color: var(--text); white-space: pre-wrap; }

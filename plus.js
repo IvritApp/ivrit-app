@@ -8,7 +8,10 @@
 (function () {
   const PRICE = 50, DAYS = 30;
   const tg = window.Telegram && Telegram.WebApp;
-  const canPay = () => !!(tg && tg.initData && typeof tg.openInvoice === "function" && window.hirbisSync && hirbisSync.active);
+  // + согласие на хранение данных (152-ФЗ): без него сервер не заводит аккаунт
+  const consented = () => { try { return !!JSON.parse(localStorage.getItem("hirbis_sync_ok") || "false"); } catch (e) { return false; } };
+  const canPay = () => !!(tg && tg.initData && typeof tg.openInvoice === "function" && window.hirbisSync && hirbisSync.active && consented());
+  const whyNot = () => tg && tg.initData && !consented() ? "Сначала разреши сохранять прогресс (⚙️ → Аккаунт)" : "Оплата и промокоды работают в приложении Hirbis в Telegram";
   const until = () => { const p = store.get("plus", null); return p && p.until ? p.until : 0; };
   const active = () => until() * 1000 > Date.now();
   const dateText = t => new Date(t * 1000).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
@@ -69,10 +72,15 @@
     w.querySelector("#plBuy").onclick = () => buy(w, close);
   }
 
+  let applying = false;                   // двойное нажатие «Применить» не шлёт код дважды
   async function applyCode(w, close) {
     const code = (w.querySelector("#plCode").value || "").trim().toUpperCase();
-    if (!code) return;
-    if (!canPay()) { showToast("Промокоды работают в приложении в Telegram"); return; }
+    if (!code || applying) return;
+    if (!canPay()) { showToast(whyNot()); return; }
+    applying = true;
+    try { await applyCode2(w, close, code); } finally { applying = false; }
+  }
+  async function applyCode2(w, close, code) {
     const r = await call("/plus/promo", { code });
     if (r.error) { showToast(r.error); if (typeof vibrate === "function") vibrate("error"); return; }
     hirbisSync.gotMe(r);
@@ -83,7 +91,7 @@
   }
 
   async function buy(w, close) {
-    if (!canPay()) { showToast("Оплата работает в приложении Hirbis в Telegram"); return; }
+    if (!canPay()) { showToast(whyNot()); return; }
     const btn = w.querySelector("#plBuy");
     btn.disabled = true; btn.textContent = "Готовлю оплату…";
     const r = await call("/plus/invoice", promo ? { code: promo.code } : {});

@@ -101,14 +101,18 @@
 
   // ---------- СВЯЗЬ С СЕРВЕРОМ ----------
   // Ответ сервера: поля аккаунта + eco {…}; ошибка — error; нехватка — error:"not_enough", need, cur
+  // 152-ФЗ: в Telegram — только после согласия на хранение данных (иначе сервер не заводит аккаунт: error "no_consent")
+  const consented = () => { try { return !!JSON.parse(localStorage.getItem("hirbis_sync_ok") || "false"); } catch (e) { return false; } };
   async function call(path, body) {
     if (!live()) return Mock.call(path, body || {});
+    if (!consented()) return { error: "Сначала разреши сохранять прогресс (⚙️ → Аккаунт)" };
     try {
       const r = await hirbisSync.api("/eco" + path, body || {});
+      if (r && r.error === "no_consent") return { error: "Сначала разреши сохранять прогресс (⚙️ → Аккаунт)" };
       if (r) { try { hirbisSync.gotMe(r); } catch (e) {} }        // ник, Plus (сундук мог продлить), бан
       if (r && r.eco) setMe(r.eco);
       return r || {};
-    } catch (e) { return { error: e.server ? (/http 404/.test(e.message) ? "Магазин скоро откроется" : e.message) : "Нет связи с сервером" }; }
+    } catch (e) { return { error: e.server ? (/not found|http 404/.test(e.message) ? "Магазин скоро откроется" : e.message) : "Нет связи с сервером" }; }
   }
   async function refresh() { await call("/me"); return me(); }
   const cost = () => ((me() || {}).cost) || MINIGAME_PRICE;
@@ -308,7 +312,8 @@
       <div class="sh-h">Купить</div>
       ${cat.filter(x => x.kind === "chest").map(it => `<div class="sh-item"><div class="sh-ic">${it.ic || "🎁"}</div>
         <div class="sh-tx"><b>${esc(it.name)}</b><small>${it.gives === "big" ? "Сразу с «Эпического»" : "С «Редкого» и выше"}</small></div>${buyBtn(it)}</div>`).join("")}
-      <div class="sh-note">Редкость растёт при открытии: <span class="sh-rars">${Object.values(RAR).map(r => `<i style="--rc:${r.c}">${r.n}</i>`).join("")}</span></div>`;
+      <div class="sh-note">Редкость растёт при открытии: <span class="sh-rars">${Object.values(RAR).map(r => `<i style="--rc:${r.c}">${r.n}</i>`).join("")}</span></div>
+      <div class="sh-note">Шансы (обычный сундук): Редкий 50% · Сверхредкий 30% · Эпический 14% · Мифический 3,6% · Легендарный 2,4%. Большой сундук: Эпический 70% · Мифический 18% · Легендарный 12%.</div>`;
     const d = body.querySelector("#shDaily");
     if (d) d.onclick = async () => { d.disabled = true; await daily(); renderShop(); };
     body.querySelectorAll("[data-open]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "…"; await open(b.dataset.open); renderShop(); });
