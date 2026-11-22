@@ -8,7 +8,7 @@
 // Пока у персонажа нет картинок — рисуется прежний SVG (avatar.js).
 // =====================================================
 (function () {
-  const V = "20261122g";      // 22.11: плоский стиль «B» (Codex, листы flat_*.png); talk/blink выровнены по голове (align_frames.ps1)
+  const V = "20261122h";      // 22.11: плоский стиль «B» (Codex, листы flat_*.png); talk/blink выровнены по голове (align_frames.ps1)
   // какие кадры уже есть (исходники — Desktop\Клод\Фото от ChatGPT\*.png).
   // Люди — холст 360×768, один масштаб, ступни на одной линии (slice_sheet.ps1). Хибри — холст 600×640 (он круглый и широкий).
   const A = ["neutral", "talk", "blink", "happy", "oops"], AB = A.concat(["think", "wave", "point", "listen", "surprised"]);
@@ -16,7 +16,7 @@
   // 22.11: 3D отменено («слишком нейросетевое», резерв — Desktop\Клод\Project\ivrit-app\Картинки 3D (резерв)).
   // Теперь плоский стиль «B»: пока только Давид и Циля, лист A (лист B Codex нарисовал неверно — ждём переделку, тогда A → AB).
   // ХИБРИ СЮДА НЕ ДОБАВЛЯТЬ: он остаётся рисованным SVG из anim.js (решение владельца). Герои — когда нарисуют (CHARS[h] = A).
-  const CHARS = { david: A, tzila: AB };
+  const CHARS = { david: AB, tzila: AB };
   const SIZE = { hibri: [600, 640] };                          // у остальных 360×768
   const ENABLED = true;
   const has = (id) => ENABLED && !!CHARS[id];
