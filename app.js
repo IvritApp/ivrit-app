@@ -58,14 +58,24 @@ let lessonPoints = 0;
 const SET_DEFAULT = { theme: "auto", sfx: 80, voice: 100, music: 50, vibro: true, translit: null };
 let settings = Object.assign({}, SET_DEFAULT, store.get("settings", {}));
 function saveSettings() { store.set("settings", settings); applySettings(); }
+// 22.11 (решение владельца): ТЁМНАЯ ТЕМА ВЫКЛЮЧЕНА на время беты — всегда светлая (картинки рисуются под светлый фон).
+// Код тёмной темы (body.theme-dark в CSS) не удалён: вернуть — DARK_ON = true и снова показать пункт «Тема» в ⚙️.
+const DARK_ON = false;
 function applySettings() {
   const b = document.body;
   // «Как в Telegram»: тёмный Telegram → тоже тёмная тема (22.11, по критику — иначе правила body.theme-dark не срабатывали)
   const twa = window.Telegram && window.Telegram.WebApp;
   const tgDark = settings.theme === "auto" && twa && twa.initData && twa.colorScheme === "dark";
-  b.classList.toggle("theme-dark", settings.theme === "dark" || !!tgDark);
-  b.classList.toggle("theme-light", settings.theme === "light");
+  const dark = DARK_ON && (settings.theme === "dark" || !!tgDark);
+  b.classList.toggle("theme-dark", dark);
+  b.classList.toggle("theme-light", !dark);      // theme-light задаёт свои цвета, чтобы тёмные цвета Telegram не просочились
   b.classList.toggle("no-tr", settings.translit === false);
+  // шапка и фон самого Telegram — под цвет приложения (иначе в тёмном Telegram сверху чёрная полоса)
+  if (twa && !dark) {
+    try { if (typeof twa.setHeaderColor === "function") twa.setHeaderColor("#ffffff"); } catch (e) {}
+    try { if (typeof twa.setBackgroundColor === "function") twa.setBackgroundColor("#ffffff"); } catch (e) {}
+    try { if (typeof twa.setBottomBarColor === "function") twa.setBottomBarColor("#ffffff"); } catch (e) {}
+  }
 }
 
 // --- Telegram ---
@@ -550,7 +560,7 @@ function hostHTML(title, inner) {
   setTimeout(() => hostAct("talk", 1300), 60);   // говорит — жестикулирует и открывает рот
   hostIdle();
   const isImg = fig.indexOf('class="ci') >= 0;                // друг-картинка (chars.js) — свой размер, без шаурмы в руке
-  return `<h2 class="ex-title">${title}</h2>` + (inner ? `<div class="host">
+  return `<h2 class="ex-title">${title}</h2>` + (inner ? `<div class="host${isImg ? " host-img" : ""}">
       <div class="host-fig${isImg ? " ci-host" : ""}">${fig}${isImg ? "" : `<img class="host-food" src="assets/gift-shawarma.png" alt="">`}</div>
       <div class="host-bubble">${inner}</div>
     </div>` : "");
@@ -1201,7 +1211,7 @@ function openSettings() {
   box.innerHTML = `<div class="set-sheet">
       <div class="set-head"><b>⚙️ Настройки</b><button class="set-x" id="setClose">✕</button></div>
       ${window.Plus ? Plus.settingsHTML() : ""}
-      <div class="set-title">Тема</div>${seg("theme", [["auto", "Как в Telegram"], ["light", "Светлая"], ["dark", "Тёмная"]])}
+      ${DARK_ON ? `<div class="set-title">Тема</div>${seg("theme", [["auto", "Как в Telegram"], ["light", "Светлая"], ["dark", "Тёмная"]])}` : ""}
       <div class="set-title">Звук</div>
       ${slider("sfx", "Звуки (верно, ошибка, огоньки)")}
       ${slider("voice", "Голос иврита")}

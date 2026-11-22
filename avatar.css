@@ -98,6 +98,16 @@
 .host-fig .ci { height: 100%; }
 #screen.ex .host-fig.ci-host { width: 117px; height: 250px; margin-bottom: -10px; }
 .host-fig.ci-host .host-food { display: none; }
+/* 22.11: облачко у друга-картинки — на уровне головы, хвостик смотрит в рот (раньше облачко было по центру фигуры и «росло от бедра») */
+#screen.ex .host.host-img { align-items: flex-start; }
+#screen.ex .host.host-img .host-bubble { margin: 22px 0 0; }
+.host.host-img .host-bubble::before { bottom: auto; top: 26px; }
+.host.host-img .host-bubble::after { bottom: auto; top: 27px; }
+@media (max-height: 700px) {
+  #screen.ex .host.host-img .host-bubble { margin-top: 8px; }
+  .host.host-img .host-bubble::before { top: 18px; }
+  .host.host-img .host-bubble::after { top: 19px; }
+}
 @media (prefers-reduced-motion: reduce) { .ci, .act-cheer .ci { animation: none; } .talking .ci .ci-talk, .act-talk .ci .ci-talk { animation: none; } }
 /* лист B: думает / машет / показывает / слушает / удивлён */
 .act-think .ci.ci-b .ci-f, .act-wave .ci.ci-b .ci-f, .ci.ci-think .ci-f, .ci.ci-wave .ci-f, .ci.ci-point .ci-f, .ci.ci-listen .ci-f, .ci.ci-surprised .ci-f { opacity: 0 !important; animation: none !important; }
