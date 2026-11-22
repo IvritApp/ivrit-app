@@ -179,7 +179,7 @@
       <div class="wd-res${fresh ? " fresh" : ""}">
         <div class="wd-bird" id="wdBird"></div>
         <div class="wd-word" dir="rtl">${w.he}</div>
-        <div class="wd-tr"><span class="tr">${w.tr}</span> <button class="listen small" id="wdSay" aria-label="Послушать">🔊</button></div>
+        <div class="wd-tr"><span class="tr">${w.tr}</span> <button class="listen small" id="wdSay" aria-label="Послушать">${SPK}</button></div>
         <div class="wd-ru">${g(w.ru)}</div>
         ${won && G.pts ? `<div class="wd-pts">+${G.pts} очков</div>` : ""}
         <div class="wd-stats">

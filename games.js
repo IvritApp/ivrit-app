@@ -58,7 +58,7 @@
   function line(who, x, cls, hideRu) {
     const id = "gl" + Math.floor(Math.random() * 1e6);
     const he = g(x.he);
-    const say = `<button class="gm-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊 Ещё раз</button>`;
+    const say = `<button class="gm-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">${SPK} Ещё раз</button>`;
     const ruBtn = x.ru && hideRu ? `<button class="gm-tool" onclick="event.stopPropagation();document.getElementById('${id}').hidden=false;this.remove()">Перевод</button>` : "";
     // 21.11: в диалогах перевод виден сразу (для новичка)
     return `<div class="gm-line ${cls || ""}">${who ? `<b class="gm-who">${who}</b>` : ""}<div class="he" dir="rtl">${he}</div>${x.tr ? `<div class="tr">${g(x.tr)}</div>` : ""}
@@ -212,7 +212,7 @@
     B.innerHTML = `${c.mine ? `<div class="np-mine"><span>Мы заказали:</span>${c.mine.map(k => `<i>${ICON(k, 40)}</i>`).join("")}</div>` : ""}
       <div class="np-pad"><div class="np-rings">${"<b></b>".repeat(9)}</div><div class="np-h">${g(c.head || "הַזְמָנָה")}</div>
       ${c.lines.map((x, i) => `<div class="np-line" data-i="${i}"><span dir="rtl">${g(x.he)}</span>${x.price != null ? `<em>${x.price} ₪</em>` : ""}</div>`).join("")}</div>
-      <div class="np-bar"><button class="gm-btn ghost" id="npAgain">🔊 Послушать ещё</button></div>
+      <div class="np-bar"><button class="gm-btn ghost" id="npAgain">${SPK} Послушать ещё</button></div>
       <div class="gm-how">${g(c.task || "Зачеркни пальцем строчку с ошибкой")}</div>`;
     const read = () => speak(g(c.say));
     setTimeout(() => { if (token === stageToken) { read(); tip(el, `🗣️ ${stage.hostName || "Официантка"} читает заказ… Слушай!`, true); } }, 600);

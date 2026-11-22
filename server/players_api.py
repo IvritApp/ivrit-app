@@ -130,6 +130,14 @@ def db():
     # отзывы тестеров (22.11, бета): «💬 Написать отзыв» в приложении → вкладка «Отзывы» в админке + сообщение админам в Telegram
     c.execute("""CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, tg_id INTEGER, at REAL, text TEXT,
         place TEXT DEFAULT '', info TEXT DEFAULT '', done INTEGER DEFAULT 0)""")
+    # ошибки приложения и события (22.11, бета): telemetry.js → /hapi/log → админка «🐞 Ошибки»
+    # errors: одна строка на одинаковую ошибку (sig = текст + файл + строка), n — сколько раз, users — у скольких игроков
+    c.execute("""CREATE TABLE IF NOT EXISTS errors (sig TEXT PRIMARY KEY, msg TEXT, src TEXT, info TEXT DEFAULT '',
+        first REAL, last REAL, n INTEGER DEFAULT 1, last_tg INTEGER, done INTEGER DEFAULT 0)""")
+    c.execute("CREATE TABLE IF NOT EXISTS errors_u (sig TEXT, tg_id INTEGER, PRIMARY KEY (sig, tg_id))")
+    # events: сколько раз за день (x — урок/квест, например a1-1-3.p2), events_u — сколько разных игроков
+    c.execute("CREATE TABLE IF NOT EXISTS events (day TEXT, name TEXT, x TEXT DEFAULT '', n INTEGER DEFAULT 0, PRIMARY KEY (day, name, x))")
+    c.execute("CREATE TABLE IF NOT EXISTS events_u (day TEXT, name TEXT, tg_id INTEGER, PRIMARY KEY (day, name, tg_id))")
     if "nick_limit" not in cols:
         c.execute(f"ALTER TABLE players ADD COLUMN nick_limit INTEGER DEFAULT {DEFAULT_NICKS}")
     # перенос старых данных: основной ник каждого игрока → в таблицу ников
@@ -775,6 +783,78 @@ def short_nick_ok(c, uid, h, is_admin):
     return ""
 
 
+# ---------- ОШИБКИ ПРИЛОЖЕНИЯ И СОБЫТИЯ (22.11, бета; клиент — telemetry.js) ----------
+# Ошибки JS склеиваются по «подписи» (текст + файл + строка), чтобы одна ошибка у ста игроков была одной строкой.
+# События — только из списка EVENTS, с счётчиком за день (МСК) и числом разных игроков. Без текста от игрока.
+EVENTS = {"app_open", "lesson_start", "lesson_end", "lesson_exit", "quest_start", "quest_end", "quest_exit",
+          "hearts_out", "repeat_start", "feedback_open"}
+EVENT_X_RE = re.compile(r"^[a-z0-9.\-]{0,24}$")
+TLM_LIMIT = {}                    # tg_id → (час, сколько записей) — не больше 200 в час от одного игрока
+TLM_DAYS = 30                     # ошибки и события старше — удаляются
+
+
+def log_telemetry(c, uid, p, now):
+    hour = int(now // 3600)
+    h, cnt = TLM_LIMIT.get(uid, (hour, 0))
+    if h != hour:
+        cnt = 0
+    errs = p.get("errors") if isinstance(p.get("errors"), list) else []
+    evs = p.get("events") if isinstance(p.get("events"), list) else []
+    errs, evs = errs[:10], evs[:40]
+    if cnt + len(errs) + len(evs) > 200:
+        return {"ok": True, "skipped": True}
+    TLM_LIMIT[uid] = (hour, cnt + len(errs) + len(evs))
+    for e in errs:
+        if not isinstance(e, dict):
+            continue
+        msg = re.sub(r"\s+", " ", str(e.get("msg") or "")).strip()[:300]
+        src = str(e.get("src") or "")[:160]
+        if not msg:
+            continue
+        info = str(e.get("info") or "")[:600]
+        sig = hashlib.sha1(f"{msg}|{src}".encode()).hexdigest()[:20]
+        c.execute("""INSERT INTO errors (sig, msg, src, info, first, last, n, last_tg) VALUES (?,?,?,?,?,?,1,?)
+            ON CONFLICT(sig) DO UPDATE SET n = n + 1, last = excluded.last, last_tg = excluded.last_tg, info = excluded.info, done = 0""",
+                  (sig, msg, src, info, now, now, uid))
+        c.execute("INSERT OR IGNORE INTO errors_u (sig, tg_id) VALUES (?,?)", (sig, uid))
+    day = datetime.fromtimestamp(now, MSK).strftime("%Y-%m-%d")
+    for e in evs:
+        if not isinstance(e, dict):
+            continue
+        name, x = str(e.get("name") or ""), str(e.get("x") or "").lower()
+        if name not in EVENTS or not EVENT_X_RE.match(x):
+            continue
+        c.execute("""INSERT INTO events (day, name, x, n) VALUES (?,?,?,1)
+            ON CONFLICT(day, name, x) DO UPDATE SET n = n + 1""", (day, name, x))
+        c.execute("INSERT OR IGNORE INTO events_u (day, name, tg_id) VALUES (?,?,?)", (day, name, uid))
+    if random.random() < 0.02:    # иногда чистим старое
+        old = now - TLM_DAYS * 86400
+        oldday = datetime.fromtimestamp(old, MSK).strftime("%Y-%m-%d")
+        c.execute("DELETE FROM errors_u WHERE sig IN (SELECT sig FROM errors WHERE last < ?)", (old,))
+        c.execute("DELETE FROM errors WHERE last < ?", (old,))
+        c.execute("DELETE FROM events WHERE day < ?", (oldday,))
+        c.execute("DELETE FROM events_u WHERE day < ?", (oldday,))
+    return {"ok": True}
+
+
+def admin_telemetry(c, now):
+    """Для админки: ошибки (новые сверху) и события за 7 дней (по дням + где чаще всего выходят из урока)."""
+    rows = c.execute("""SELECT e.*, (SELECT COUNT(*) FROM errors_u u WHERE u.sig = e.sig) AS users,
+        (SELECT handle FROM players WHERE tg_id = e.last_tg) AS handle FROM errors e ORDER BY e.done, e.last DESC LIMIT 100""").fetchall()
+    errors = [{"sig": x["sig"], "msg": x["msg"], "src": x["src"], "info": x["info"], "first": x["first"], "last": x["last"],
+               "n": x["n"], "users": x["users"], "handle": x["handle"], "done": bool(x["done"])} for x in rows]
+    since = datetime.fromtimestamp(now - 6 * 86400, MSK).strftime("%Y-%m-%d")
+    days = {}
+    for x in c.execute("SELECT day, name, SUM(n) AS n FROM events WHERE day >= ? GROUP BY day, name", (since,)).fetchall():
+        days.setdefault(x["day"], {})[x["name"]] = {"n": x["n"], "users": 0}
+    for x in c.execute("SELECT day, name, COUNT(*) AS u FROM events_u WHERE day >= ? GROUP BY day, name", (since,)).fetchall():
+        days.setdefault(x["day"], {}).setdefault(x["name"], {"n": 0, "users": 0})["users"] = x["u"]
+    exits = [{"x": x["x"], "n": x["n"]} for x in c.execute("""SELECT x, SUM(n) AS n FROM events WHERE day >= ? AND name IN ('lesson_exit', 'quest_exit')
+        AND x != '' GROUP BY x ORDER BY n DESC LIMIT 10""", (since,)).fetchall()]
+    return {"errors": errors, "open": sum(1 for e in errors if not e["done"]),
+            "days": [{"day": d, "ev": days[d]} for d in sorted(days, reverse=True)], "exits": exits}
+
+
 # ---------- УВЕДОМЛЕНИЯ ИГРОКУ (22.11): «к сожалению, твой ник передан…», «подписку сняли» и т. п. ----------
 # Хранятся в таблице notices; приходят в каждом ответе me() (поле notices — непрочитанные), телефон показывает окно «📬».
 # Если игрок нажимал «Старт» у бота — то же сообщение уходит и в Telegram (в фоне, после ответа; через посредника tg_api).
@@ -988,6 +1068,9 @@ class Handler(BaseHTTPRequestHandler):
                     with TG_OUTBOX_LOCK:
                         TG_OUTBOX.append((a[0], f"📝 Отзыв от @{r['handle']}" + (f" ({place})" if place else "") + f":\n\n{text}"))
             return 200, {"ok": True}
+
+        if route == "/hapi/log":                                  # ошибки приложения и события (telemetry.js)
+            return 200, log_telemetry(c, uid, p, now)
 
         if route == "/hapi/notices/read":                         # игрок прочитал уведомления
             ids = [int(x) for x in (p.get("ids") or []) if str(x).isdigit()][:50]
@@ -1370,6 +1453,12 @@ class Handler(BaseHTTPRequestHandler):
                              "open": c.execute("SELECT COUNT(*) FROM feedback WHERE done=0").fetchone()[0]}
             if route == "/hapi/admin/feedback/done":
                 c.execute("UPDATE feedback SET done=? WHERE id=?", (1 if p.get("done", True) else 0, int(p.get("id") or 0)))
+                return 200, {"ok": True}
+            # 🐞 ошибки приложения + события за 7 дней
+            if route == "/hapi/admin/errors":
+                return 200, admin_telemetry(c, now)
+            if route == "/hapi/admin/errors/done":
+                c.execute("UPDATE errors SET done=? WHERE sig=?", (1 if p.get("done", True) else 0, str(p.get("sig") or "")[:64]))
                 return 200, {"ok": True}
             # промокоды Hirbis Plus
             if route == "/hapi/admin/promo/list":

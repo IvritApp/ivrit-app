@@ -396,7 +396,7 @@
   function info(e, tag) {
     const el = document.getElementById("wwInfo"); if (!el || !e) return;
     el.innerHTML = `<div class="ww-found${tag ? " bonus" : ""}">${tag ? `<small>${tag}</small>` : ""}<span class="ww-he" dir="rtl">${e.he}</span>
-      <span class="ww-ru"><span class="tr">${e.tr}</span> — <b>${g(e.ru)}</b></span><button class="listen small" id="wwSay" aria-label="Послушать">🔊</button></div>`;
+      <span class="ww-ru"><span class="tr">${e.tr}</span> — <b>${g(e.ru)}</b></span><button class="listen small" id="wwSay" aria-label="Послушать">${SPK}</button></div>`;
     document.getElementById("wwSay").onclick = () => say(e);
   }
   const say = (e) => { if (e && typeof speak === "function") speak(e.he, { audio: e.audio }); };

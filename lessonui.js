@@ -1,12 +1,12 @@
 // =====================================================
 // ЭКРАН УРОКА (18.11): крестик «выйти» и СЕРДЕЧКИ-ЖИЗНИ (как в Duolingo).
-//  • 5 ❤️. Ошибка в уроке — минус сердечко. Новое сердечко — каждые 36 минут (полная шкала за 3 часа).
+//  • 10 ❤️ (22.11, решение владельца: чтобы чаще заходили). Ошибка в уроке — минус сердечко. Новое сердечко — каждые 9 минут (полная шкала за 1,5 часа).
 //  • Кончились — окно «Сердечки кончились»: подождать или «Тренировка» (старый урок без потери ❤️) → +1 ❤️.
 //  • Карточки «Новое слово», повторение после квеста и тренировка сердечки не тратят. Тестировщику — без ограничений.
 // store "hearts" = { n, t } (t — когда начался отсчёт до следующего сердечка).
 // =====================================================
 (function () {
-  const MAX = 5, REGEN_MS = 36 * 60 * 1000;            // 21.11: полная шкала (5 ❤️) — за 3 часа, 1 ❤️ каждые 36 мин
+  const MAX = 10, REGEN_MS = 9 * 60 * 1000;            // 22.11: полная шкала (10 ❤️) — за 1,5 часа, 1 ❤️ каждые 9 мин
   const HEART = `<svg viewBox="0 0 24 22" aria-hidden="true"><path d="M12 21.2 10.6 20C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.4 3c1.8 0 3.5.8 4.6 2.1C13.1 3.8 14.8 3 16.6 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.6 11.6z" fill="currentColor"/><path d="M6.4 6.6c.9-.9 2.2-1.1 3.2-.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".55"/></svg>`;
   // ∞ сердечек: тестировщик или подписка Hirbis Plus (plus.js)
   const unlimited = () => (typeof testMode === "function" && testMode()) || !!(window.Plus && Plus.active());
@@ -26,6 +26,7 @@
   const spends = () => lesson && !lesson.practice && !lesson.review && !unlimited();
 
   const Hearts = {
+    MAX,                                                   // сколько ❤️ в полной шкале (eco.js «Полные сердечки»)
     n: () => (unlimited() ? Infinity : state().n),
     render(bump) {
       const el = document.getElementById("hearts");
@@ -66,6 +67,7 @@
       document.body.appendChild(w);
       requestAnimationFrame(() => w.classList.add("show"));
       if (typeof vibrate === "function") vibrate("warning");
+      if (window.track) track("hearts_out");
       // «Новое ❤️ через N мин» обновляется, пока окно открыто
       const tick = setInterval(() => { const el = document.getElementById("hoLeft"); if (!el) return clearInterval(tick); el.textContent = minsText(msToNext()); }, 20000);
       const close = () => { clearInterval(tick); w.classList.remove("show"); setTimeout(() => w.remove(), 250); };
@@ -99,7 +101,10 @@
     if (window.HAnim) HAnim.mascot(document.getElementById("exBird"), "sad", { size: 90 });
     const close = () => { w.classList.remove("show"); setTimeout(() => w.remove(), 250); };
     w.querySelector("#exStay").onclick = close;
-    w.querySelector("#exLeave").onclick = () => { close(); hideFeedback(); showPath(); };
+    w.querySelector("#exLeave").onclick = () => {
+      if (window.track && typeof lessonTag === "function") track("lesson_exit", lessonTag(lesson));   // где бросают урок (админка «🐞»)
+      close(); hideFeedback(); showPath();
+    };
   }
   const x = document.getElementById("exClose");
   if (x) x.onclick = askExit;

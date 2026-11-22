@@ -4,6 +4,9 @@
 // функции (function), списки [ ], словари { }.
 // =====================================================
 
+// 22.11: значок «послушать» — свой рисованный динамик вместо эмодзи 🔊 (в шаблонах: ${SPK}). Цвет — от кнопки (currentColor).
+window.SPK = `<svg class="spk" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2h3.2L12 5.3c.7-.5 1.6 0 1.6.8v11.8c0 .8-.9 1.3-1.6.8l-4.8-3.9H4c-.6 0-1-.4-1-1v-3.6c0-.6.4-1 1-1z" fill="currentColor"/><path d="M16.6 8.6a4.6 4.6 0 0 1 0 6.8M19 6.2a8 8 0 0 1 0 11.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+
 // 3D-Хибри (chars.js) вместо нарисованного — подключаем до того, как главная нарисует Хибри
 if (window.HirbisChars && HirbisChars.wrapMascot) HirbisChars.wrapMascot();
 
@@ -433,6 +436,11 @@ function showToast(text) {
 if (tg && tg.BackButton) tg.BackButton.onClick(() => {
   // в алфавите «Назад» сначала обрабатывает сам раздел (например, из урока — к списку уроков)
   if (!document.getElementById("alphabet").hidden && typeof window.alphabetBack === "function" && window.alphabetBack()) return;
+  // статистика: «Назад» посреди урока/квеста — значит бросил (telemetry.js)
+  if (window.track) {
+    if (!lessonView.hidden && lesson && step < queue.length) track("lesson_exit", lessonTag(lesson));
+    else if (!document.getElementById("quest").hidden && typeof quest !== "undefined" && quest && !quest._ended) track("quest_exit", quest.id);
+  }
   if (!lessonView.hidden || !document.getElementById("quest").hidden) showPath(); else showHome();
 });
 
@@ -475,11 +483,15 @@ function startLesson(id) {
       data.phrases = (data.phrases || []).map(w => Object.assign({}, w, { he: g(w.he), tr: g(w.tr), ru: g(w.ru) }));
       lesson = data;
       queue = [...lesson.exercises];          // порядок заданий продуман в файле урока
+      if (window.track) track("lesson_start", lessonTag(lesson));     // статистика для админки (telemetry.js)
       if (window.Hearts) Hearts.render();
       askTranslit(showStep);
     })
     .catch(() => { screen.textContent = "Не удалось загрузить урок 😕"; });
 }
+
+// метка урока для статистики: «a1-1-3.p2» (урок и часть), «practice», «repeat», «exam-a1»
+function lessonTag(l) { return l ? String(l.id) + (l.part != null ? ".p" + (l.part + 1) : "") : ""; }
 
 // --- 2. Показываем текущее задание (с плавной сменой) ---
 function showStep() {
@@ -600,7 +612,7 @@ function showChooseTranslation(ex) {
 
   screen.innerHTML = hostHTML(TASK.tr, `
       <div class="word" dir="rtl">${word.he}</div>
-      <div class="translit"><span class="tr">${word.tr}</span> <button class="listen small" id="listen" aria-label="Послушать">🔊</button></div>`) + `
+      <div class="translit"><span class="tr">${word.tr}</span> <button class="listen small" id="listen" aria-label="Послушать">${SPK}</button></div>`) + `
     <div id="options"></div>
   `;
 
@@ -674,7 +686,7 @@ function showListen(ex) {
   const word = lesson.words[ex.word];
   const options = shuffle([word, ...distractors(word, 3)]);
   screen.innerHTML = hostHTML(TASK.listen, `
-      <button class="listen big" id="listen" aria-label="Послушать">🔊</button>
+      <button class="listen big" id="listen" aria-label="Послушать">${SPK}</button>
       <div class="word reveal" dir="rtl" id="reveal" hidden>${word.he}</div>`) + `
     <div id="options"></div>`;
   const play = () => { const b = document.getElementById("listen"); if (!b) return; speak(word.he, { audio: word.audio }); b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); };
@@ -904,6 +916,7 @@ function checkAnswer(btn, isRight, ex, word, wrongDetail) {
     if (lost >= 5) showToast(`Серия из ${lost} прервалась — начнём новую!`);
     btn.classList.add("wrong");
     mistakes++;
+    if (ex && ex.word != null && lesson) (lesson._missed = lesson._missed || {})[ex.word] = 1;   // в конце урока — «🔁 Повторить» (wordmarks.js)
     queue.push(ex);                        // повторим в конце урока
     playSound("wrong");
     vibrate("error");
@@ -1022,7 +1035,9 @@ function showFinish() {
   screen.classList.remove("ex");
   const isPart = lesson.partsTotal > 0 && window.finishLessonPart;   // урок из частей (parts.js)
   if (lesson.practice && window.Hearts) Hearts.gain(1);              // тренировка вернула сердечко
-  if (!isPart && !lesson.practice) markDone(lesson.id);
+  if (window.track) track("lesson_end", lessonTag(lesson));
+  const noMark = lesson.practice || lesson.id === "repeat";            // тренировка и «🔁 Повтори слова» — не уроки, в done/perfect не пишем
+  if (!isPart && !noMark) markDone(lesson.id);
   window.streakHold = !!window.HAnim;                     // экран серии покажем сами — после праздника (см. конец функции)
   if (typeof streakDone === "function") streakDone();     // день засчитан в серию
   // Идеальный урок (ни одной ошибки) — золотой, очки за урок ×2
@@ -1030,7 +1045,7 @@ function showFinish() {
   if (perfect) {
     store.set(todayKey(), store.get(todayKey(), 0) + lessonPoints);   // добавляем ещё столько же
     lessonPoints *= 2;
-    if (!isPart && !lesson.practice) markPerfect(lesson.id);
+    if (!isPart && !noMark) markPerfect(lesson.id);
   }
   // часть урока: засчитываем часть; урок пройден — после последней; золотой — если все части без ошибок
   const pr = isPart ? finishLessonPart(lesson, perfect) : { lessonDone: true, gold: perfect, next: -1 };
@@ -1069,6 +1084,9 @@ function showFinish() {
         ${combo >= 1 ? `<div class="pts-fire">${flameSVG(fireLevel(combo))}<span>${combo}</span></div>` : ""}
       </div>
 
+      <!-- 22.11: «Какие слова ты запомнил?» — ✓ / 🔁 у каждого слова (wordmarks.js) -->
+      <div class="wm" id="wmBox" hidden></div>
+
       <!-- Бонус: сленговое выражение -->
       <div class="bonus" id="bonus"></div>
 
@@ -1087,8 +1105,10 @@ function showFinish() {
   if (finNext) finNext.onclick = () => startLessonPart(lid, pr.next);
   // ещё раз: часть урока — та же часть; экзамен — собрать заново; обычный урок — по файлу
   if (finAgain) finAgain.onclick = () => isPart ? startLessonPart(lid, lpart)
-    : lexam && window.startExam && course ? startExam(course.chapters[0]) : startLesson(lid);
+    : lexam && window.startExam && course ? startExam(course.chapters[0])
+    : lid === "repeat" && window.WordMarks ? WordMarks.startRepeat() : startLesson(lid);
   if (finAgain && lpractice) finAgain.remove();                      // в тренировке хватит одной кнопки «Дальше»
+  if (window.WordMarks) { try { WordMarks.finishBox(lesson, document.getElementById("wmBox")); } catch (e) {} }
   setTimeout(() => playSound("finish"), 900);   // фанфара — когда удод сел на ветку
   // Праздник (anim.js): Хибри ликует на весь экран → «идеальный урок ×2» → экран серии дня
   if (window.HAnim) {
@@ -1109,7 +1129,7 @@ function showFinish() {
       box.innerHTML = `
         <div class="bonus-label">🎁 Бонус · ${data.title}</div>
         <div class="bonus-he" dir="rtl">${p.he}</div>
-        <div class="bonus-tr"><span class="tr">${p.tr}</span> <button class="listen small" id="bonus-listen" aria-label="Послушать">🔊</button></div>
+        <div class="bonus-tr"><span class="tr">${p.tr}</span> <button class="listen small" id="bonus-listen" aria-label="Послушать">${SPK}</button></div>
         <div class="bonus-ru">${p.ru}</div>
       `;
       document.getElementById("bonus-listen").onclick = () => speak(p.he);

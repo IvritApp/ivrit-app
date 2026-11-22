@@ -1180,3 +1180,14 @@ body.theme-dark .sy-warn { background: #3a2a16; color: #ffd9a8; }
 #progress-bar.run::before { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 35%, rgba(255,255,255,.75) 50%, transparent 65%); animation: ha-shine .9s ease-out; }
 .tu-bird .ha-m { display: block; margin: 0 auto; }
 div.tu-bird { margin: 0 auto; }
+
+/* 22.11: рисованный динамик вместо эмодзи 🔊 (window.SPK в app.js) — синий, по центру кнопки */
+.spk { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; flex: none; }
+.listen, .cd-say { color: #1cb0f6; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.listen.big { display: flex; }
+.listen .spk, .cd-say .spk { width: 54%; height: 54%; }
+.q-tool .spk, .gm-tool .spk, .gm-btn .spk { width: 1.15em; height: 1.15em; vertical-align: -0.22em; margin-right: 2px; }
+.ab-spk { color: #1cb0f6; }
+/* 22.11: в админке 5 вкладок — переносим на 2 строки, чтобы влезали на телефоне */
+#syTabs { flex-wrap: wrap; }
+#syTabs button { flex: 1 1 30%; font-size: 13px; padding: 8px 4px; }

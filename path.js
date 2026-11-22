@@ -148,6 +148,7 @@ function renderPath() {
       <div class="p-review-h">🔁 Повторение после квеста <small>${reviewDoneN(lvl.id)} из ${reviewCount}</small></div>
       <div class="p-review-row">${reviewTitles.map((t, k) => { const id = `rev-${lvl.id}-${k + 1}`, dn = doneLessons().includes(id);
         return `<button class="p-rev${dn ? " done" : ""}" data-rev="${k}"><b>${dn ? "✓" : k + 1}</b><span>${t}</span></button>`; }).join("")}</div></div>` : ""}
+    ${window.WordMarks ? WordMarks.pathHTML() : ""}
     </div>
     <div class="p-lvl-list-title">Все уровни</div>
     ${ch.levels.map((l, i) => l.soon ? `<div class="p-soon"><b>Уровень ${i + 1} · ${l.title}</b><span>скоро</span></div>`
@@ -179,6 +180,8 @@ function renderPath() {
   if (window.partsDecorate) partsDecorate(lvl, pathView);
   document.getElementById("p-settings").onclick = openSettings;
   pathView.querySelectorAll(".p-rev").forEach(b => b.onclick = () => startReview(lvl.id, +b.dataset.rev));
+  const rp = document.getElementById("p-repeat");                 // «🔁 Повтори слова» — слова, которые игрок отметил «повторить» (wordmarks.js)
+  if (rp) rp.onclick = () => WordMarks.startRepeat();
   const tb = document.getElementById("p-taxi");
   if (tb) tb.onclick = () => showTaxi(() => showPath());
   pathView.querySelectorAll(".p-lvl-go").forEach(b => b.onclick = () => {

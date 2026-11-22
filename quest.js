@@ -151,6 +151,8 @@ function startQuest(id) {
         return;
       }
       quest = d; qStep = 0; qMistakes = 0; qBag = []; qCombo = 0; qPoints = 0; qTalk = { clean: 0, withHint: 0, misses: 0, hints: 0 };
+      quest._ended = false;
+      if (window.track) track("quest_start", d.id);                 // статистика для админки (telemetry.js)
       const token = renderStageShell(d.place || "counter", d.placeTitle || d.title, d.icon || "⭐");
       // Список заказа — по кнопке, а главное видно на прилавке
       const ob = document.getElementById("stOrder"), tray = document.getElementById("qTray");
@@ -181,7 +183,7 @@ function sellerHTML(s, who) {
     <div class="tr">${tr}</div>
     <div class="ru q-ru-line" id="${id}">${g(s.ru)}</div>
     <div class="q-tools">
-      <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊 Ещё раз</button>
+      <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">${SPK} Ещё раз</button>
     </div>`;
 }
 
@@ -292,7 +294,7 @@ function addSpeakTask(st, opts) {
   const showHint = () => {
     if (!hinted) { hinted = true; qTalk.hints++; }
     hint.hidden = false;
-    hint.innerHTML = oks.map(o => `<div><span class="he" dir="rtl">${g(o.he)}</span> <span class="tr">${g(o.tr)}</span> <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(g(o.he)).replace(/"/g, "&quot;")})">🔊</button></div>`).join("");
+    hint.innerHTML = oks.map(o => `<div><span class="he" dir="rtl">${g(o.he)}</span> <span class="tr">${g(o.tr)}</span> <button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(g(o.he)).replace(/"/g, "&quot;")})">${SPK}</button></div>`).join("");
   };
   box.querySelector('[data-a="hint"]').onclick = showHint;
   box.querySelector('[data-a="tap"]').onclick = () => { store.set("nospeak_until", Date.now() + 15 * 60000); showToast("Хорошо, 15 минут — кнопками"); box.remove(); addTapOptions(st, opts); };
@@ -590,7 +592,7 @@ function startCatch(st) {
     const he = g(c.say.he), id = "cs" + Math.floor(Math.random() * 1e6);
     stage.say("seller", `${nameTag(stage.hostName || "Официантка")}
       <div class="q-hidden-say" id="${id}"><div class="he" dir="rtl">${he}</div><div class="tr">${g(c.say.tr)}</div></div>
-      <div class="q-tools"><button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">🔊 Ещё раз</button>
+      <div class="q-tools"><button class="q-tool" onclick="event.stopPropagation();speak(${JSON.stringify(he).replace(/"/g, "&quot;")})">${SPK} Ещё раз</button>
       <button class="q-tool" onclick="event.stopPropagation();document.getElementById('${id}').classList.add('open');this.remove()">Показать текст</button></div>`);
     speak(he, { audio: c.say.audio });
   }, 2200);
@@ -618,7 +620,7 @@ function startCatch(st) {
       qCombo = 0; updateQuestFire(false);
       playSound("wrong"); vibrate("error");
       const h = document.getElementById("qHint");
-      h.innerHTML = `💡 <b>${friendName()}:</b> ${g((c.wrong && c.wrong[b.dataset.id]) || c.hint || "Послушай ещё раз — нажми 🔊")}`;
+      h.innerHTML = `💡 <b>${friendName()}:</b> ${g((c.wrong && c.wrong[b.dataset.id]) || c.hint || "Послушай ещё раз — нажми «Ещё раз»")}`;
       h.hidden = false;
     }
   });
@@ -705,7 +707,7 @@ function startFamily(st) {
     }
     const cur = quiz[q];
     friendSays(`Покажи, кто здесь <b dir="rtl">${g(cur.he)}</b>?`);
-    opts.innerHTML = `<div class="q-fam-ask">${ruMode() ? `Нажми на того, кто «${g(cur.ru)}»` : `<span class="he" dir="rtl">${g(cur.he)}</span> <span class="tr">${g(cur.tr)}</span> — нажми на этого человека за столом`} <button class="q-tool" id="famSay">🔊</button></div>`;
+    opts.innerHTML = `<div class="q-fam-ask">${ruMode() ? `Нажми на того, кто «${g(cur.ru)}»` : `<span class="he" dir="rtl">${g(cur.he)}</span> <span class="tr">${g(cur.tr)}</span> — нажми на этого человека за столом`} <button class="q-tool" id="famSay">${SPK}</button></div>`;
     document.getElementById("famSay").onclick = (e) => { e.stopPropagation(); speak(g(cur.he)); };
     speak(g(cur.he));
     answering = true;
@@ -730,6 +732,8 @@ function addToTray(items, noStage) {
 // --- Финал ---
 function finishQuest() {
   if (window.closePhone) closePhone();
+  if (quest && !quest._ended && window.track) track("quest_end", quest.id);
+  if (quest) quest._ended = true;
   if (typeof streakDone === "function") streakDone();     // квест тоже засчитывает день
   const token = stageToken;
   const o = quest.outro;

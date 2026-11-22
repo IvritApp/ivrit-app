@@ -140,7 +140,7 @@
         </div>
 
         <button class="ab-big" id="abBig" dir="rtl">${L.ch}</button>
-        <div class="ab-name">${esc(L.name)} <span class="ab-name-he" dir="rtl">${L.nameHe}</span> <span class="ab-spk">🔊</span></div>
+        <div class="ab-name">${esc(L.name)} <span class="ab-name-he" dir="rtl">${L.nameHe}</span> <span class="ab-spk">${SPK}</span></div>
 
         <h3 class="ab-h">Как читается</h3>
         <div class="ab-forms">${forms}</div>

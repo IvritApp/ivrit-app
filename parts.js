@@ -40,12 +40,18 @@
 
   function buildExercises(data, k) {
     const n = data.newCount || data.words.length;
-    const fresh = Array.from({ length: n }, (_, i) => i);
-    const old = Array.from({ length: data.words.length - n }, (_, i) => n + i);
+    let fresh = Array.from({ length: n }, (_, i) => i);
+    let old = Array.from({ length: data.words.length - n }, (_, i) => n + i);
+    // 22.11: «уже знаю» — не гоняем (если осталось хотя бы 3 слова); «повторить» — первыми, и слова прошлых уроков с 🔁 — всегда
+    const fk = fresh.filter(i => !isKnown(data.words[i]));
+    if (fk.length >= 3) fresh = fk;
+    old = old.filter(i => !isKnown(data.words[i]));
+    const oldRep = old.filter(i => isRepeat(data.words[i]));
+    const rep = (list) => { const s = shuf(list); return s.filter(i => isRepeat(data.words[i])).concat(s.filter(i => !isRepeat(data.words[i]))); };
     // каждая часть начинает с других слов; с 3-й части иногда попадаются слова прошлых уроков
     let bag = [];
     const nextWord = (avoid) => {
-      if (!bag.length) bag = shuf(fresh).concat(k >= 3 && old.length ? shuf(old).slice(0, 2) : []);
+      if (!bag.length) bag = rep(fresh).concat(oldRep.length ? shuf(oldRep).slice(0, 3) : k >= 3 && old.length ? shuf(old).slice(0, 2) : []);
       let i = bag.findIndex(x => x !== avoid);
       if (i < 0) i = 0;
       return bag.splice(i, 1)[0];
@@ -77,9 +83,15 @@
   }
 
   // Знакомство с новыми словами: КАРТОЧКА слова → сразу простое задание с ним (ведём за руку)
+  // 22.11: слова, которые игрок отметил «уже знаю» (wordmarks.js), в знакомстве пропускаем (если «знаю» все слова — показываем все карточки)
+  const isKnown = (w) => !!(window.WordMarks && w && WordMarks.known(w));
+  const isRepeat = (w) => !!(window.WordMarks && w && WordMarks.repeat(w));
   function introExercises(data, from, to) {
     const out = [];
-    for (let i = from; i < to; i++) {
+    let idx = Array.from({ length: to - from }, (_, j) => from + j);
+    const unknown = idx.filter(i => !isKnown(data.words[i]));
+    if (unknown.length) idx = unknown;
+    for (const i of idx) {
       out.push({ type: "card", word: i });
       out.push({ type: (i - from) % 2 ? "listen" : "choose_translation", word: i });
     }

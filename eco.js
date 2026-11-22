@@ -125,7 +125,7 @@
       s.freezes = Math.min(MAX_FREEZES, f + 1); store.set("streak", s);
       if (typeof updateToday === "function" && !document.getElementById("home").hidden) updateToday();
     } else if (type === "hearts") {
-      store.set("hearts", { n: 5, t: Date.now() });
+      store.set("hearts", { n: (window.Hearts && Hearts.MAX) || 10, t: Date.now() });
       if (window.Hearts) Hearts.render();
     }
   }
@@ -377,7 +377,7 @@
     const f = it("freeze"), h = it("hearts");
     body.innerHTML = `
       ${f ? `<div class="sh-item big"><div class="sh-ic">❄️</div><div class="sh-tx"><b>Заморозка серии</b><small>Пропустишь день — серия не сгорит${fr != null ? ` · есть: ${fr} из ${MAX_FREEZES}` : ""}</small></div>${fr != null && fr >= MAX_FREEZES ? `<span class="sh-buy poor">Максимум</span>` : buyBtn(f)}</div>` : ""}
-      ${h ? `<div class="sh-item big"><div class="sh-ic">❤️</div><div class="sh-tx"><b>Полные сердечки</b><small>Сразу 5 ❤️${hn != null ? ` · сейчас: ${hn === Infinity ? "∞" : hn}` : ""}</small></div>${hn === Infinity || hn >= 5 ? `<span class="sh-buy poor">Уже полные</span>` : buyBtn(h)}</div>` : ""}
+      ${h ? `<div class="sh-item big"><div class="sh-ic">❤️</div><div class="sh-tx"><b>Полные сердечки</b><small>Сразу ${(window.Hearts && Hearts.MAX) || 10} ❤️${hn != null ? ` · сейчас: ${hn === Infinity ? "∞" : hn}` : ""}</small></div>${hn === Infinity || hn >= ((window.Hearts && Hearts.MAX) || 10) ? `<span class="sh-buy poor">Уже полные</span>` : buyBtn(h)}</div>` : ""}
       <div class="sh-note">🥐 бурекасы дают за уроки: 1 очко = 1 🥐.</div>`;
     bindBuy(body);
   }

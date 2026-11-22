@@ -115,14 +115,14 @@
         <div class="cd-face cd-front">
           ${pic ? `<div class="cd-pic">${pic}</div>` : `<div class="cd-pic none">🐦</div>`}
           <div class="cd-he" dir="rtl">${w.he}</div>
-          <button class="cd-say" id="cd-say" aria-label="Послушать">🔊</button>
+          <button class="cd-say" id="cd-say" aria-label="Послушать">${SPK}</button>
           <div class="cd-tap">нажми, чтобы перевернуть</div>
         </div>
         <div class="cd-face cd-back">
           <div class="cd-ru">${w.ru}</div>
           <div class="cd-tr tr">${w.tr}</div>
           <div class="cd-he-sm" dir="rtl">${w.he}</div>
-          <button class="cd-say" id="cd-say2" aria-label="Послушать">🔊</button>
+          <button class="cd-say" id="cd-say2" aria-label="Послушать">${SPK}</button>
         </div>
       </div>
     </div>`;
@@ -227,17 +227,21 @@
             <div class="cd-pair-eq">=</div>
             <div class="cd-pair-ru"><span class="cd-pair-lang">русский</span><b>${w.ru}</b></div>
           </div>
-          <button class="cd-say cd-pair-say" id="cd-say" aria-label="Послушать ещё раз">🔊</button>
+          <button class="cd-say cd-pair-say" id="cd-say" aria-label="Послушать ещё раз">${SPK}</button>
         </div>
         <div class="cd-pair-tip">Послушай и повтори вслух 🗣️</div>
         <div class="cd-btns" id="cd-btns"><button class="btn blue" id="cd-go">Запомнил${g("{m:}{f:а}")}, дальше</button></div>
       </div>`;
     const sayIt = () => { speak(w.he, { audio: w.audio }); const b = document.getElementById("cd-say"); if (b) { b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); } };
     document.getElementById("cd-say").onclick = sayIt;
-    document.getElementById("cd-pair").onclick = (e) => { if (e.target.id !== "cd-say") sayIt(); };
+    document.getElementById("cd-pair").onclick = (e) => { if (!e.target.closest("#cd-say")) sayIt(); };   // внутри кнопки — SVG, e.target может быть <path>
     setTimeout(sayIt, 350);
     // двойное нажатие не должно пропускать следующее задание
-    document.getElementById("cd-go").onclick = function () { if (this.disabled) return; this.disabled = true; playSound("pop"); vibrate("light"); goNext(); };
+    document.getElementById("cd-go").onclick = function () {
+      if (this.disabled) return;
+      document.querySelectorAll("#cd-btns button").forEach(x => x.disabled = true);   // вместе с «Уже знаю» (wordmarks.js)
+      playSound("pop"); vibrate("light"); goNext();
+    };
   };
 
   // ---------- Конец части ----------

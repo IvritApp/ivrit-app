@@ -68,6 +68,7 @@
   function appVer() { const s = document.querySelector('script[src*="app.js?v="]'); return s ? (s.getAttribute("src").split("v=")[1] || "") : ""; }
   function openFeedback(place) {
     if (!initData) { if (typeof showToast === "function") showToast("Отзыв можно отправить из приложения в Telegram"); return; }
+    if (window.track) track("feedback_open");
     const box = sheet("syFeedback", `<div class="set-head"><b>💬 Отзыв о Hirbis</b><button class="set-x" id="syFbX">✕</button></div>
       <p class="sy-p">Это бета-версия — нам очень важно твоё мнение. Что понравилось? Что непонятно или сломалось? Пиши как есть 🙏</p>
       <textarea id="syFbText" class="sy-fb-text" maxlength="1500" rows="5" placeholder="Например: «в уроке 3 кнопка не нажималась» или «квест с шаурмой — огонь!»"></textarea>
@@ -322,7 +323,7 @@
   const dt = t => t ? new Date(t * 1000).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
   function openAdmin(handle) {
     const box = sheet("syAdminSheet", `<div class="set-head"><b>👑 Админ-панель</b><button class="set-x" id="syAx">✕</button></div>
-      <div class="set-seg" id="syTabs"><button data-t="find" class="on">Игроки</button><button data-t="fb">📝 Отзывы</button><button data-t="promo">🎟 Промокоды</button><button data-t="log">Журнал</button></div>
+      <div class="set-seg" id="syTabs"><button data-t="find" class="on">Игроки</button><button data-t="fb">📝 Отзывы</button><button data-t="err">🐞 Ошибки</button><button data-t="promo">🎟 Промокоды</button><button data-t="log">Журнал</button></div>
       <div class="set-test"><input id="syFind" placeholder="ник, имя или ID" autocomplete="off" autocapitalize="off"><button class="btn blue" id="syGo">Найти</button></div>
       <div id="syCard"></div>`, true);
     box.querySelector("#syAx").onclick = () => box.classList.remove("show");
@@ -364,6 +365,29 @@
         feedbackList();
       });
       card.querySelectorAll(".sy-fb-who").forEach(a => a.onclick = (ev) => { ev.preventDefault(); if (a.dataset.h) openPlayer(a.dataset.h); });
+    };
+    // 🐞 ошибки приложения (telemetry.js) + сколько людей начинают/заканчивают/бросают уроки и квесты за 7 дней
+    const EVN = { app_open: "Открыли приложение", lesson_start: "Начали урок", lesson_end: "Закончили урок", lesson_exit: "Бросили урок",
+      quest_start: "Начали квест", quest_end: "Закончили квест", quest_exit: "Бросили квест", hearts_out: "Кончились ❤️",
+      repeat_start: "«Повтори слова»", feedback_open: "Открыли отзыв" };
+    const errorsTab = async () => {
+      card.innerHTML = `<p class="sy-p">Загружаю…</p>`;
+      let res;
+      try { res = await api("/admin/errors", {}); } catch (e) { card.innerHTML = `<p class="sy-p">Нет связи с сервером</p>`; return; }
+      if (res.error) { card.innerHTML = `<p class="sy-p">${esc(res.error)}</p>`; return; }
+      const day = res.days[0];
+      const stat = day ? Object.keys(EVN).filter(k => day.ev[k]).map(k => `<div class="sy-log"><b>${EVN[k]}</b> ${day.ev[k].n} раз · игроков: ${day.ev[k].users}</div>`).join("") : "";
+      card.innerHTML = `<div class="set-title">Сегодня${day ? " (" + esc(day.day) + ")" : ""}</div>${stat || `<p class="sy-p">Событий пока нет</p>`}
+        ${res.days.length > 1 ? `<div class="set-note">Прошлые дни: ${res.days.slice(1).map(d => `${esc(d.day.slice(5))} — уроков ${(d.ev.lesson_end || { n: 0 }).n}, игроков ${(d.ev.app_open || { users: 0 }).users}`).join(" · ")}</div>` : ""}
+        ${res.exits.length ? `<div class="set-title">Чаще всего бросают (7 дней)</div><div class="set-note">${res.exits.map(x => `${esc(x.x)} — ${x.n}`).join(" · ")}</div>` : ""}
+        <div class="set-title">Ошибки приложения · новых: ${res.open}</div>` +
+        (res.errors.map(x => `<div class="sy-log ${x.done ? "sy-dead" : ""}"><b>${dt(x.last)}</b> ×${x.n} · игроков: ${x.users}${x.handle ? " · последний @" + esc(x.handle) : ""}
+          <span class="sy-fb-msg">${esc(x.msg)}</span><span>${esc(x.src)}</span><span>${esc(x.info)}</span>
+          <button class="btn ghost sy-prdel sy-er-done" data-sig="${esc(x.sig)}" data-done="${x.done ? 0 : 1}">${x.done ? "Вернуть в новые" : "✓ Разобрано"}</button></div>`).join("") || `<p class="sy-p">Ошибок нет 🎉</p>`);
+      card.querySelectorAll(".sy-er-done").forEach(b => b.onclick = async () => {
+        try { await api("/admin/errors/done", { sig: b.dataset.sig, done: b.dataset.done === "1" }); } catch (e) { showToast("Нет связи с сервером"); return; }
+        errorsTab();
+      });
     };
     // 🎟 промокоды Hirbis Plus: создать (скидка % или дни Plus), список, удалить
     const promos = async () => {
@@ -415,7 +439,7 @@
     box.querySelector("#syTabs").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
       box.querySelectorAll("#syTabs button").forEach(x => x.classList.toggle("on", x === b));
-      b.dataset.t === "log" ? log() : b.dataset.t === "promo" ? promos() : b.dataset.t === "fb" ? feedbackList() : list();
+      b.dataset.t === "log" ? log() : b.dataset.t === "promo" ? promos() : b.dataset.t === "fb" ? feedbackList() : b.dataset.t === "err" ? errorsTab() : list();
     };
     box.querySelector("#syGo").onclick = list;
     inp.onkeydown = (e) => { if (e.key === "Enter") list(); };

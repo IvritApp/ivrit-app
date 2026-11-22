@@ -111,3 +111,24 @@ button.p-exam.locked { opacity: .75; }
 @media (max-height: 700px) { #screen.ex .host-fig.ci-host { height: 170px; width: 80px; } #screen.ex .ex-title { font-size: 21px; margin-bottom: 8px; } }
 
 body.theme-dark .q-goal-s { color: #9aa7b8; }
+
+/* ===== 22.11: «Какие слова ты запомнил?» в конце урока + «Уже знаю» на карточке (wordmarks.js) ===== */
+.wm { margin: 14px 0 4px; padding: 14px 12px; border: 2px solid #dfe6ee; border-radius: 18px; background: var(--bg); color: var(--text); text-align: left; }
+.wm-h { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.wm-sub { font-size: 13px; color: var(--hint); line-height: 1.35; margin-bottom: 10px; }
+.wm-list { display: flex; flex-direction: column; gap: 8px; }
+.wm-row { display: flex; align-items: center; gap: 6px; }
+.wm-w { flex: 1; min-width: 0; display: flex; flex-direction: column; cursor: pointer; }
+.wm-w b { font-size: 20px; font-weight: 600; line-height: 1.2; text-align: right; }
+.wm-w span { font-size: 13px; color: var(--hint); text-align: right; line-height: 1.2; overflow-wrap: anywhere; }
+.wm-b { flex: none; font-family: inherit; font-size: 12px; font-weight: 700; line-height: 1.1; padding: 8px 7px; min-height: 40px; border-radius: 12px; border: 2px solid #dfe6ee; border-bottom-width: 3px;
+  background: var(--bg); color: var(--hint); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.wm-b.ok.on { background: #e8f8e1; border-color: #58cc02; color: #3c8c00; }
+.wm-b.rep.on { background: #fff4e0; border-color: #ffb020; color: #b66d00; }
+.wm-b:active { transform: translateY(1px); }
+.wm-all { display: block; margin: 10px auto 0; background: none; border: none; color: #1cb0f6; font-family: inherit; font-size: 14px; font-weight: 700; line-height: 1.2; cursor: pointer; padding: 6px; }
+.wm-skip { margin-top: 8px; }
+button.p-repeat { width: 100%; border: 2px solid #ffb020; font: inherit; text-align: left; cursor: pointer; background: #fff7e8; color: #b66d00; }
+.p-repeat span { background: #ffb020; color: #fff; border-radius: 999px; min-width: 26px; padding: 2px 8px; text-align: center; font-weight: 800; }
+.cd-inlesson .cd-btns.has-skip { flex-direction: column; gap: 6px; }
+.cd-inlesson .cd-btns .wm-skip { background: none; border: none; box-shadow: none; color: var(--hint); font-size: 15px; padding: 10px; }

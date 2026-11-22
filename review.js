@@ -30,7 +30,10 @@
     if (!lvl) throw new Error("no level");
     const { words, phrases } = await levelData(lvl);
     const weak = store.get("weak_q-" + lvl.quest, []);
-    const ordered = weakFirst(words, weak);
+    // 22.11 (wordmarks.js): «повторить» — в самое начало, «уже знаю» — в конец
+    const WM = window.WordMarks;
+    const o0 = weakFirst(words, weak);
+    const ordered = WM ? o0.filter(w => WM.repeat(w)).concat(o0.filter(w => !WM.repeat(w) && !WM.known(w)), o0.filter(w => WM.known(w))) : o0;
     let ws, ps;
     const half = Math.ceil(ordered.length / 2);
     if (k === 0) { ws = ordered.slice(0, Math.min(10, half)); ps = phrases.slice(0, 3); }
