@@ -144,6 +144,7 @@ function renderPath() {
       ${questIcon(lvl.questImg)}
       <span><b>Квест: ${lvl.questTitle || lvl.title}</b><br>${allDone ? (questDone ? (questGold ? "Идеально 🏆 · можно ещё раз" : "Пройден ✓ · можно ещё раз") : "Открыт — вперёд!") : `Откроется после ${lvl.lessons.length} уроков 🔒`}</span>
     </button>
+    ${testMode() && window.startQuest2 && lvl.quest === "shawarma" ? `<button class="p-q2" id="p-q2">🧪 Новая шаурма (тест, видно только тестировщику)</button>` : ""}
     ${(window.reviewNeeded && (reviewNeeded(lvl.id) || reviewDoneN(lvl.id) > 0)) ? `<div class="p-review">
       <div class="p-review-h">🔁 Повторение после квеста <small>${reviewDoneN(lvl.id)} из ${reviewCount}</small></div>
       <div class="p-review-row">${reviewTitles.map((t, k) => { const id = `rev-${lvl.id}-${k + 1}`, dn = doneLessons().includes(id);
@@ -180,6 +181,8 @@ function renderPath() {
   if (window.partsDecorate) partsDecorate(lvl, pathView);
   document.getElementById("p-settings").onclick = openSettings;
   pathView.querySelectorAll(".p-rev").forEach(b => b.onclick = () => startReview(lvl.id, +b.dataset.rev));
+  const q2 = document.getElementById("p-q2");                      // новый квест «что сказал — то появилось» (quest2.js), пока только тестировщику
+  if (q2) q2.onclick = () => startQuest2("shawarma");
   const rp = document.getElementById("p-repeat");                 // «🔁 Повтори слова» — слова, которые игрок отметил «повторить» (wordmarks.js)
   if (rp) rp.onclick = () => WordMarks.startRepeat();
   const tb = document.getElementById("p-taxi");

@@ -39,9 +39,15 @@ def backup_one(name, path, today):
     dst = sqlite3.connect(tmp)
     try:
         src.backup(dst)
-    finally:
+    except Exception as e:
         dst.close()
         src.close()
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        print(f"!!! {name}: backup failed: {e}")
+        return False
+    dst.close()
+    src.close()
     check = sqlite3.connect(tmp)
     try:
         ok = check.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
@@ -58,16 +64,18 @@ def backup_one(name, path, today):
 
 
 def cleanup(today):
-    """Delete backups older than KEEP_DAYS days."""
+    """Delete backups older than KEEP_DAYS days, but always keep the 5 newest copies of each database."""
     limit = today - datetime.timedelta(days=KEEP_DAYS)
-    for f in glob.glob(os.path.join(DEST, "*-????-??-??.db")):
-        try:
-            day = datetime.date.fromisoformat(f[-13:-3])
-        except ValueError:
-            continue
-        if day < limit:
-            os.remove(f)
-            print(f"deleted old {os.path.basename(f)}")
+    for name in DATABASES:
+        files = sorted(glob.glob(os.path.join(DEST, f"{name}-????-??-??.db")))
+        for f in files[:-5]:
+            try:
+                day = datetime.date.fromisoformat(f[-13:-3])
+            except ValueError:
+                continue
+            if day <= limit:
+                os.remove(f)
+                print(f"deleted old {os.path.basename(f)}")
 
 
 def main():
@@ -78,7 +86,8 @@ def main():
         return 0
     today = datetime.date.today()
     results = [backup_one(n, p, today.isoformat()) for n, p in DATABASES.items()]
-    cleanup(today)
+    if all(results):                     # old copies are deleted only when today's copies are fine
+        cleanup(today)
     return 0 if all(results) else 1
 
 

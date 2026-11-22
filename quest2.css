@@ -1,0 +1,75 @@
+/* ===== Новые квесты «что сказал — то появилось» (quest2.js) ===== */
+.q2 { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; background: var(--bg); color: var(--text); }
+.q2-top { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.q2-x { width: 44px; height: 44px; border: 0; background: none; font-size: 22px; color: #9aa6b2; cursor: pointer; }
+.q2-bar { flex: 1; height: 14px; border-radius: 8px; background: #e8eef4; overflow: hidden; }
+.q2-bar i { display: block; height: 100%; width: 0; background: #58cc02; border-radius: 8px; transition: width .5s ease; }
+
+/* сцена: фон Codex 2:3, всё поверх — в процентах от картинки, поэтому совпадает на любом экране */
+.q2-scene { position: relative; flex: none; width: min(100%, calc(58vh * 2 / 3)); width: min(100%, calc(58dvh * 2 / 3)); aspect-ratio: 2 / 3;
+  margin: 0 auto; background-size: 100% 100%; background-repeat: no-repeat; border-radius: 18px; overflow: hidden; }
+.q2-say { position: absolute; left: 5%; right: 5%; top: 3%; padding: 10px 14px 8px; background: #fff; color: #222; border-radius: 18px;
+  box-shadow: 0 4px 0 rgba(0,0,0,.08); text-align: center; }
+.q2-say.in { animation: q2Pop .35s cubic-bezier(.2,1.4,.4,1); }
+.q2-who { font-size: 12px; font-weight: 800; color: #1899d6; text-align: left; }
+.q2-he { font-size: 26px; font-weight: 700; line-height: 1.25; cursor: pointer; }
+.q2-tr { font-size: 14px; color: #6b7785; }
+.q2-ru { margin-top: 4px; border: 0; background: #eef5fc; color: #1899d6; border-radius: 10px; padding: 3px 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.q2-ru.open { background: none; color: #222; font-weight: 600; }
+/* доска на прилавке */
+.q2-board { position: absolute; left: 8%; right: 8%; top: 64%; bottom: 15%; }
+.q2-board.rolling { animation: q2Roll .9s ease-in-out; }
+.q2-bread { position: absolute; left: 50%; top: 50%; width: 80%; transform: translate(-50%, -50%); animation: q2Drop .45s cubic-bezier(.2,1.4,.4,1) both; }
+.q2-bread.done { width: 60%; }
+.q2-piece { position: absolute; width: 24%; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)); animation: q2Drop .45s cubic-bezier(.2,1.4,.4,1) both; filter: drop-shadow(0 2px 0 rgba(0,0,0,.12)); }
+.q2-money { left: 84% !important; top: 30% !important; width: 26%; }
+@keyframes q2Drop { from { opacity: 0; margin-top: -60px; } to { opacity: 1; margin-top: 0; } }
+@keyframes q2Pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes q2Roll { 0% { transform: none; } 40% { transform: scaleX(.6) rotate(-4deg); } 100% { transform: none; } }
+
+/* панель ответа */
+.q2-panel { flex: 1; padding: 10px 14px 24px; display: flex; flex-direction: column; gap: 8px; }
+.q2-task { font-size: 17px; font-weight: 800; text-align: center; }
+.q2-hint { min-height: 20px; font-size: 14px; color: #6b7785; text-align: center; }
+.q2-hint.bad { color: #e24b4b; }
+.q2-chips { display: flex; flex-direction: column; gap: 8px; }
+.q2-chip { display: flex; flex-direction: column; align-items: center; padding: 10px 12px; border: 2px solid #dfe6ee; border-bottom-width: 4px; border-radius: 16px;
+  background: #fff; color: #222; font-family: inherit; cursor: pointer; }
+.q2-chip b { font-size: 22px; font-weight: 700; }
+.q2-chip span { font-size: 13px; color: #6b7785; }
+.q2-chip:disabled { opacity: .5; }
+.q2-mic { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; border: 0; border-bottom: 4px solid #1680b8; border-radius: 18px;
+  background: #1cb0f6; color: #fff; font-family: inherit; font-size: 18px; font-weight: 800; cursor: pointer; }
+.q2-mic-ic { font-size: 22px; }
+.q2-mic.on { background: #ff4b4b; border-bottom-color: #c93a3a; animation: q2Pulse 1s ease-in-out infinite; }
+@keyframes q2Pulse { 50% { transform: scale(1.03); } }
+.q2-nospeak { border: 0; background: none; color: #9aa6b2; font-family: inherit; font-size: 13px; cursor: pointer; padding: 4px; }
+.q2-wait { text-align: center; font-size: 17px; font-weight: 700; color: #6b7785; padding: 16px; }
+/* лотки с начинкой */
+.q2-trays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.q2-tray { position: relative; display: flex; flex-direction: column; align-items: center; padding: 3px 0; border: 2px solid #e3e9ef; border-radius: 12px; background: #fff; cursor: pointer; }
+.q2-tray img { width: 100%; max-width: 44px; aspect-ratio: 1; object-fit: contain; }
+.q2-tray-he { display: none; font-size: 11px; font-weight: 700; color: #222; line-height: 1.1; }
+.q2-tray.open { border-color: #1cb0f6; background: #eaf6fe; }
+.q2-tray.open .q2-tray-he { display: block; }
+.q2-tray.used { border-color: #58cc02; background: #effae6; }
+.q2-tray.used::after { content: "✓"; position: absolute; right: 2px; top: 0; color: #58cc02; font-weight: 900; font-size: 12px; }
+.q2-row { display: flex; flex-direction: column; gap: 8px; }
+.q2-done b { font-size: 20px; }
+/* оплата */
+.q2-bill { align-self: center; border: 0; background: none; padding: 0; cursor: pointer; animation: q2Pop .35s ease both; }
+.q2-bill img { width: 120px; }
+.q2-bill.gone { visibility: hidden; }
+/* итог */
+.q2-end { text-align: center; display: flex; flex-direction: column; gap: 10px; }
+.q2-end h2 { margin: 4px 0 0; font-size: 24px; }
+.q2-pts { font-size: 22px; font-weight: 900; color: #ff9600; }
+.q2-words { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.q2-word { display: flex; flex-direction: column; align-items: center; padding: 6px 10px; border: 2px solid #dfe6ee; border-radius: 12px; background: #fff; font-family: inherit; cursor: pointer; }
+.q2-word b { font-size: 18px; } .q2-word span { font-size: 12px; color: #6b7785; }
+/* кнопка тестировщика на дорожке */
+.p-q2 { display: block; width: 100%; margin: 6px 0 0; padding: 10px; border: 2px dashed #ff9600; border-radius: 14px; background: #fff7ea; color: #b46a00; font-family: inherit; font-weight: 800; cursor: pointer; }
+
+/* по критику: на шаге начинки сцена ниже, а 🎤 всегда виден внизу экрана */
+.q2.q2-filling .q2-scene { width: min(100%, calc(44vh * 2 / 3)); width: min(100%, calc(44dvh * 2 / 3)); }
+.q2-mic { position: sticky; bottom: 8px; z-index: 2; box-shadow: 0 6px 16px rgba(28, 176, 246, .35); }

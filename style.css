@@ -1191,3 +1191,6 @@ div.tu-bird { margin: 0 auto; }
 /* 22.11: в админке 5 вкладок — переносим на 2 строки, чтобы влезали на телефоне */
 #syTabs { flex-wrap: wrap; }
 #syTabs button { flex: 1 1 30%; font-size: 13px; padding: 8px 4px; }
+
+/* 22.11: картинки к словам (assets/words, плоский стиль) */
+.w-pic img { width: 100%; height: 100%; object-fit: contain; display: block; }

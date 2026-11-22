@@ -119,3 +119,6 @@
 body.theme-dark .ww-l { box-shadow: 0 4px 0 rgba(0, 0, 0, .4); }
 @media (max-height: 700px) { .ww-board { min-height: 130px; margin-top: 8px; } .ww-wheel { width: min(220px, 64vw); } .ww-l { width: 56px; height: 56px; margin: -28px 0 0 -28px; font-size: 30px; } }
 @media (prefers-reduced-motion: reduce) { .mg-coin, .ww-pop, .ww-shake, .ww-win.fresh, .ww-found { animation: none; } }
+
+/* 22.11: иконка Вордла — белая плитка с полем 3×3 */
+.mg-ic-wd { background: #fff; box-shadow: inset 0 0 0 2px #e3e9ef; }

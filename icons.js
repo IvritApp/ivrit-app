@@ -284,7 +284,24 @@
   window.WORD_ICON_BY_RU = BY_RU;
   window.WORD_ICON_ART = ART_BY_RU;
   window.wordIconId = (w) => (w && (w.img || BY_RU[norm(w.ru)] || BY_RU[norm(w.ru).replace(/^голод.*/, "голоден")])) || (/^голод/.test(norm(w && w.ru)) ? "hungry" : null);
+  // 22.11: КАРТИНКИ К СЛОВАМ В ПЛОСКОМ СТИЛЕ (Codex, листы 4×4 → claude-docs/tools/slice_grid.ps1):
+  // assets/words/m/<номер>.webp — жест показывает Давид, assets/words/f/<номер>.webp — Циля (только где есть человек).
+  // index.json: he (иврит без огласовок, обе формы рода) → номер, ru → номер, f — у каких номеров есть вариант с Цилей.
+  let PICS = null;
+  fetch("assets/words/index.json").then(r => r.ok ? r.json() : null).then(j => { if (j) PICS = Object.assign(j, { fset: new Set(j.f || []) }); }).catch(() => {});
+  const heKey = (s) => String(s || "").replace(/\{m:([^}]*)\}\{f:[^}]*\}/g, "$1").replace(/[֑-ׇ]/g, "").replace(/[?!.,"״׳']/g, "").replace(/\s+/g, " ").trim();
+  function picFor(w, size) {
+    if (!PICS || !w || typeof w !== "object") return "";
+    let n = PICS.he[heKey(w.he)];
+    if (n == null) n = PICS.ru[norm(w.ru)];
+    if (n == null) return "";
+    const girl = typeof profile !== "undefined" && profile && profile.gender === "f" && PICS.fset.has(n);
+    const s = size || 64;
+    return `<span class="w-ico w-pic" style="width:${s}px;height:${s}px"><img src="assets/words/${girl ? "f" : "m"}/${String(n).padStart(3, "0")}.webp?v=${PICS.v}" width="${s}" height="${s}" alt="" decoding="async" draggable="false"></span>`;
+  }
   window.wordIcon = function (idOrWord, size) {
+    const pic = picFor(idOrWord, size);
+    if (pic) return pic;
     const id = typeof idOrWord === "string" ? idOrWord : window.wordIconId(idOrWord);
     if (!id || !I[id]) {
       const art = typeof idOrWord === "object" && idOrWord ? ART_BY_RU[norm(idOrWord.ru)] : null;

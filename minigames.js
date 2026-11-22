@@ -8,6 +8,18 @@
   const view = () => document.getElementById("minigames");
   let mgView = null;            // что сейчас открыто в разделе: "menu" | "wheel" | null
   let wdFromMenu = false;       // Вордл открыт из мини-игр (кнопка «Назад» вернёт сюда)
+  // 22.11: иконка Вордла — маленькое поле 3×3 (серые/жёлтые/зелёные плитки с буквами, нижний ряд угадан), плоский стиль с одной тенью
+  const WORDLE_IC = (() => {
+    const C = { g: ["#58cc02", "#46a302"], y: ["#ffc800", "#e5a400"], n: ["#c5ced8", "#a8b3bf"] };
+    const rows = [["n", "y", "n"], ["y", "g", "n"], ["g", "g", "g"]], letters = [["ת", "ל", "ב"], ["ש", "ו", "ר"], ["ם", "ו", "ל"]];
+    let s = "";
+    rows.forEach((r, j) => r.forEach((k, i) => {
+      const x = 4 + i * 16, y = 4 + j * 16;
+      s += `<rect x="${x}" y="${y + 1.5}" width="14" height="14" rx="3" fill="${C[k][1]}"/><rect x="${x}" y="${y}" width="14" height="13" rx="3" fill="${C[k][0]}"/>` +
+        `<text x="${x + 7}" y="${y + 10}" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" font-family="Arial, sans-serif">${letters[j][i]}</text>`;
+    }));
+    return `<svg viewBox="0 0 56 56" width="44" height="44" aria-hidden="true">${s}</svg>`;
+  })();
 
   // ---------- КОШЕЛЁК = 🥐 бурекасы из eco.js ----------
   const balance = () => (window.Eco ? Eco.bur() : 0);
@@ -47,7 +59,7 @@
       </div>
       <div class="mg-note">🥐 — за уроки. Игры их тратят, а рейтинг не трогают.</div>
       <button class="mg-game" id="mgWordle">
-        <span class="mg-ic mg-ic-wd">🟩</span>
+        <span class="mg-ic mg-ic-wd">${WORDLE_IC}</span>
         <span class="mg-tx"><b>Вордл · слово дня</b><small>Угадай слово за 6 попыток</small></span>
         <span class="mg-price ${wdDone ? "ok" : "free"}">${wdDone ? "✓ сегодня" : "бесплатно"}</span>
       </button>

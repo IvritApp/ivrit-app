@@ -175,7 +175,7 @@ function showOnboarding() {
       <label class="ob-nick"><span>@</span><input id="ob-nick" maxlength="32" placeholder="твой_ник" autocomplete="off" autocapitalize="off" spellcheck="false" value="${draft.nick || ""}"></label>
       <div class="ob-nick-st" id="ob-nick-st"></div>
       <p class="ob-text small ob-rule">Только маленькие латинские буквы (a–z), цифры и _ — от 5 до 32 символов. Ник уникальный: если его уже кто-то занял, взять его нельзя. 🛒 Скоро ники можно будет покупать и продавать на площадке внутри Hirbis.</p>
-      <p class="ob-text small">Нажимая «Дальше», ты соглашаешься, что твой прогресс хранится на нашем сервере в России — чтобы он не потерялся при смене телефона и перешёл в приложение Hirbis.</p>
+      <p class="ob-text small">Нажимая «Дальше», ты соглашаешься, что твой прогресс (и технические данные для исправления ошибок: устройство, экран, ошибки приложения, начатые и законченные уроки) хранится на нашем сервере в России — чтобы он не потерялся при смене телефона и перешёл в приложение Hirbis.</p>
       <button class="btn blue" data-next id="ob-go2" disabled>Дальше</button>`;
     },
     // 4. Завязка истории
@@ -225,7 +225,7 @@ function showOnboarding() {
     const next = obStep.querySelector("[data-next]");
     next.onclick = () => {
       const S_NICK = 2, S_STORY = 3;
-      if (i === S_STORY && "speechSynthesis" in window) speak(STORY[draft.gender].ready.he);
+      if (i === S_STORY) speak(STORY[draft.gender].ready.he, { voice: draft.gender === "f" ? "f" : "m" });   // профиля ещё нет — голос по выбранному полу
       if (i === S_NICK) { if (!draft.nickOk) return; hirbisSync.chooseHandle(draft.nick); i = S_STORY; render(); return; }
       if (i === 1) {                                   // после имени и пола — создаём героя
         const base = draft.avatar && draft.avatarGender === draft.gender ? draft.avatar : HirbisAvatar.defaults(draft.gender);
@@ -436,6 +436,8 @@ function showToast(text) {
 if (tg && tg.BackButton) tg.BackButton.onClick(() => {
   // в алфавите «Назад» сначала обрабатывает сам раздел (например, из урока — к списку уроков)
   if (!document.getElementById("alphabet").hidden && typeof window.alphabetBack === "function" && window.alphabetBack()) return;
+  // открытые окна «Точно выйти?» / «Сердечки кончились» закрываем — иначе висят поверх дорожки (и выход посчитался бы дважды)
+  ["exAsk", "hOut"].forEach(id => { const w = document.getElementById(id); if (w) w.remove(); });
   // статистика: «Назад» посреди урока/квеста — значит бросил (telemetry.js)
   if (window.track) {
     if (!lessonView.hidden && lesson && step < queue.length) track("lesson_exit", lessonTag(lesson));
@@ -484,6 +486,7 @@ function startLesson(id) {
       lesson = data;
       queue = [...lesson.exercises];          // порядок заданий продуман в файле урока
       if (window.track) track("lesson_start", lessonTag(lesson));     // статистика для админки (telemetry.js)
+      ttsPreload(lesson.words.map(w => w.he).concat(lesson.phrases.map(p => p.he)));   // звуки урока — заранее
       if (window.Hearts) Hearts.render();
       askTranslit(showStep);
     })
@@ -678,6 +681,7 @@ function noListenText() {
 }
 function setNoListen(on) {
   store.set("nolisten_until", on ? Date.now() + NO_LISTEN_MIN * 60000 : 0);
+  ttsReq++;                                                    // отменить и то, что ещё только собиралось прозвучать
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
   if ("speechSynthesis" in window) speechSynthesis.cancel();
 }
@@ -1155,16 +1159,60 @@ function random(list) { return list[Math.floor(Math.random() * list.length)]; }
 // если у слова/реплики в файле данных есть поле "audio" (например "audio": "seller/hello.mp3"),
 // играется файл content/<язык>/audio/<путь>. Голос персонажа задаётся полем "voice" (seller, david, tsilya, hibri…).
 let currentAudio = null;
+// 22.11: НЕЙРОСЕТЕВАЯ ОЗВУЧКА (Azure: Аври — мужской голос для парней, Хила — женский для девушек).
+// Файлы делает claude-docs/tools/tts_build.ps1: content/he/audio/tts/<m|f>/<имя>.mp3 + index.json (какие файлы есть).
+// Имя = ttsName(текст) — тот же хэш, что в скрипте (FNV-1a 32 + длина). Нет файла — говорит устройство, как раньше.
+let ttsIndex = null;
+const ttsReady = fetch(`content/${COURSE_LANG}/audio/tts/index.json?v=${Math.floor(Date.now() / 4194304)}`).then(r => r.ok ? r.json() : null)
+  .then(j => { if (j) ttsIndex = { v: j.v, m: new Set(j.m || []), f: new Set(j.f || []) }; }).catch(() => {});
+// Один постоянный плеер: на iPhone звук без нажатия разрешён только плееру, который хоть раз запустили по нажатию.
+// Поэтому при первом касании экрана «разблокируем» его тишиной, а дальше только меняем src.
+const ttsPlayer = typeof Audio === "function" ? new Audio() : null;
+let ttsReq = 0;                                  // номер последней просьбы «скажи» — старые ответы не мешают новым
+if (ttsPlayer) {
+  ttsPlayer.preload = "auto";
+  const unlock = () => {
+    document.removeEventListener("pointerdown", unlock, true);
+    if (ttsPlayer.src && !ttsPlayer.paused) return;              // уже играет — значит, разрешено
+    ttsPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+    ttsPlayer.play().then(() => ttsPlayer.pause()).catch(() => {});
+  };
+  document.addEventListener("pointerdown", unlock, true);
+}
+// заранее скачать звуки урока (на телефоне первое слово иначе ждёт сеть)
+function ttsPreload(texts) {
+  ttsReady.then(() => (texts || []).forEach(t => { const s = ttsFile(t); if (s) fetch(s).catch(() => {}); }));
+}
+function ttsName(s) {
+  s = String(s).trim().replace(/\s+/g, " ");
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h.toString(16).padStart(8, "0") + "-" + s.length;
+}
+function ttsFile(text, voice) {
+  if (!ttsIndex || !text) return null;
+  const v = voice || (profile && profile.gender === "f" ? "f" : "m"), n = ttsName(text);
+  return ttsIndex[v].has(n) ? `content/${COURSE_LANG}/audio/tts/${v}/${n}.mp3?v=${ttsIndex.v}` : null;
+}
 function speak(text, opts) {
   const audio = opts && opts.audio;
+  const req = ++ttsReq;
   if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-  if (audio) {
-    currentAudio = new Audio(`content/${COURSE_LANG}/audio/${audio}`);
-    currentAudio.volume = settings.voice / 100;
-    currentAudio.play().catch(() => ttsFallback(text));      // файла нет — говорит устройство
-    return;
-  }
-  ttsFallback(text);
+  if (ttsPlayer) ttsPlayer.pause();
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  if (!settings.voice) return;
+  const go = () => {
+    if (req !== ttsReq) return;                                  // уже просили сказать другое
+    const src = audio ? `content/${COURSE_LANG}/audio/${audio}` : ttsFile(text, opts && opts.voice);
+    if (!src || !ttsPlayer) { ttsFallback(text); return; }
+    ttsPlayer.src = src;
+    ttsPlayer.volume = settings.voice / 100;
+    currentAudio = ttsPlayer;
+    // файла нет / не дали играть — говорит устройство; но не если это мы сами прервали (AbortError) ради нового слова
+    ttsPlayer.play().catch(e => { if (req === ttsReq && !(e && e.name === "AbortError")) ttsFallback(text); });
+  };
+  // список озвучки ещё грузится (первые секунды после запуска) — ждём его не дольше 0,8 с
+  if (ttsIndex || audio) go(); else Promise.race([ttsReady, new Promise(r => setTimeout(r, 800))]).then(go);
 }
 function ttsFallback(text) {
   if (!("speechSynthesis" in window) || !text) return;

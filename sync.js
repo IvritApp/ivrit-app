@@ -169,7 +169,7 @@
   function askConsent() {
     const box = sheet("syConsent", `<div class="set-head"><b>☁️ Сохраняем прогресс</b></div>
       <p class="sy-p">Чтобы твой прогресс не потерялся — при смене телефона и при переходе в будущее приложение Hirbis — мы храним его на нашем сервере в России.</p>
-      <p class="sy-p">Что хранится: имя и ник из Telegram, Telegram ID, твой прогресс в уроках, серия и очки. Мы не передаём эти данные третьим лицам.</p>
+      <p class="sy-p">Что хранится: имя и ник из Telegram, Telegram ID, твой прогресс в уроках, серия и очки, а также технические данные для исправления ошибок: версия Telegram и устройства, размер экрана, ошибки приложения, какие уроки начаты и закончены. Мы не передаём эти данные третьим лицам.</p>
       <button class="btn blue sy-wide" id="syAgree">Согласен(на), сохранять</button>`);
     box.querySelector("#syAgree").onclick = () => { lsSet("sync_ok", true); box.classList.remove("show"); sync(); };
   }

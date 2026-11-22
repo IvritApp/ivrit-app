@@ -21,7 +21,10 @@
   function addErr(msg, src, line, col, stack) {
     msg = String(msg || "").slice(0, 300);
     if (!msg || NOISE.test(msg)) return;
-    src = String(src || "").replace(location.origin, "").replace(/\?v=\w+/, "") + (line ? ":" + line + (col ? ":" + col : "") : "");
+    // без ?… и #… — в адресе страницы Telegram может держать #tgWebAppData (подпись игрока), это на сервер не шлём
+    const clean = (s) => String(s || "").replace(location.origin, "").replace(/[?#][^\s)]*/g, "");
+    src = clean(src) + (line ? ":" + line + (col ? ":" + col : "") : "");
+    stack = stack ? clean(stack) : stack;
     const key = msg + "|" + src;
     if (seen[key] || sentErr >= 10) return;
     seen[key] = 1; sentErr++;
