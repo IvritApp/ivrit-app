@@ -1,0 +1,71 @@
+/* ===== Квест «Автобус» (q2-bus.js, content/he/quests2/bus.json) ===== */
+/* водитель (npc квеста) — только на фоне кабины; сидит в кресле: ниже пояса плавно «утопает» в сиденье */
+.q2-scene[data-bg*="quests/bus/"] .q2-npc { opacity: 0; visibility: hidden; transition: opacity .35s, visibility .35s; }
+.q2-scene[data-bg$="quests/bus/bg_driver.webp"] .q2-npc { opacity: 1; visibility: visible;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 61%); mask-image: linear-gradient(to bottom, #000 55%, transparent 61%); }
+/* то, что игрок сказал, ложится ровно в «доску» шага (табличка остановки, валидатор) */
+.q2-scene[data-bg*="quests/bus/"] .q2-piece { left: 50% !important; top: 50% !important; width: 90%; }
+.q2-scene[data-bg$="quests/bus/bg_driver.webp"] .q2-piece { width: 62%; }
+.q2-scene[data-bg*="quests/bus/"] .q2-money:not(:last-child) { opacity: 0; transition: opacity .3s; }   /* карта → валидатор с ✓ */
+
+/* человек в сцене (женщина с остановки) */
+.q2bus-p { position: absolute; z-index: 1; aspect-ratio: 360 / 768; transform: translateX(-50%); pointer-events: none; }
+.q2bus-p .ci { height: 100%; }
+.q2bus-p.in { animation: q2busIn .5s cubic-bezier(.25, 1.4, .5, 1) both; }
+@keyframes q2busIn { from { opacity: 0; transform: translateX(-50%) translateY(5%); } to { opacity: 1; transform: translateX(-50%); } }
+
+/* едем: сцена чуть трясётся, по окну бегут блики (q2Fade смены фона не перебивается) */
+.q2-scene.q2bus-moving { animation: q2busShake .32s linear infinite; }
+.q2-scene.q2bus-moving.swap { animation: q2Fade .5s ease, q2busShake .32s linear infinite; }
+@keyframes q2busShake { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(.8px); } 70% { transform: translateY(-.6px); } }
+.q2bus-speed { position: absolute; z-index: 1; left: 5%; right: 5%; top: 12%; bottom: 20%; pointer-events: none; opacity: 0; transition: opacity .4s;
+  background: repeating-linear-gradient(100deg, transparent 0 46px, rgba(255, 255, 255, .22) 46px 52px, transparent 52px 120px); background-size: 240px 100%; }
+.q2-scene.q2bus-moving .q2bus-speed { opacity: 1; animation: q2busRush .7s linear infinite; }
+@keyframes q2busRush { from { background-position: 0 0; } to { background-position: -240px 0; } }
+
+/* табло «следующая остановка» (как в израильском автобусе) */
+.q2bus-led { position: absolute; z-index: 3; left: 6%; right: 6%; top: 3%; padding: 6px 42px 7px 10px; border: 0; border-radius: 12px; background: #17202b; color: #ffb02e;
+  text-align: center; box-shadow: inset 0 0 0 2px #2c3a4a, 0 4px 0 rgba(0, 0, 0, .15); font-family: inherit; cursor: pointer; }
+.q2bus-led small { display: block; font-size: 12px; font-weight: 700; color: #ffcf7a; opacity: .85; }
+.q2bus-led b { display: block; min-height: 1.25em; font-size: 22px; font-weight: 800; line-height: 1.25; text-shadow: 0 0 8px rgba(255, 160, 40, .55); }
+.q2bus-led b.hid { letter-spacing: 4px; animation: q2busBlink 1.1s steps(2) infinite; }
+.q2bus-led.stop b { color: #ff5a4a; text-shadow: 0 0 10px rgba(255, 80, 60, .7); animation: q2busBlink .6s steps(2) 4; }
+@keyframes q2busBlink { 50% { opacity: .35; } }
+.q2bus-spk { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 50%; background: #ffb02e; color: #17202b; display: grid; place-items: center; }
+.q2bus-spk .spk { width: 18px; height: 18px; }
+
+/* карта маршрута: справа налево, кружок за кружком; автобус едет по линии */
+.q2bus-map { position: absolute; z-index: 2; left: 4%; right: 4%; bottom: 3%; height: 15%; min-height: 54px; background: rgba(255, 255, 255, .95); border-radius: 14px; box-shadow: 0 4px 0 rgba(0, 0, 0, .12); }
+.q2bus-line { position: absolute; left: 10%; right: 10%; top: 46%; height: 5px; margin-top: -2.5px; border-radius: 3px; background: #c9d3de; }
+.q2bus-st { position: absolute; top: 46%; width: 16px; height: 16px; margin: -8px 0 0 -8px; box-sizing: border-box; border: 3px solid #1e5aa8; border-radius: 50%; background: #fff; transition: background .3s, border-color .3s; }
+.q2bus-st.on { background: #58cc02; border-color: #3c8c00; }
+.q2bus-st.next { animation: q2busPulse 1s ease-in-out infinite; }
+.q2bus-st.end { border-style: dashed; border-color: #9aa6b2; }
+@keyframes q2busPulse { 50% { box-shadow: 0 0 0 5px rgba(28, 176, 246, .35); } }
+.q2bus-lb { position: absolute; top: 62%; transform: translateX(-50%); font-size: 12px; font-weight: 800; color: #9aa6b2; white-space: nowrap; }
+.q2bus-lb.named { color: #24364b; }
+.q2bus-lb.new { animation: q2busWrite .7s ease both; }
+@keyframes q2busWrite { from { clip-path: inset(0 0 0 100%); color: #1cb0f6; } to { clip-path: inset(0 0 0 0); } }
+.q2bus-bus { position: absolute; top: 46%; width: 15%; max-width: 46px; transform: translate(-50%, -92%) scaleX(-1); transition: left 1.6s cubic-bezier(.45, .05, .3, 1); }
+.q2-scene.q2bus-moving .q2bus-bus { animation: q2busBob .4s ease-in-out infinite; }
+@keyframes q2busBob { 50% { margin-top: -1.5px; } }
+.q2bus-ding { position: absolute; z-index: 3; right: 6%; top: 34%; width: 30%; pointer-events: none; animation: q2busDing 1.6s ease both; filter: drop-shadow(0 0 14px rgba(255, 70, 50, .65)); }
+@keyframes q2busDing { 0% { opacity: 0; transform: scale(.5); } 20% { opacity: 1; transform: scale(1.1); } 35% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(.95); } }
+
+/* панель: 🔔 или «еду дальше» */
+.q2bus-need { text-align: center; font-size: 14px; color: #6b7785; }
+.q2bus-need bdi { font-weight: 800; color: #222; }
+.q2bus-go { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.q2bus-bell, .q2bus-on { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 8px; border: 2px solid #dfe6ee; border-bottom-width: 4px;
+  border-radius: 18px; background: #fff; color: #222; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+.q2bus-bell { border-color: #ffb3ad; background: #fff4f3; color: #c93a3a; }
+.q2bus-bell img { width: 64px; height: 64px; }
+.q2bus-arrow { font-size: 40px; line-height: 64px; color: #1cb0f6; }
+.q2bus-bell:disabled, .q2bus-on:disabled { opacity: .55; }
+.q2bus-bell.shake { animation: q2busNo .4s ease; }
+@keyframes q2busNo { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .q2-scene.q2bus-moving, .q2-scene.q2bus-moving .q2bus-speed, .q2-scene.q2bus-moving .q2bus-bus, .q2bus-led b.hid { animation: none; }
+  .q2-scene.q2bus-moving.swap { animation: q2Fade .5s ease; }
+}

@@ -23,15 +23,24 @@
   function msToNext() { const s = state(); return s.n >= MAX ? 0 : Math.max(0, REGEN_MS - (Date.now() - s.t)); }
   function minsText(ms) { const m = Math.ceil(ms / 60000); return m + " мин"; }
   // 22.11 (владелец): ❤️ тратятся во ВСЕХ частях урока, включая «знакомство» (1–2); без потерь — только тренировка и повторение
-  const spends = () => lesson && !lesson.practice && !lesson.review && !unlimited();
+  // 23.11 (владелец): уроки уровней 1–3 (a1-1-*, a1-3-* «Квартира», a1-2-* «Магазин») — без потери ❤️, чтобы новичок спокойно учился первые часы
+  const freeId = (id) => /^a1-[123]-\d+$/.test(String(id || ""));
+  const freeNow = () => !!(lesson && freeId(lesson.id));
+  const spends = () => lesson && !lesson.practice && !lesson.review && !unlimited() && !freeNow();
 
   const Hearts = {
     MAX,                                                   // сколько ❤️ в полной шкале (eco.js «Полные сердечки»)
+    freeId,
     n: () => (unlimited() ? Infinity : state().n),
     render(bump) {
       const el = document.getElementById("hearts");
       if (!el) return;
-      const n = Hearts.n();
+      const n = freeNow() && !(lesson.practice || lesson.review) ? Infinity : Hearts.n();   // в уроке уровней 1–3 — ∞
+      // первый урок, где ❤️ тратятся (после бесплатных уровней 1–3) — один раз предупредить
+      if (n !== Infinity && spends() && /^a1-/.test(String(lesson.id)) && !store.get("heartsIntro", false)) {
+        store.set("heartsIntro", true);
+        if (typeof showToast === "function") showToast("❤️ Дальше ошибка стоит сердечко — новое появляется каждые 9 минут");
+      }
       el.className = "hearts" + (n === 0 ? " empty" : "") + (bump ? " lost" : "") + (window.Plus && Plus.active() ? " plus" : "");
       el.innerHTML = HEART + `<b>${n === Infinity ? "∞" : n}</b>`;
       el.onclick = () => { if (window.Plus) Plus.open("hearts"); };       // нажал на сердечки → Hirbis Plus

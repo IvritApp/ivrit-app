@@ -244,6 +244,54 @@
     };
   };
 
+  // ---------- Карточка «Новая фраза» (23.11, аудит новичка): шаг { type: "phrase_card", phrase: i } ----------
+  // Перед первой «Собери фразу» с этой фразой: фраза целиком (звук, транскрипция, перевод) + разбор по словам.
+  // Показывается один раз на фразу (store "phrasesSeen"), parts.js вставляет шаг сам.
+  const plain = (s) => String(s || "").replace(/[֑-ׇ]/g, "").replace(/[?!.,״"׳']/g, "").trim();
+  window.showPhraseCard = function (ex) {
+    const p = (lesson.phrases || [])[ex.phrase];
+    if (!p) { goNext(); return; }
+    const seen = store.get("phrasesSeen", []);
+    if (!seen.includes(plain(p.he))) store.set("phrasesSeen", seen.concat(plain(p.he)).slice(-400));
+    // разбор: слово фразы → слово урока (и без приставок ו/ה/ב/ל/ש: «וּטְחִינָה» = «и» + «тхина»)
+    const PREF = { "ו": "и", "ה": "(артикль)", "ב": "в", "ל": "к, для", "ש": "что" };
+    const words = lesson.words || [];
+    // служебные слова, которых может не быть в словах урока
+    const FUNC = { "עם": "с", "בלי": "без", "אני": "я", "אתה": "ты", "זה": "это", "שלי": "мой", "שלך": "твой", "שלו": "его", "שלה": "её", "לי": "мне", "לך": "тебе", "זאת": "это", "לא": "не, нет", "כן": "да", "מה": "что", "איפה": "где",
+      "יש": "есть", "אין": "нет (не имеется)", "גם": "тоже", "פה": "здесь", "כאן": "тут", "תודה": "спасибо", "בבקשה": "пожалуйста", "מאוד": "очень", "של": "(чей) — у, от" };
+    const find = (t) => words.find(w => plain(w.he) === t) || (FUNC[t] ? { ru: FUNC[t] } : null);
+    const parts = p.he.split(/\s+/).filter(Boolean).map(tok => {
+      const t = plain(tok);
+      // את: אַתְּ = «ты» (девушке), אֶת — служебное слово перед «тем самым» предметом (различаем по огласовке)
+      if (t === "את") return { tok, ru: /אֶ/.test(tok) ? "(слово אֶת)" : "ты" };
+      let w = find(t), pre = "";
+      if (!w && t.length > 2 && PREF[t[0]]) { w = find(t.slice(1)); if (w) pre = PREF[t[0]]; }
+      if (!w && t.length > 3 && t[0] === "ו" && PREF[t[1]]) { w = find(t.slice(2)); if (w) pre = "и + " + PREF[t[1]]; }
+      return { tok, ru: w ? (pre ? pre + " + " : "") + w.ru : "" };
+    });
+    screen.innerHTML = `
+      <div class="cd-wrap cd-inlesson">
+        <div class="cd-newtag">💬 Новая фраза</div>
+        <div class="cd-pair cd-phrase" id="cd-pair">
+          <b class="cd-ph-he" dir="rtl">${p.he}</b>
+          <span class="tr cd-ph-tr">${p.tr || ""}</span>
+          <div class="cd-ph-ru">${p.ru}</div>
+          <button class="cd-say cd-pair-say" id="cd-say" aria-label="Послушать ещё раз">${SPK}</button>
+        </div>
+        ${parts.some(x => x.ru) ? `<div class="cd-ph-words" dir="rtl">${parts.map(x => `<span class="cd-ph-w"><b>${x.tok.replace(/[?!.,]/g, "")}</b><small dir="ltr">${x.ru || "…"}</small></span>`).join("")}</div>
+        <div class="cd-pair-tip">Иврит читаем справа налево ← первое слово справа</div>` : `<div class="cd-pair-tip">Послушай и повтори вслух 🗣️</div>`}
+        <div class="cd-btns" id="cd-btns"><button class="btn blue" id="cd-go">Понятно, дальше</button></div>
+      </div>`;
+    const sayIt = () => { speak(p.he, { audio: p.audio }); const b = document.getElementById("cd-say"); if (b) { b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); } };
+    document.getElementById("cd-say").onclick = sayIt;
+    document.getElementById("cd-pair").onclick = (e) => { if (!e.target.closest("#cd-say")) sayIt(); };
+    setTimeout(sayIt, 350);
+    document.getElementById("cd-go").onclick = function () {
+      if (this.disabled) return; this.disabled = true;
+      playSound("pop"); vibrate("light"); goNext();
+    };
+  };
+
   // ---------- Конец части ----------
   function finishPart() {
     const { lvl, k, total, words } = S;

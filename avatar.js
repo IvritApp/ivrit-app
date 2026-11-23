@@ -57,8 +57,56 @@
       gender: f ? "f" : "m",
       beard: "none", payot: "none", headwear: "none", kippaColor: 0,   // борода, пейсы, кипа / шляпа / платок — бесплатно
       outer: null, hat: null, glasses: null,        // надетые платные вещи
-      owned: []                                      // купленные платные вещи
+      owned: [],                                     // купленные платные вещи
+      hero: null                                     // 23.11: готовый герой-картинка ("hero_m3"), выбирается на экране «Выбери героя»
     };
+  }
+  // 23.11: готовые герои плоского стиля (assets/chars/hero_*). Если герой выбран — svg() везде отдаёт его картинку
+  const HERO_RE = /^hero_[mf](10|[1-9])$/;
+  function heroHTML(id, opts) {
+    const head = opts && opts.view === "head";
+    const v = (window.HirbisChars && HirbisChars.V) || "";
+    // во весь рост — «живой» (моргает, говорит) через chars.js; голова — один кадр, обрезанный CSS
+    const live = !head && typeof window.charImgHTML === "function" ? charImgHTML(id) : "";
+    return `<span class="hb-avatar hero-pic${head ? " hero-head" : ""}${opts && opts.cls ? " " + opts.cls : ""}">${live ||
+      `<img src="assets/chars/${id}_neutral.webp${v ? "?v=" + v : ""}" alt="" draggable="false" decoding="async">`}</span>`;
+  }
+
+  // ---------- «Выбери своего героя» (23.11, решение владельца: готовые герои вместо конструктора) ----------
+  // pickHero(cfg, onDone): окно поверх экрана; 10 героев своего пола, крупный просмотр выбранного; «Выбрать» → onDone(cfg c hero).
+  // «Собрать своего» — прежний конструктор (openEditor).
+  function pickHero(cfg, onDone) {
+    const base = JSON.parse(JSON.stringify(cfg || defaults("m")));
+    const g = base.gender || (typeof profile !== "undefined" && profile && profile.gender) || "m";
+    base.gender = g;
+    const list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `hero_${g}${n}`);
+    let sel = HERO_RE.test(base.hero || "") && base.hero.startsWith("hero_" + g) ? base.hero : list[0];
+    const old = document.getElementById("heroPick"); if (old) old.remove();
+    const w = document.createElement("div");
+    w.id = "heroPick"; w.className = "hp-wrap";
+    w.innerHTML = `<div class="hp-card">
+      <button class="hp-x" id="hpX" type="button" aria-label="Закрыть">✕</button>
+      <h2 class="hp-title">Выбери своего героя</h2>
+      <div class="hp-big" id="hpBig"></div>
+      <div class="hp-grid">${list.map(id => `<button class="hp-one" type="button" data-id="${id}">${heroHTML(id, { view: "head" })}</button>`).join("")}</div>
+      <button class="btn blue hp-go" id="hpGo" type="button">Выбрать</button>
+      <button class="hp-own" id="hpOwn" type="button">🎨 Собрать своего в конструкторе</button>
+    </div>`;
+    document.body.appendChild(w);
+    requestAnimationFrame(() => w.classList.add("show"));
+    const show = () => {
+      el("hpBig").innerHTML = heroHTML(sel);
+      const ci = el("hpBig").querySelector(".ci");
+      if (ci) { ci.classList.add("act-cheer"); setTimeout(() => ci.classList.remove("act-cheer"), 900); }
+      w.querySelectorAll(".hp-one").forEach(b => b.classList.toggle("on", b.dataset.id === sel));
+    };
+    w.querySelectorAll(".hp-one").forEach(b => b.onclick = () => { sel = b.dataset.id; if (typeof vibrate === "function") vibrate("light"); if (typeof playSound === "function") playSound("pop"); show(); });
+    show();
+    const close = () => w.remove();
+    // ✕ — закрыть без выбора (на главной кнопки «Назад» Telegram нет); Хибри на главной снова оживает
+    el("hpX").onclick = () => { close(); if (typeof startHomeBird === "function" && !document.getElementById("home").hidden) startHomeBird(); };
+    el("hpGo").onclick = () => { close(); base.hero = sel; onDone(sanitize(base)); };
+    el("hpOwn").onclick = () => { close(); base.hero = null; openEditor(base, onDone); };
   }
 
   // Убрать то, что не подходит полу (например, после «Сменить имя или пол»)
@@ -70,6 +118,7 @@
       if (!o || !fits(o, g)) c[k] = d[k];
     });
     if (g === "f") { c.beard = "none"; c.payot = "none"; }
+    if (c.hero != null && !(typeof c.hero === "string" && HERO_RE.test(c.hero) && c.hero.startsWith("hero_" + g))) c.hero = null;   // чужого пола — тоже сброс
     return c;
   }
 
@@ -367,6 +416,9 @@
   // ---------- Сборка ----------
   let UID = 0;
   function svg(cfg, opts) {
+    // герой-картинка: голова (аватар, друзья, профиль) — всегда; во весь рост — только где просили { hero: true }.
+    // Старые SVG-сцены (такси, джойстик, «покажи на себе» у врача — зоны под пропорции SVG) рисуют прежнего героя.
+    if (cfg && typeof cfg.hero === "string" && HERO_RE.test(cfg.hero) && ((opts && opts.view === "head") || (opts && opts.hero))) return heroHTML(cfg.hero, opts);
     const c = Object.assign(defaults("m"), cfg || {});
     const pose = (opts && opts.pose) || "stand";
     const skin = SKIN[c.skin] || SKIN[1], hairCol = HAIRC[c.hairColor] || HAIRC[1];
@@ -552,5 +604,5 @@
     const cfg = CHARS[name]; if (!cfg) return "";
     return svg(sanitize(Object.assign(defaults(cfg.gender), cfg)), opts);
   }
-  window.HirbisAvatar = { svg, defaults, sanitize, openEditor, OPTIONS, SHOP, SKIN, HAIRC, TOPC, BOTC, KIPPAC, CHARS, charSVG };
+  window.HirbisAvatar = { svg, defaults, sanitize, openEditor, pickHero, OPTIONS, SHOP, SKIN, HAIRC, TOPC, BOTC, KIPPAC, CHARS, charSVG };
 })();

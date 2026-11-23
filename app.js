@@ -45,7 +45,9 @@ function fireLevel(c) { let l = 0; FIRE.forEach((f, i) => { if (c >= f.from && i
 // Хранилище на устройстве (временно — потом перенесём на сервер, чтобы работало и в приложении)
 // Уроки и сцены всегда берём свежими (GitHub Pages кэширует файлы на 10 минут)
 const _fetch = window.fetch.bind(window);
-window.fetch = (url, opts) => _fetch(url, Object.assign({ cache: "no-cache" }, opts));
+// 23.11: звуки (audio/) и картинки (assets/) — из памяти телефона: их имена/версии и так меняются при обновлении
+// (списки .json — всегда свежие: index.json озвучки и картинок меняются при обновлении)
+window.fetch = (url, opts) => /\/audio\/|^assets\/|\/assets\//.test(String(url)) && !/\.json(\?|$)/.test(String(url)) ? _fetch(url, opts) : _fetch(url, Object.assign({ cache: "no-cache" }, opts));
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem("hirbis_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -182,7 +184,7 @@ function showOnboarding() {
     () => {
       const st = STORY[draft.gender];
       return `
-      <div class="ob-hero">${HirbisAvatar.svg(draft.avatar)}</div>
+      <div class="ob-hero">${HirbisAvatar.svg(draft.avatar, { hero: true })}</div>
       <h1 class="ob-title">Твоя история</h1>
       <p class="ob-text">Представь: ты скоро переезжаешь в Израиль. Там уже 10 лет живёт ${st.who}. ${st.met} встретит тебя в аэропорту и поможет обосноваться.</p>
       <p class="ob-text">А пока я научу тебя первым словам. Кстати, вот твоя первая фраза:</p>
@@ -230,7 +232,7 @@ function showOnboarding() {
       if (i === 1) {                                   // после имени и пола — создаём героя
         const base = draft.avatar && draft.avatarGender === draft.gender ? draft.avatar : HirbisAvatar.defaults(draft.gender);
         stopHomeBird();
-        HirbisAvatar.openEditor(base, cfg => {
+        (HirbisAvatar.pickHero || HirbisAvatar.openEditor)(base, cfg => {   // 23.11: выбор готового героя (конструктор — по кнопке внутри)
           draft.avatar = cfg; draft.avatarGender = draft.gender;
           onboardView.hidden = false; startHomeBird();
           // ник спрашиваем только в Telegram и только у тех, кто ещё не выбрал
@@ -288,7 +290,7 @@ function updateHeroCard() { document.getElementById("heroIcon").innerHTML = Hirb
 updateHeroCard();
 document.getElementById("go-hero").onclick = () => {
   stopHomeBird();
-  HirbisAvatar.openEditor(myAvatar(), cfg => {
+  (HirbisAvatar.pickHero || HirbisAvatar.openEditor)(myAvatar(), cfg => {   // 23.11: «Выбери героя» (конструктор — кнопкой внутри)
     if (profile) { profile.avatar = cfg; store.set("profile", profile); }
     updateHeroCard(); showHome();
   });
@@ -437,6 +439,13 @@ if (tg && tg.BackButton) tg.BackButton.onClick(() => {
   // в алфавите «Назад» сначала обрабатывает сам раздел (например, из урока — к списку уроков)
   if (!document.getElementById("alphabet").hidden && typeof window.alphabetBack === "function" && window.alphabetBack()) return;
   // открытые окна «Точно выйти?» / «Сердечки кончились» закрываем — иначе висят поверх дорожки (и выход посчитался бы дважды)
+  const tipW = document.getElementById("tipSheet");                 // «💡 Совет» перед уроком: закрыть и остаться на дорожке (урок не начинается)
+  if (tipW) { tipW.remove(); return; }
+  if (!document.getElementById("quest").hidden && window.q2Hush) q2Hush();   // новый квест: голос и микрофон — стоп
+  const csW = document.getElementById("csPlay");                    // кат-сцена (cutscene.js): закрыть, квест не начинать
+  if (csW) { if (csW._stop) csW._stop(); csW.remove(); return; }
+  const hpW = document.getElementById("heroPick");                  // «Выбери героя»: закрыть без выбора
+  if (hpW) { hpW.remove(); if (!homeView.hidden) startHomeBird(); return; }   // (в знакомстве останется тот же шаг — «Дальше» откроет выбор снова)
   ["exAsk", "hOut"].forEach(id => { const w = document.getElementById(id); if (w) w.remove(); });
   document.querySelectorAll(".wm-sheet").forEach(w => { w.remove(); if (w._done) w._done(); });   // окно «Какие слова запомнил?»
   // статистика: «Назад» посреди урока/квеста — значит бросил (telemetry.js)
@@ -466,7 +475,8 @@ function startLesson(id) {
   if (given) id = given.id;
   // сердечки кончились — урок не начинаем (тренировка и повторение — можно)
   // (части «знакомство» 0–1 сердечки не тратят — туда пускаем и с нулём)
-  if (window.Hearts && !(given && (given.practice || given.review)) && Hearts.n() <= 0) { Hearts.outModal(); return; }
+  // 23.11: уроки уровней 1–3 (новички) сердечки не тратят — туда пускаем и с нулём
+  if (window.Hearts && !(given && (given.practice || given.review)) && !(Hearts.freeId && Hearts.freeId(id)) && Hearts.n() <= 0) { Hearts.outModal(); return; }
   stopHomeBird();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "lesson");
   if (tg && tg.BackButton) tg.BackButton.show();
@@ -507,8 +517,9 @@ function showStep() {
 
   const ex = queue[step];
   document.querySelectorAll(".ex-bottom").forEach(e => e.remove());
-  screen.classList.toggle("ex", ex.type !== "card");               // раскладка задания: кнопки внизу, «ПРОВЕРИТЬ»
+  screen.classList.toggle("ex", ex.type !== "card" && ex.type !== "phrase_card");   // раскладка задания: кнопки внизу, «ПРОВЕРИТЬ»
   if (ex.type === "card" && window.showWordCard) showWordCard(ex);   // новое слово: карточка (cards.js)
+  else if (ex.type === "phrase_card") { if (window.showPhraseCard) showPhraseCard(ex); else goNext(); }   // новая фраза (cards.js)
   else if (ex.type === "choose_translation") showChooseTranslation(ex);
   else if (ex.type === "choose_hebrew") showChooseHebrew(ex);
   else if (ex.type === "listen") { if (noListen()) showChooseTranslation(ex); else showListen(ex); }
@@ -721,8 +732,14 @@ const cleanTok = (t) => t.replace(/[?!.,]/g, "");
 function showBuildPhrase(ex) {
   const ph = lesson.phrases[ex.phrase];
   const target = ph.he.split(" ").map(cleanTok);
-  const extra = shuffle(lesson.words.filter(w => !w.he.includes(" ") && !target.includes(w.he)).map(w => w.he)).slice(0, 2);
+  const extraW = shuffle(lesson.words.filter(w => !w.he.includes(" ") && !target.includes(w.he))).slice(0, 2);
+  const extra = extraW.map(w => w.he);
   const tiles = shuffle([...target, ...extra]);
+  // 23.11 (аудит новичка): под словом на плитке — как читается (если транскрипция включена; класс tr прячется сам)
+  const trOf = {};
+  const trToks = String(ph.tr || "").split(/\s+/).filter(Boolean);
+  if (trToks.length === target.length) target.forEach((t, i) => { trOf[t] = trToks[i].replace(/[?!.,]/g, ""); });
+  extraW.forEach(w => { trOf[w.he] = w.tr || ""; });
   screen.innerHTML = hostHTML(TASK.build, `<div class="q-ru">${ph.ru}</div>`) + `
     <div class="build-line" dir="rtl" id="bLine"><span class="build-empty"></span></div>
     <div class="build-pool" dir="rtl" id="bPool"></div>`;
@@ -735,7 +752,8 @@ function showBuildPhrase(ex) {
   };
   tiles.forEach(t => {
     const b = document.createElement("button");
-    b.className = "tile"; b.textContent = t; b.dir = "rtl";
+    b.className = "tile"; b.dir = "rtl"; b.dataset.he = t;
+    b.innerHTML = trOf[t] ? `<span class="t-he">${t}</span><small class="tr t-tr" dir="ltr">${trOf[t]}</small>` : t;
     b.onclick = () => {
       if (b._fly) return;
       const toLine = b.parentNode === pool;
@@ -751,7 +769,7 @@ function showBuildPhrase(ex) {
     pool.appendChild(b);
   });
   function doCheck() {
-    const got = [...line.querySelectorAll(".tile")].map(b => b.textContent);
+    const got = [...line.querySelectorAll(".tile")].map(b => b.dataset.he);
     const ok = got.join(" ") === target.join(" ");
     document.querySelectorAll(".tile").forEach(b => b.disabled = true);
     if (ok) { line.classList.add("good"); speak(ph.he, { audio: ph.audio }); }
@@ -821,6 +839,7 @@ function showBlitz(ex) {
     box.innerHTML = `<div class="bl-top"><div class="bl-bar"><div id="blBar"></div></div><b id="blTime">${left}</b></div>
       <div class="bl-score">✓ <b id="blOk">0</b></div>
       <div class="bl-word" dir="rtl" id="blWord"></div>
+      <div class="bl-tr tr" id="blTr"></div>
       <div class="bl-opts" id="blOpts"></div>`;
     const bar = document.getElementById("blBar");
     requestAnimationFrame(() => { bar.style.transition = `width ${BLITZ_SEC}s linear`; bar.style.width = "0%"; });
@@ -846,6 +865,7 @@ function showBlitz(ex) {
       const wrong = random(pool.filter(x => x !== w));
       const el = document.getElementById("blWord");
       el.textContent = w.he; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+      document.getElementById("blTr").textContent = w.tr || "";          // 23.11: транскрипция (если включена в настройках)
       speak(w.he, { audio: w.audio });                    // 18.11: в блице каждое слово ещё и звучит
       const opts = document.getElementById("blOpts");
       opts.innerHTML = "";
@@ -866,8 +886,11 @@ function showBlitz(ex) {
     const finish = () => {
       if (over) return; over = true; clearInterval(timer);
       if (ring && ring.stop) ring.stop();
-      const good = total > 0 && right / total >= 0.7 && right >= 5;
+      // 23.11: в уровне 1 (полный новичок) блиц — разминка: засчитывается всегда, без «не сдал» и без потери ❤️
+      const soft = /^a1-1-\d+$/.test(String(lesson.id));
+      const good = soft ? total > 0 : total > 0 && right / total >= 0.7 && right >= 5;
       document.getElementById("blOpts").innerHTML = "";
+      document.getElementById("blTr").textContent = "";
       document.getElementById("blWord").innerHTML = `<span class="bl-res">${right} из ${total}</span>`;
       setTimeout(() => checkAnswer(document.createElement("button"), good, ex, { ru: "", he: "", tr: "" },
         good ? "" : `Верно ${right} из ${total}. Нужно хотя бы 5 и 70% — попробуем ещё раз в конце урока`), 700);
@@ -1292,8 +1315,8 @@ function openSettings() {
         ? `<div class="set-test"><span>🔇 Задания на слух выключены до ${noListenText()}</span><button class="btn ghost" id="listenOn">Включить</button></div>`
         : `<div class="set-test"><span>Нет наушников или шумно?</span><button class="btn ghost" id="listenOff">🔇 Не могу слушать</button></div>`}
       <div class="set-title">Транскрипция русскими буквами</div>
-      ${seg("translit", [["false", "Без неё ⭐"], ["true", "Показывать"]])}
-      <div class="set-note">⭐ Советуем учить без транскрипции — так слова запоминаются лучше. Но выбор за тобой.</div>
+      ${seg("translit", [["true", "Показывать"], ["false", "Без неё"]])}
+      <div class="set-note">Когда начнёшь читать буквы — попробуй без транскрипции: так слова запоминаются лучше.</div>
       <div class="set-title">Вибрация</div>${seg("vibro", [["true", "Вкл"], ["false", "Выкл"]])}
       ${window.hirbisSync ? hirbisSync.settingsHTML() : ""}
       <div class="set-title">Помощь</div>
@@ -1350,10 +1373,11 @@ function closeSettings() { const b = document.getElementById("settings"); if (b)
 // ---------- Перед первым уроком: транскрипция или нет ----------
 function askTranslit(then) {
   if (settings.translit !== null) { then(); return; }
-  screen.innerHTML = hostHTML("Показывать, как читаются слова, русскими буквами?", `
+  // 23.11: новички (не читают на иврите) — транскрипция включена; первым идёт вариант для новичка
+  screen.innerHTML = hostHTML("Умеешь читать на иврите?", `
       <div class="word" dir="rtl">שָׁלוֹם</div><div class="translit"><span class="tr-demo">шалом</span></div>`) + `
-    <button class="option tr-choice" data-v="false"><b>Без транскрипции ⭐</b><br><small>Учу иврит по-настоящему — так лучше запоминается</small></button>
-    <button class="option tr-choice" data-v="true"><b>С транскрипцией</b><br><small>Так проще на старте</small></button>
+    <button class="option tr-choice" data-v="true"><b>Нет / только учу буквы</b><br><small>Под словами будет подсказка русскими буквами: שָׁלוֹם — «шалом»</small></button>
+    <button class="option tr-choice" data-v="false"><b>Да, читаю</b><br><small>Без подсказки русскими буквами</small></button>
     <p class="set-note">Поменять можно в любой момент: ⚙️ Настройки на странице уроков.</p>`;
   screen.querySelectorAll(".tr-choice").forEach(b => b.onclick = () => {
     settings.translit = b.dataset.v === "true"; saveSettings(); playSound("pop"); then();

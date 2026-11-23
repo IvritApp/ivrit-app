@@ -1,0 +1,94 @@
+/* ===== Квест «Магазин» (q2-makolet.js): тележка от первого лица, полки, мамин список, лента на кассе ===== */
+/* вид: коридор или полки (всё в % от сцены 2:3); повороты — сдвиг вбок, шаг вперёд — «наезд» */
+.q2makolet-view { position: absolute; inset: 0; z-index: 0; background-size: 100% 100%; background-repeat: no-repeat; }
+.q2makolet-view.in-l { animation: q2makoletInL .45s cubic-bezier(.3,.7,.4,1) both; }
+.q2makolet-view.in-r { animation: q2makoletInR .45s cubic-bezier(.3,.7,.4,1) both; }
+.q2makolet-view.out-l { animation: q2makoletOutL .45s cubic-bezier(.3,.7,.4,1) both; }
+.q2makolet-view.out-r { animation: q2makoletOutR .45s cubic-bezier(.3,.7,.4,1) both; }
+.q2makolet-view.fwd { animation: q2makoletFwd .6s ease-out both; }
+.q2makolet-view.go { animation: q2makoletGo .65s ease-in both; }
+@keyframes q2makoletInL { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes q2makoletInR { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes q2makoletOutL { from { transform: none; } to { transform: translateX(-100%); } }
+@keyframes q2makoletOutR { from { transform: none; } to { transform: translateX(100%); } }
+@keyframes q2makoletFwd { from { transform: scale(.86); opacity: .2; } to { transform: none; opacity: 1; } }
+@keyframes q2makoletGo { from { transform: none; opacity: 1; } to { transform: scale(1.35); opacity: .4; } }
+
+/* товары на полке — кнопки; нажал — подпись на иврите сверху */
+.q2makolet-item { position: absolute; transform: translate(-50%, -50%); border: 0; background: none; padding: 0; margin: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.q2makolet-item img { display: block; width: 100%; pointer-events: none; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .16)); }
+.q2makolet-item:active img { transform: scale(.94); }
+.q2makolet-item.taken { visibility: hidden; }
+.q2makolet-tag { display: none; position: absolute; left: 50%; bottom: 96%; transform: translateX(-50%); background: #fff; color: #222; padding: 2px 8px; border-radius: 10px;
+  font-size: 14px; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 0 rgba(0, 0, 0, .15); z-index: 1; }
+.q2makolet-item.open .q2makolet-tag { display: block; animation: q2Pop .3s ease both; }
+.q2makolet-item.open img { animation: q2makoletWiggle .5s ease; }
+@keyframes q2makoletWiggle { 25% { transform: rotate(-6deg) scale(1.06); } 60% { transform: rotate(5deg) scale(1.06); } }
+
+/* тележка с руками; на полках уходит вниз — видна только горка покупок */
+.q2makolet-cart { position: absolute; inset: 0; z-index: 2; pointer-events: none; transition: transform .45s cubic-bezier(.3,.7,.4,1); }
+.q2makolet-cart.low { transform: translateY(24%); }
+.q2makolet-cart.enter .q2makolet-hands, .q2makolet-cart.enter .q2makolet-pile { animation: q2makoletCartIn .6s cubic-bezier(.2,1.2,.4,1) both; }
+.q2makolet-cart.roll .q2makolet-hands, .q2makolet-cart.roll .q2makolet-pile { animation: q2makoletRoll .45s ease-in-out; }
+@keyframes q2makoletCartIn { from { transform: translateY(40%); } to { transform: none; } }
+@keyframes q2makoletRoll { 30% { transform: translateY(1.5%) rotate(-.6deg); } 70% { transform: translateY(-.8%) rotate(.5deg); } }
+.q2makolet-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
+.q2makolet-pile { position: absolute; left: 16%; right: 16%; top: 58%; bottom: 20%; }
+.q2makolet-pi { position: absolute; width: 26%; transform: rotate(var(--rot, 0deg)); }
+.q2makolet-pi img { display: block; width: 100%; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .2)); }
+.q2makolet-pi.star::after { content: "⭐"; position: absolute; right: -4%; top: -6%; font-size: 13px; }
+.q2makolet-pi.wait { opacity: 0; }
+.q2makolet-pi.pop { animation: q2makoletPop .35s cubic-bezier(.2,1.5,.4,1); }
+@keyframes q2makoletPop { from { transform: rotate(var(--rot, 0deg)) scale(.6); } to { transform: rotate(var(--rot, 0deg)) scale(1); } }
+.q2makolet-fly { position: fixed; z-index: 9000; pointer-events: none; object-fit: contain; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .25)); }
+
+/* мамин список — бумажка в углу сцены */
+.q2makolet-list { position: absolute; left: 3%; top: 2.5%; width: 58%; z-index: 3; padding: 5px 7px 4px; background: #fffdf3; color: #222; border-radius: 6px;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .14); transform: rotate(-1.5deg); transform-origin: 0 0; transition: transform .35s ease; }
+.q2makolet-list.mini { transform: rotate(-1.5deg) scale(.66); }
+.q2makolet-list.in { animation: q2makoletListIn .5s cubic-bezier(.2,1.3,.4,1) both; }
+.q2makolet-list.all { animation: q2makoletAll .7s ease; box-shadow: 0 0 0 3px #58cc02, 0 3px 0 rgba(0, 0, 0, .14); }
+@keyframes q2makoletListIn { from { transform: translateY(-120%) rotate(-8deg); } to { transform: rotate(-1.5deg); } }
+@keyframes q2makoletAll { 40% { transform: rotate(-1.5deg) scale(1.08); } }
+.q2makolet-lh { font-size: 11px; font-weight: 800; color: #9a7b3c; margin-bottom: 2px; }
+.q2makolet-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 6px; direction: rtl; }
+.q2makolet-row { display: flex; align-items: center; gap: 4px; min-width: 0; border: 0; background: none; padding: 1px 0; color: #222;
+  font-family: inherit; font-size: 13px; font-weight: 800; line-height: 1.2; text-align: right; cursor: pointer; }
+.q2makolet-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q2makolet-row i { flex: none; width: 12px; height: 12px; border: 2px solid #c9b98f; border-radius: 3px; font-style: normal; font-size: 10px; line-height: 9px; text-align: center; color: #fff; }
+.q2makolet-row.done { color: #9aa6b2; text-decoration: line-through; }
+.q2makolet-row.done i { background: #58cc02; border-color: #58cc02; }
+.q2makolet-row.done i::before { content: "✓"; }
+
+/* стрелки-направления в панели */
+.q2makolet-dirs { display: flex; gap: 8px; justify-content: center; }
+.q2makolet-dir { flex: 1; max-width: 118px; display: flex; flex-direction: column; align-items: center; padding: 5px 4px 4px; border: 2px solid #dfe6ee; border-bottom-width: 4px;
+  border-radius: 14px; background: #fff; color: #222; font-family: inherit; cursor: pointer; }
+.q2makolet-dir b { font-size: 19px; line-height: 1.15; }
+.q2makolet-dir small { font-size: 12px; color: #6b7785; }
+.q2makolet-ar { font-size: 16px; line-height: 1; color: #1cb0f6; }
+.q2makolet-dir.open { border-color: #1cb0f6; background: #eaf6fe; }
+.q2makolet-dir:disabled { opacity: .5; }
+
+/* касса: передняя часть прилавка поверх кассира; покупки на ленте */
+.q2makolet-front { position: absolute; inset: 0; z-index: 1; background-size: 100% 100%; pointer-events: none; }
+.q2makolet-belt { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.q2makolet-belt img { position: absolute; width: 15%; transform: translate(-50%, -50%); filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .2));
+  animation: q2makoletBelt .5s cubic-bezier(.2,1.3,.4,1) both; transition: margin-left 1.4s linear; }
+.q2makolet-belt.run img { margin-left: -4%; }
+@keyframes q2makoletBelt { from { opacity: 0; transform: translate(-50%, 60%) scale(.7); } to { opacity: 1; transform: translate(-50%, -50%); } }
+
+/* 23.11 (владелец: «всё говорит сам»): с микрофоном стрелки без слов; 💡 — сначала первые буквы (.h1), потом слово целиком (.h2) */
+.q2makolet-dir .p { display: none; }
+.q2makolet-dirs.mute .f { display: none; }
+.q2makolet-dirs.mute.h1 .p { display: block; }
+.q2makolet-dirs.mute.h2 .f { display: block; }
+.q2makolet-dirs.mute .q2makolet-ar { font-size: 26px; padding: 4px 0; }
+.q2makolet-dirs.mute .q2makolet-dir { justify-content: center; min-height: 48px; }
+/* 💡 у полки: товары из списка мигают, потом показывают слово */
+.q2makolet-item.glow img { animation: q2makoletGlow 1.1s ease-in-out infinite; }
+@keyframes q2makoletGlow { 50% { filter: drop-shadow(0 0 6px #ffd400) drop-shadow(0 0 3px #ffd400); transform: scale(1.06); } }
+.q2makolet-item.show .q2makolet-tag { display: block; }
+@media (prefers-reduced-motion: reduce) {
+  .q2makolet-view, .q2makolet-cart, .q2makolet-list, .q2makolet-belt img, .q2makolet-pi { animation-duration: .01s !important; transition-duration: .01s !important; }
+}

@@ -209,3 +209,13 @@ body.theme-dark .cd-pair-he b { color: #8cc4f5; }
 
 /* подпись под кружком — ниже кольца */
 .p-node-wrap .p-label { margin-top: 20px; }
+
+/* 23.11: «💬 Новая фраза» перед «Собери фразу» (cards.js showPhraseCard) */
+.cd-phrase { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 22px; }
+.cd-ph-he { font-size: 34px; line-height: 1.25; font-weight: 600; color: #2f7fd0; text-align: center; word-break: break-word; }
+.cd-ph-tr { font-size: 17px; color: var(--hint); }
+.cd-ph-ru { font-size: 20px; font-weight: 700; margin-top: 4px; text-align: center; }
+.cd-ph-words { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 400px; margin: 14px auto 0; }
+.cd-ph-w { display: flex; flex-direction: column; align-items: center; padding: 6px 10px; border: 2px solid #e5e5e5; border-radius: 12px; background: var(--bg); color: var(--text); }
+.cd-ph-w b { font-size: 20px; font-weight: 600; }
+.cd-ph-w small { font-size: 13px; color: var(--hint); }

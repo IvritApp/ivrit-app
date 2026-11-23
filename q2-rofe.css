@@ -1,0 +1,132 @@
+/* ===== Квест «Травмпункт» (q2-rofe.js): манекен, больное место, рентген, лечение, таблетница, талон очереди ===== */
+/* предметы движка (мяч, календарь) в этом квесте крупнее */
+.q2-scene[data-bg*="quests/rofe/"] .q2-piece { width: 36%; }
+/* в кабинете врача облачко компактнее — манекен под ним виден целиком */
+.q2-scene[data-bg*="rofe/bg_exam"] .q2-say { padding: 7px 12px 6px; }
+.q2-scene[data-bg*="rofe/bg_exam"] .q2-he { font-size: 20px; }
+.q2-scene[data-bg*="rofe/bg_exam"] .q2-tr { font-size: 12px; }
+.q2-scene[data-bg*="rofe/bg_exam"] .q2-ru { font-size: 12px; padding: 2px 8px; margin-top: 2px; }
+
+/* панель */
+.q2rofe-chips { display: flex; flex-direction: column; gap: 8px; }
+.q2rofe-chips.two { display: grid; grid-template-columns: 1fr 1fr; }
+.q2rofe-chips.two .q2-chip b { font-size: 19px; }
+.q2rofe-frame { display: flex; gap: 8px; justify-content: center; }
+.q2rofe-frame button { display: flex; flex-direction: column; align-items: center; padding: 5px 12px; border: 2px dashed #c9d6e3; border-radius: 14px;
+  background: #fff; color: #222; font-family: inherit; cursor: pointer; }
+.q2rofe-frame b { font-size: 18px; font-weight: 700; }
+.q2rofe-frame small { font-size: 11px; color: #6b7785; }
+
+/* манекен: точная пропорция картинки — места травм в % совпадают на любом экране */
+.q2rofe-body { position: absolute; top: 0; left: 50%; height: 100%; aspect-ratio: 589 / 1213; transform: translateX(-50%);
+  border-radius: 16px; background: rgba(255, 255, 255, .5); box-shadow: 0 0 0 6px rgba(255, 255, 255, .5); }
+.q2rofe-man { width: 100%; height: 100%; display: block; pointer-events: none; }
+.q2rofe-body.in { animation: q2rofeIn .45s ease both; }
+@keyframes q2rofeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.q2rofe-spot { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; padding: 0; cursor: pointer; border: 3px solid #ff4b4b;
+  background: rgba(255, 75, 75, .32); -webkit-tap-highlight-color: transparent; }
+.q2rofe-spot.hot { animation: q2rofeThrob 1.05s ease-in-out infinite; }
+.q2rofe-spot.lit { background: rgba(255, 75, 75, .72); border-color: #e03a3a; }
+.q2rofe-spot.burst::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 4px solid #ff4b4b; animation: q2rofeRing .8s ease-out both; }
+.q2rofe-spot.shake { animation: q2rofeShake .45s ease, q2rofeThrob 1.05s ease-in-out .45s infinite; }
+@keyframes q2rofeThrob { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: .75; } 50% { transform: translate(-50%, -50%) scale(1.18); opacity: 1; } }
+@keyframes q2rofeRing { from { transform: scale(1); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+@keyframes q2rofeShake { 0%, 100% { margin-left: 0; } 25% { margin-left: -6px; } 75% { margin-left: 6px; } }
+
+/* слово у больного места (подсказка) */
+.q2rofe-tag { position: absolute; z-index: 3; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; padding: 4px 10px;
+  background: #fff; color: #222; border-radius: 12px; box-shadow: 0 3px 0 rgba(0, 0, 0, .12); white-space: nowrap; pointer-events: none; }
+.q2rofe-tag.below { transform: translate(-50%, 0); }
+.q2rofe-tag.in { animation: q2Pop .3s cubic-bezier(.2, 1.4, .4, 1) both; }
+.q2rofe-tag b { font-size: 20px; font-weight: 800; line-height: 1.15; }
+.q2rofe-tag span { font-size: 11px; color: #6b7785; }
+
+/* карточка названной части тела (картинка Codex) */
+.q2rofe-card { position: absolute; left: -4%; top: 0; width: 42%; aspect-ratio: 1; border-radius: 50%; background: #fff; border: 3px solid #ff4b4b;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .1); overflow: hidden; }
+.q2rofe-card img { width: 100%; height: 100%; object-fit: contain; }
+.q2rofe-card.in { animation: q2rofeCard .6s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes q2rofeCard { from { transform: scale(0) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* лечение — наклейки у больного места */
+.q2rofe-stick { position: absolute; z-index: 2; width: 36%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: #fff;
+  padding: 3%; box-sizing: border-box; box-shadow: 0 4px 0 rgba(0, 0, 0, .12); }
+.q2rofe-stick img { width: 100%; height: 100%; object-fit: contain; }
+.q2rofe-stick.in { animation: q2rofeStick .55s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes q2rofeStick { from { transform: translate(-50%, -160%) scale(.4); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
+
+/* врач нажимает: синее кольцо; «אַי!» */
+.q2rofe-probe { position: absolute; width: 15%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; border: 4px solid #1cb0f6;
+  background: rgba(28, 176, 246, .2); box-sizing: border-box; animation: q2rofePress .5s ease-out both, q2rofePulse 1.2s ease-in-out .5s infinite; pointer-events: none; }
+.q2rofe-probe::after { content: ""; position: absolute; left: 50%; top: 50%; width: 30%; height: 30%; transform: translate(-50%, -50%); border-radius: 50%; background: #1cb0f6; }
+@keyframes q2rofePress { from { transform: translate(-50%, -50%) scale(1.8); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@keyframes q2rofePulse { 50% { transform: translate(-50%, -50%) scale(.85); } }
+.q2rofe-ouch { position: absolute; z-index: 4; transform: translate(-50%, -50%); font-size: 26px; font-weight: 900; color: #ff4b4b; pointer-events: none;
+  text-shadow: 0 2px 0 #fff, 2px 0 0 #fff, -2px 0 0 #fff, 0 -2px 0 #fff; animation: q2rofeOuch 1.4s ease-out both; }
+@keyframes q2rofeOuch { 0% { margin-top: 0; opacity: 0; transform: translate(-50%, -50%) scale(.5); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+  100% { margin-top: -40px; opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+
+/* талон очереди */
+.q2rofe-ticket { position: absolute; left: 50%; top: 50%; width: 72%; transform: translate(-50%, -50%) rotate(-6deg); display: flex; flex-direction: column; align-items: center;
+  padding: 8px 6px 6px; border: 0; border-top: 4px dashed #c9d6e3; border-radius: 10px; background: #fffdf6; color: #222; font-family: inherit; cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, .14); animation: q2rofeTicket .6s cubic-bezier(.2, 1.4, .4, 1) both; }
+.q2rofe-ticket small { font-size: 14px; font-weight: 700; color: #6b7785; }
+.q2rofe-ticket b { font-size: 52px; font-weight: 900; line-height: 1; color: #1899d6; }
+.q2rofe-ticket i { font-style: normal; font-size: 11px; color: #6b7785; }
+.q2rofe-ticket.ok { box-shadow: 0 0 0 4px #58cc02, 0 5px 0 rgba(0, 0, 0, .14); }
+.q2rofe-ticket.ok b { color: #58cc02; }
+@keyframes q2rofeTicket { from { transform: translate(-50%, 40%) rotate(10deg); opacity: 0; } to { transform: translate(-50%, -50%) rotate(-6deg); opacity: 1; } }
+
+/* рентген: снимок «проявляется», бегущая полоса, красная трещина */
+.q2rofe-xray { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.q2rofe-film { position: relative; width: 100%; aspect-ratio: 1; max-height: 100%; border-radius: 14px; overflow: hidden; background: #0d1b3d; box-shadow: 0 0 0 5px #2b3a55, 0 6px 0 5px rgba(0, 0, 0, .15); }
+.q2rofe-film img { width: 100%; height: 100%; display: block; }
+.q2rofe-scan { display: none; position: absolute; left: 0; right: 0; height: 14%; background: rgba(150, 225, 255, .55); box-shadow: 0 0 14px 6px rgba(150, 225, 255, .5); }
+.q2rofe-xray.dev .q2rofe-scan { display: block; animation: q2rofeScan 2.2s ease-in-out both; }
+.q2rofe-xray.dev .q2rofe-film img { animation: q2rofeDev 2.2s ease both; }
+@keyframes q2rofeScan { from { top: -14%; } to { top: 100%; } }
+@keyframes q2rofeDev { 0% { opacity: 0; } 60% { opacity: .5; } 100% { opacity: 1; } }
+.q2rofe-crack { position: absolute; width: 34%; overflow: visible; animation: q2rofeCrack 1.4s ease-in-out infinite; }
+.q2rofe-crack path { fill: none; stroke: #ff3b3b; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+.q2rofe-xray.dev .q2rofe-crack { animation: q2rofeFadeIn .4s ease 2.1s both, q2rofeCrack 1.4s ease-in-out 2.5s infinite; }
+@keyframes q2rofeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes q2rofeCrack { 50% { opacity: .45; } }
+.q2rofe-xray.look .q2rofe-film { animation: q2rofeLook .7s ease; }
+@keyframes q2rofeLook { 30% { box-shadow: 0 0 0 5px #ffc800, 0 0 22px 8px rgba(255, 200, 0, .7); } }
+
+/* лечение: 4 лотка-картинки */
+.q2rofe-trays { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.q2rofe-trays .q2-tray img { max-width: 58px; }
+.q2rofe-trays .q2-tray-he { font-size: 13px; }
+.q2rofe-no { animation: q2rofeShake .45s ease; border-color: #ff4b4b !important; }
+
+/* таблетница: утро / день / вечер */
+.q2rofe-box { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(3, 1fr); gap: 6px; padding: 8px; box-sizing: border-box;
+  border-radius: 18px; background: #dcd3ff; box-shadow: 0 5px 0 #b3a6ec; animation: q2rofeIn .45s ease both; }
+.q2rofe-cell { display: grid; grid-template-columns: auto 1fr 34%; align-items: center; gap: 6px; padding: 0 8px; border: 2px solid transparent; border-radius: 12px;
+  background: #fff; color: #222; font-family: inherit; cursor: pointer; min-height: 0; }
+.q2rofe-ic { font-size: 20px; }
+.q2rofe-lab { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; }
+.q2rofe-lab b { font-size: 17px; font-weight: 800; white-space: nowrap; line-height: 1.15; }
+.q2rofe-lab small { font-size: 11px; color: #6b7785; }
+/* с микрофоном иврит на ячейках спрятан до нажатия / подсказки */
+.q2rofe-box.hide-he .q2rofe-lab b { display: none; }
+.q2rofe-box.hide-he .q2rofe-lab small { font-size: 14px; font-weight: 700; color: #4b5866; }
+.q2rofe-box.hide-he .q2rofe-cell.open .q2rofe-lab b { display: block; animation: q2Pop .3s ease both; }
+.q2rofe-box.hide-he .q2rofe-cell.open .q2rofe-lab small { font-size: 11px; font-weight: 400; color: #6b7785; }
+/* 💡 подсказка: нужная картинка / ячейка мигает */
+.q2rofe-tip { animation: q2rofeTip 1s ease-in-out 3; border-color: #ffc800 !important; }
+@keyframes q2rofeTip { 50% { transform: scale(1.06); box-shadow: 0 0 0 4px rgba(255, 200, 0, .55); } }
+
+/* спина: манекен стоит лицом к нам — место пунктиром, подпись «сзади» и карточка «вид сзади» видна сразу */
+.q2rofe-spot.behind { border-style: dashed; }
+.q2rofe-back { position: absolute; transform: translate(-50%, -50%); padding: 2px 8px; border-radius: 999px; background: #fff; color: #c93a3a;
+  font-size: 12px; font-weight: 800; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 0 rgba(0, 0, 0, .12); }
+.q2rofe-card.back { cursor: pointer; border-style: dashed; }
+.q2rofe-card.back.lit { border-style: solid; }
+.q2rofe-card em { position: absolute; left: 0; right: 0; bottom: 4%; text-align: center; font-style: normal; font-size: 10px; font-weight: 800; color: #c93a3a; }
+.q2rofe-pit { height: 70%; max-height: 40px; border-radius: 999px; background: #eef2f6; box-shadow: inset 0 3px 0 rgba(0, 0, 0, .08); display: flex; align-items: center; justify-content: center; }
+.q2rofe-pill { display: block; width: 60%; height: 52%; border-radius: 999px; background: linear-gradient(90deg, #fff 50%, #ff9600 50%); box-shadow: 0 2px 0 rgba(0, 0, 0, .15); }
+.q2rofe-pill.in { animation: q2rofePill .5s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes q2rofePill { from { transform: translateY(-34px) rotate(-60deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.q2rofe-box.done .q2rofe-cell { border-color: #58cc02; }

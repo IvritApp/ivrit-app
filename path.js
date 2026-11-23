@@ -103,6 +103,7 @@ function renderPath() {
   const allDone = testMode() || lvl.lessons.every(id => done.includes(id));
   const questDone = store.get("quest_q-" + lvl.quest, false);
   const questGold = store.get("questGold_q-" + lvl.quest, false);
+  const isQ2 = !!(window.startQuest2 && (window.Q2_READY || []).includes(lvl.quest));   // у уровня есть новый квест (quest2.js)
   const nextIdx = lvl.lessons.findIndex(id => !done.includes(id));   // первый непройденный
 
   // змейка: смещение кружков влево-вправо
@@ -144,7 +145,7 @@ function renderPath() {
       ${questIcon(lvl.questImg)}
       <span><b>Квест: ${lvl.questTitle || lvl.title}</b><br>${allDone ? (questDone ? (questGold ? "Идеально 🏆 · можно ещё раз" : "Пройден ✓ · можно ещё раз") : "Открыт — вперёд!") : `Откроется после ${lvl.lessons.length} уроков 🔒`}</span>
     </button>
-    ${testMode() && window.startQuest2 && (window.Q2_READY || []).includes(lvl.quest) ? `<button class="p-q2" id="p-q2" data-q="${lvl.quest}">🧪 Новый квест (тест, видно только тестировщику)</button>` : ""}
+    ${testMode() && isQ2 ? `<button class="p-q2" id="p-q2" data-q="${lvl.quest}">🗂 Старый квест (видно только тестировщику)</button>` : ""}
     ${(window.reviewNeeded && (reviewNeeded(lvl.id) || reviewDoneN(lvl.id) > 0)) ? `<div class="p-review">
       <div class="p-review-h">🔁 Повторение после квеста <small>${reviewDoneN(lvl.id)} из ${reviewCount}</small></div>
       <div class="p-review-row">${reviewTitles.map((t, k) => { const id = `rev-${lvl.id}-${k + 1}`, dn = doneLessons().includes(id);
@@ -181,8 +182,8 @@ function renderPath() {
   if (window.partsDecorate) partsDecorate(lvl, pathView);
   document.getElementById("p-settings").onclick = openSettings;
   pathView.querySelectorAll(".p-rev").forEach(b => b.onclick = () => startReview(lvl.id, +b.dataset.rev));
-  const q2 = document.getElementById("p-q2");                      // новый квест «что сказал — то появилось» (quest2.js), пока только тестировщику
-  if (q2) q2.onclick = () => startQuest2(q2.dataset.q);
+  const q2 = document.getElementById("p-q2");                      // старый квест уровня (quest.js) — только тестировщику, для сравнения
+  if (q2) q2.onclick = () => startQuest(q2.dataset.q);
   const rp = document.getElementById("p-repeat");                 // «🔁 Повтори слова» — слова, которые игрок отметил «повторить» (wordmarks.js)
   if (rp) rp.onclick = () => WordMarks.startRepeat();
   const tb = document.getElementById("p-taxi");
@@ -198,7 +199,7 @@ function renderPath() {
   };
   document.getElementById("p-quest").onclick = () => {
     if (!allDone) { showToast(`Пройди все ${lvl.lessons.length} уроков — и квест откроется`); vibrate("warning"); return; }
-    startQuest(lvl.quest);
+    if (isQ2) startQuest2(lvl.quest); else startQuest(lvl.quest);   // 23.11: новый квест «что сказал — то появилось», если он готов
   };
   const cur = pathView.querySelector(".p-node.current");
   if (cur) setTimeout(() => cur.scrollIntoView({ behavior: "smooth", block: "center" }), 200);

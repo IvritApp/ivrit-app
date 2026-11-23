@@ -10,7 +10,7 @@
 (function () {
   const errs = [], evs = [], seen = {};
   let sentErr = 0;
-  const ver = () => { const s = document.querySelector('script[src*="app.js?v="]'); const m = s && s.src.match(/v=([\w]+)/); return m ? m[1] : "?"; };
+  const ver = () => { if (window.APP_V) return window.APP_V; const s = document.querySelector('script[src*="app.bundle.js?v="], script[src*="app.js?v="]'); const m = s && s.src.match(/v=([\w]+)/); return m ? m[1] : "?"; };
   const where = () => { try { const s = [...document.querySelectorAll("body > section")].find(x => !x.hidden); return s ? s.id : ""; } catch (e) { return ""; } };
   function info() {
     const tg = window.Telegram && Telegram.WebApp;

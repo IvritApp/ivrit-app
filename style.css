@@ -782,6 +782,7 @@ body.theme-dark .p-node.locked { background: #2a3442; box-shadow: 0 6px 0 #1b222
 .bl-score { font-size: 16px; color: var(--green); margin: 6px 0 0; }
 .bl-word { font-size: 46px; font-weight: 700; margin: 10px 0 14px; min-height: 60px; }
 .bl-word.pop { animation: popIn .25s ease both; }
+.bl-tr { margin: -10px 0 12px; min-height: 20px; font-size: 17px; color: var(--muted, #888); text-align: center; }
 .bl-res { font-size: 30px; color: var(--blue-dark); direction: ltr; display: inline-block; }
 .bl-opts { display: flex; gap: 10px; max-width: 380px; margin: 0 auto; }
 .bl-opt { flex: 1; padding: 22px 8px; font-size: 19px; border-radius: 16px; border: 2px solid #dfe6ee; border-bottom-width: 4px;
@@ -1194,3 +1195,7 @@ div.tu-bird { margin: 0 auto; }
 
 /* 22.11: картинки к словам (assets/words, плоский стиль) */
 .w-pic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* 23.11: транскрипция под словом на плитке «Собери фразу» */
+.tile .t-he { display: block; }
+.tile .t-tr { display: block; font-size: 12px; font-weight: 500; color: #8a96a8; line-height: 1.1; margin-top: 1px; }

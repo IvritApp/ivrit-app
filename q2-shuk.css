@@ -1,0 +1,162 @@
+/* ===== Квест «Шук» (q2-shuk.js): рынок от первого лица — руки с сумкой-тележкой, ходьба голосом, торг ===== */
+/* облачко реплики компактнее (сцена на этих шагах ниже) */
+.q2.q2shuk-on .q2-say { padding: 7px 12px 6px; }
+.q2.q2shuk-on .q2-he { font-size: 22px; }
+.q2.q2shuk-on .q2-board { pointer-events: none; }
+
+/* мир: ряд рынка или прилавок (под продавцом, руками и облачком) */
+.q2shuk-world { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.q2shuk-mir, .q2shuk-bg { position: absolute; inset: 0; }
+.q2shuk-mir.on { transform: scaleX(-1); }
+.q2shuk-bg { background-size: 100% 100%; transition: transform 1.9s cubic-bezier(.45, .05, .35, 1); }
+.q2shuk-world.walked .q2shuk-bg { transform: scale(1.42); }
+/* вход в шаг (без fill: после конца не мешает «уходу» и повороту); правила ниже по файлу перебивают его */
+.q2shuk-world.in-left { animation: q2shukInL .6s ease-out; }
+.q2shuk-world.in-right { animation: q2shukInR .6s ease-out; }
+.q2shuk-world.in-straight, .q2shuk-world.in-back { animation: q2shukInS .6s ease-out; }
+@keyframes q2shukInL { from { transform: translateX(-45%); opacity: .2; } to { transform: none; opacity: 1; } }
+@keyframes q2shukInR { from { transform: translateX(45%); opacity: .2; } to { transform: none; opacity: 1; } }
+@keyframes q2shukInS { from { transform: scale(.86); opacity: .2; } to { transform: none; opacity: 1; } }
+.q2shuk-world.walking { animation: q2shukSway .95s ease-in-out 2; }
+@keyframes q2shukSway { 25% { transform: translateX(-.8%) rotate(-.35deg); } 75% { transform: translateX(.8%) rotate(.35deg); } }
+/* поворот к прилавку */
+.q2shuk-world.turn-left { animation: q2shukTL .7s ease-in forwards; }
+.q2shuk-world.turn-right { animation: q2shukTR .7s ease-in forwards; }
+.q2shuk-world.turn-straight { animation: q2shukTS .7s ease-in forwards; }
+@keyframes q2shukTL { to { transform: translateX(45%); opacity: .1; } }
+@keyframes q2shukTR { to { transform: translateX(-45%); opacity: .1; } }
+@keyframes q2shukTS { to { transform: scale(1.35); opacity: .1; } }
+/* не туда — камера заглядывает и возвращается */
+.q2shuk-world.peek-left { animation: q2shukPL .9s ease-in-out; }
+.q2shuk-world.peek-right { animation: q2shukPR .9s ease-in-out; }
+.q2shuk-world.peek-straight { animation: q2shukPS .9s ease-in-out; }
+@keyframes q2shukPL { 40%, 60% { transform: translateX(16%); } }
+@keyframes q2shukPR { 40%, 60% { transform: translateX(-16%); } }
+@keyframes q2shukPS { 40%, 60% { transform: scale(1.08); } }
+/* «уходишь» от прилавка (трюк) */
+.q2shuk-world.away { transition: transform .5s ease-in, opacity .5s; transform: translateX(30%); opacity: .45; }
+
+/* знак нужного прилавка */
+.q2shuk-sign { position: absolute; top: 44%; width: 24%; aspect-ratio: 1; display: grid; place-items: center; background: #fff; border: 3px solid #ffc94a;
+  border-radius: 50%; box-shadow: 0 4px 0 rgba(0, 0, 0, .15); animation: q2shukSign .5s cubic-bezier(.2, 1.5, .4, 1) both, q2shukBounce 1.4s ease-in-out .5s infinite; }
+.q2shuk-sign img { width: 72%; }
+.q2shuk-sign b { position: absolute; bottom: -24%; left: 50%; transform: translateX(-50%); font-size: 22px; line-height: 1; }
+.q2shuk-sign.left { left: 5%; }
+.q2shuk-sign.right { right: 5%; }
+.q2shuk-sign.straight { left: 38%; top: 36%; }
+@keyframes q2shukSign { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes q2shukBounce { 50% { margin-top: -3%; } }
+
+/* руки с сумкой-тележкой (поверх всего, кроме облачков); купленное торчит из сумки */
+.q2shuk-cart { position: absolute; inset: 0; z-index: 2; pointer-events: none; transition: transform .6s ease; }
+.q2shuk-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
+.q2shuk-bag { position: absolute; inset: 0; }
+.q2shuk-bag img { position: absolute; bottom: 8%; width: 20%; transform: translateX(-50%) rotate(var(--r, 0deg)); animation: q2shukDrop .45s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes q2shukDrop { from { opacity: 0; margin-bottom: 12%; } to { opacity: 1; margin-bottom: 0; } }
+.q2shuk-cart.low { transform: translateY(10%); }
+.q2shuk-cart.bob { animation: q2shukBob .48s ease-in-out 4; }
+@keyframes q2shukBob { 50% { transform: translateY(1.6%) rotate(.6deg); } }
+.q2shuk-cart.turn-left { transform: translateX(7%) rotate(4deg); }
+.q2shuk-cart.turn-right { transform: translateX(-7%) rotate(-4deg); }
+.q2shuk-cart.turn-straight { transform: translateY(3%); }
+.q2shuk-cart.away { transform: translate(-8%, 12%) rotate(-6deg); }
+
+/* продавец (#q2Npc движка) */
+#q2Npc.q2shuk-off { opacity: 0; visibility: hidden; }
+#q2Npc.q2shuk-in { animation: q2shukNpc .5s ease-out .25s both; }
+@keyframes q2shukNpc { from { opacity: 0; transform: translateY(6%); } to { opacity: 1; transform: none; } }
+
+/* прилавок: картинка шире сцены в 2,25 раза, листается пальцем */
+.q2shuk-world.stall { touch-action: pan-y; cursor: grab; transition: transform .5s ease, opacity .5s; }
+.q2shuk-pan { position: absolute; top: 0; bottom: 0; left: 0; width: 225%; will-change: transform; }
+.q2shuk-pan.smooth { transition: transform .8s cubic-bezier(.4, .1, .3, 1); }
+.q2shuk-view { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.q2shuk-pile { position: absolute; transform: translateX(-50%); aspect-ratio: 5 / 4; cursor: pointer; }
+.q2shuk-pile > span { position: absolute; width: 62%; aspect-ratio: 1; pointer-events: none; }
+.q2shuk-pile > span:nth-child(1) { left: 0; bottom: 0; transform: rotate(-8deg); }
+.q2shuk-pile > span:nth-child(2) { right: 0; bottom: 0; transform: rotate(7deg); }
+.q2shuk-pile > span:nth-child(3) { left: 19%; bottom: 24%; }
+.q2shuk-pile img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.q2shuk-stem { clip-path: inset(3% 30% 74% 43%); }
+.q2shuk-pile.want { animation: q2shukWant 1.2s ease-in-out infinite; }
+@keyframes q2shukWant { 50% { transform: translateX(-50%) translateY(-7%) scale(1.07); } }
+/* ценник */
+.q2shuk-tag { position: absolute; z-index: 1; display: flex; align-items: baseline; gap: 5px; transform: translate(-50%, 0) rotate(-3deg); padding: 3px 10px;
+  background: #fffbe9; color: #222; border: 2px solid #e8c25a; border-radius: 10px; font-weight: 900; font-size: 21px; white-space: nowrap; box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
+.q2shuk-tag s { font-size: 13px; color: #e24b4b; font-weight: 800; }
+.q2shuk-tag.pop { animation: q2shukTag .5s cubic-bezier(.2, 1.6, .4, 1); }
+.q2shuk-tag.down b { color: #2e9d58; }
+.q2shuk-tag.up b { color: #e24b4b; }
+@keyframes q2shukTag { from { transform: translate(-50%, 0) scale(.4) rotate(-14deg); } to { transform: translate(-50%, 0) scale(1) rotate(-3deg); } }
+/* название над товаром, на который нажали */
+.q2shuk-lbl { position: absolute; z-index: 2; transform: translate(-50%, -100%); padding: 3px 9px; background: #fff; color: #222; border-radius: 10px;
+  font-size: 16px; font-weight: 800; text-align: center; white-space: nowrap; box-shadow: 0 2px 0 rgba(0, 0, 0, .15); pointer-events: none; animation: q2shukLbl 1.9s ease forwards; }
+.q2shuk-lbl small { display: block; font-size: 11px; color: #6b7785; font-weight: 600; }
+@keyframes q2shukLbl { 0% { opacity: 0; margin-top: 6px; } 12%, 80% { opacity: 1; margin-top: 0; } 100% { opacity: 0; } }
+/* товар летит в сумку, монеты — продавцу */
+.q2shuk-fly { position: absolute; z-index: 5; transform: translate(-50%, -50%); pointer-events: none;
+  transition: left .8s cubic-bezier(.4, 0, .6, 1), top .8s cubic-bezier(.5, -.5, .7, 1), width .8s ease; }
+
+/* подсказка друга */
+.q2shuk-pal { position: absolute; left: 3%; right: 3%; bottom: 3%; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px;
+  background: #fff; color: #222; border-radius: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, .2); font-size: 14px; font-weight: 700; line-height: 1.3; pointer-events: none; }
+.q2shuk-pal[hidden] { display: none; }
+.q2shuk-pal.in { animation: q2shukPop .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes q2shukPop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+.q2shuk-face { flex: none; position: relative; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #ffe7b8; }
+.q2shuk-face .ci { position: absolute; height: 240px; left: -35px; top: -36px; }
+
+/* кошелёк с остатком */
+.q2shuk-wcard { position: absolute; left: 8%; right: 8%; top: 38%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fffaf0; color: #222;
+  border-radius: 18px; box-shadow: 0 6px 0 rgba(0, 0, 0, .15); animation: q2shukPop .5s cubic-bezier(.2, 1.4, .4, 1) .3s both; }
+.q2shuk-wcard > img { flex: none; width: 26%; }
+.q2shuk-wcard.out { animation: q2shukOut .4s ease-in forwards; }
+@keyframes q2shukOut { to { transform: translateY(40%) scale(.6); opacity: 0; } }
+.q2shuk-cash { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.q2shuk-note { display: inline-flex; align-items: center; justify-content: center; gap: 3px; width: 62px; height: 32px; border-radius: 5px; color: #fff;
+  font-weight: 900; font-size: 16px; box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .15); }
+.q2shuk-note i { font-style: normal; font-size: 13px; opacity: .85; }
+.q2shuk-note.n20 { background: #d64541; }
+.q2shuk-note.n50 { background: #3d9a5b; }
+.q2shuk-note.n100 { background: #ec8a2b; }
+.q2shuk-coin { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #e7b93c; border: 3px solid #c9cdd2;
+  color: #5a4300; font-weight: 900; font-size: 13px; }
+.q2shuk-coin.s { width: 28px; height: 28px; background: #c9cdd2; border-color: #aeb4ba; color: #333; }
+
+/* панель: список и кошелёк */
+.q2shuk-hud { display: flex; align-items: center; gap: 4px; }
+.q2shuk-list { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.q2shuk-li { display: flex; align-items: center; gap: 2px; padding: 2px 5px 2px 2px; border: 2px dashed #d6c7a1; border-radius: 10px; background: #fffaf0; color: #222;
+  font-family: inherit; cursor: pointer; }
+.q2shuk-li img { width: 20px; height: 20px; object-fit: contain; }
+.q2shuk-li b { font-size: 13px; font-weight: 700; }
+.q2shuk-li.got { border-style: solid; border-color: #58cc02; background: #effae6; }
+.q2shuk-li.got::after { content: "✓"; color: #58cc02; font-weight: 900; }
+.q2shuk-wal { flex: none; position: relative; display: flex; align-items: center; gap: 2px; padding: 3px 6px 3px 3px; border-radius: 12px; background: #fff4dc; color: #8a5a00;
+  font-weight: 900; font-size: 16px; }
+.q2shuk-wal img { width: 24px; height: 24px; object-fit: contain; }
+.q2shuk-wal.pay { animation: q2shukShake .5s; }
+@keyframes q2shukShake { 25% { transform: translateX(-3px) rotate(-3deg); } 75% { transform: translateX(3px) rotate(3deg); } }
+.q2shuk-minus { position: absolute; right: 6px; top: -6px; color: #e24b4b; font-weight: 900; pointer-events: none; animation: q2shukMinus 1.3s ease-out forwards; }
+@keyframes q2shukMinus { to { transform: translateY(-22px); opacity: 0; } }
+
+/* кнопки-фразы (направления, цвета, торг, суммы) */
+.q2shuk-p { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 6px; border: 2px solid #dfe6ee; border-bottom-width: 4px;
+  border-radius: 14px; background: #fff; color: #222; font-family: inherit; cursor: pointer; min-width: 0; }
+.q2shuk-p b { font-size: 19px; font-weight: 700; line-height: 1.2; }
+.q2shuk-p span { font-size: 11px; color: #6b7785; text-align: center; line-height: 1.2; }
+.q2shuk-p:disabled { opacity: .5; }
+.q2shuk-p.acc { grid-column: 1 / -1; border-color: #9be15d; background: #f3fce9; }
+.q2shuk-dirs, .q2shuk-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.q2shuk-dir i { font-style: normal; font-size: 20px; line-height: 1; }
+.q2shuk-col i { width: 18px; height: 18px; border-radius: 50%; background: var(--c); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .15); }
+.q2shuk-ph { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.q2shuk-am { grid-template-columns: repeat(3, 1fr); }
+.q2shuk-am .q2shuk-p b { font-size: 16px; }
+
+/* 23.11: с микрофоном — стрелки без иврита, фразы только после «💡 Подсказка»; подсказка друга — в одну строку */
+.q2shuk-hints[hidden] { display: none; }
+.q2shuk-hints { margin-top: 2px; }
+.q2shuk-arr i { font-size: 26px; }
+.q2shuk-arr span { font-size: 12px; }
+.q2shuk-pal-t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

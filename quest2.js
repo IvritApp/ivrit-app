@@ -7,13 +7,14 @@
 // Типы шагов: choice (продавец спрашивает → один из ответов, ответ может положить картинку на доску: "put"),
 //             fill (игрок сам называет начинку, сколько хочет, потом «זֶה הַכּוֹל»), wrap (шаурма заворачивается),
 //             pay (продавец называет цену → «вот, спасибо» + нажать на купюру).
-// Пока виден только тестировщику (кнопка «🧪 Новый квест» на дорожке, список Q2_READY) — до одобрения владельца.
+// 23.11 (владелец): открыт ВСЕМ — у уровней из Q2_READY кнопка «Квест» на дорожке запускает новый квест; старый — только тестировщику («🗂 Старый квест»).
 // 23.11: шаги могут менять фон ("bg"), говорящего ("who"), место доски ("board"), чистить доску ("clear");
 //        новые типы: ask (спроси хозяина — чек-лист ✓/✗, квартира), "receipt" у choice (счёт с лишней строкой, кафе), "ok": false у неверного ответа.
 // =====================================================
 (function () {
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   let Q = null, k = 0, token = 0, root = null, placed = [], points = 0, mistakes = 0, curWho = "";
+  let voiceMiss = 0;                    // промахи распознавания голоса — НЕ ошибки (золото квеста не снимают), но много — значит, нужно повторение
   // сцена шага: фон ("bg": имя файла без .webp), кто говорит ("who"), где доска ("board": [left, top, right, bottom] в %)
   function setScene(st) {
     const sc = document.getElementById("q2Scene"), b = document.getElementById("q2Board");
@@ -22,7 +23,7 @@
     if (st.who) curWho = st.who;
     const z = st.board || Q.board;
     if (z) { b.style.left = z[0] + "%"; b.style.top = z[1] + "%"; b.style.right = z[2] + "%"; b.style.bottom = z[3] + "%"; }
-    if (st.clear && !st._cleared) { b.innerHTML = ""; st._cleared = true; }   // только при первом показе шага (перерисовка не стирает разложенное)
+    if (st.clear && !st._cleared) { b.innerHTML = ""; st._cleared = true; if (st.base) put(st.base, true); }   // только при первом показе шага (перерисовка не стирает разложенное); "base" — подложка (тарелка)
   }
   // жив ли ещё этот шаг: не начат новый шаг, экран квеста не закрыт («✕», «Назад» Telegram, «Дальше»)
   const alive = (t) => t === token && root && root.isConnected && !document.getElementById("quest").hidden;
@@ -83,13 +84,13 @@
     root = document.getElementById("q2");
     document.getElementById("q2Scene").dataset.bg = Q.bg;              // первый фон уже стоит — не мигать
     // человек в сцене (картинка Codex из chars.js): "npc": {id, right, bottom, h} в % от сцены
-    const n = Q.npc, box = document.getElementById("q2Npc");
-    if (n && window.HirbisChars && HirbisChars.has(n.id)) {
-      box.innerHTML = charImgHTML(n.id);
+    const n = Q.npc, box = document.getElementById("q2Npc"), nid = n ? g(n.id) : "";   // id может зависеть от пола: "{m:rina}{f:irit}"
+    if (n && window.HirbisChars && HirbisChars.has(nid)) {
+      box.innerHTML = charImgHTML(nid);
       box.style.right = (n.right ?? 6) + "%"; box.style.bottom = (n.bottom ?? 24) + "%"; box.style.height = (n.h ?? 52) + "%";
     } else box.remove();
     window.scrollTo(0, 0);
-    document.getElementById("q2X").onclick = () => { if (window.track && !(quest && quest._ended)) track("quest_exit", Q.id); leave(); };
+    document.getElementById("q2X").onclick = () => { if (window.track && !(quest && quest._ended)) track("quest_exit", quest ? quest.id : Q.id); leave(); };
   }
   function progress() { const b = document.getElementById("q2Bar"); if (b) b.style.width = Math.round(k / Q.steps.length * 100) + "%"; }
 
@@ -98,7 +99,7 @@
     const box = document.getElementById("q2Say");
     if (!box || !line) return;
     box.hidden = false;
-    box.innerHTML = `<div class="q2-who">${esc(curWho || Q.seller)}</div><div class="q2-he" dir="rtl">${esc(he(line))}</div>
+    box.innerHTML = `<div class="q2-who">${esc(g(curWho || Q.seller))}</div><div class="q2-he" dir="rtl">${esc(he(line))}</div>
       <div class="q2-tr">${esc(tr(line))}</div><button class="q2-ru" type="button">перевод</button>`;
     box.classList.remove("in"); void box.offsetWidth; box.classList.add("in");
     const ru = box.querySelector(".q2-ru");
@@ -106,11 +107,21 @@
     box.querySelector(".q2-he").onclick = () => speak(he(line));
     speak(he(line));
     const npc = document.querySelector("#q2Npc .ci");                 // человек «говорит» (рот двигается)
-    if (npc) { npc.classList.add("talking"); clearTimeout(npc._tt); npc._tt = setTimeout(() => npc.classList.remove("talking"), 900 + he(line).length * 60); }
+    // рот двигается, только если говорит сам человек на картинке (а не папа за кадром — "who" другого)
+    if (npc && (!curWho || g(curWho) === g(Q.seller))) { npc.classList.add("talking"); clearTimeout(npc._tt); npc._tt = setTimeout(() => npc.classList.remove("talking"), 900 + he(line).length * 60); }
+  }
+
+  // человек в сцене реагирует: happy — прыгает от радости, oops — огорчился (avatar.css: ci-happy / ci-oops + движение тела)
+  function npcAct(name, ms) {
+    const ci = document.querySelector("#q2Npc .ci");
+    if (!ci) return;
+    ci.classList.remove("ci-happy", "ci-oops", "ci-hop"); void ci.offsetWidth;
+    ci.classList.add("ci-" + name); if (name === "happy") ci.classList.add("ci-hop");
+    clearTimeout(ci._a); ci._a = setTimeout(() => ci.classList.remove("ci-happy", "ci-oops", "ci-hop"), ms || 1500);
   }
 
   // положить картинку на доску: хлеб — большой в центре, остальное — горкой поверх, со «шлепком»
-  function put(id, big) {
+  function put(id, big, upright) {
     const b = document.getElementById("q2Board");
     if (!b) return;
     const el = document.createElement("img");
@@ -120,7 +131,7 @@
       const n = placed.length, ang = n * 2.4, r = 6 + (n % 4) * 5;
       el.className = "q2-piece";
       el.style.left = (50 + Math.cos(ang) * r * 1.6) + "%"; el.style.top = (52 + Math.sin(ang) * r) + "%";
-      el.style.setProperty("--rot", (Math.round(Math.random() * 50) - 25) + "deg");
+      el.style.setProperty("--rot", upright ? "0deg" : (Math.round(Math.random() * 50) - 25) + "deg");   // свечи, бокал — ровно
     }
     b.appendChild(el);
     placed.push(id);
@@ -171,6 +182,11 @@
     panel.innerHTML = "";
     if (!st) { finish(t); return; }
     setScene(st);
+    // 23.11: СВОИ МЕХАНИКИ квестов — отдельные файлы q2-<квест>.js регистрируют тип шага: Q2_STEPS[type] = function (api) {…}
+    if (window.Q2_STEPS && typeof Q2_STEPS[st.type] === "function") {
+      if (st.seller) sellerSays(st.seller); else if (st.seller === null) { const sb = document.getElementById("q2Say"); if (sb) sb.hidden = true; }
+      return Q2_STEPS[st.type](stepApi(st, panel, t));
+    }
     if (st.type === "ask") return renderAsk(st, panel, t);
     if (st.receipt) { showReceipt(st); st.answers = receiptAnswers(st); }
     else if (st.fixReceipt && receiptLines) showReceipt(Q.steps.find(s => s.receipt), true);
@@ -190,16 +206,17 @@
     else if (st.seller === null) { const sb = document.getElementById("q2Say"); if (sb) sb.hidden = true; }   // реплики нет — старое облачко убрать
     if (st.type === "fill") return renderFill(st, panel, t);
     // choice / pay
-    panel.innerHTML = `<div class="q2-task">${esc(g(st.hint || (st.type === "pay" ? "Заплати и поблагодари" : "Ответь")))}</div><div class="q2-hint" id="q2Hint"></div><div class="q2-chips" id="q2Chips"></div>`;
+    panel.innerHTML = `<div class="q2-task">${esc(g(st.hint || (st.type === "pay" ? "Заплати и поблагодари" : micOK() ? "Ответь вслух на иврите 🎤" : "Ответь")))}</div><div class="q2-hint" id="q2Hint"></div><div class="q2-chips" id="q2Chips"></div>`;
     const chips = panel.querySelector("#q2Chips");
     const payId = st.payWith || "bill50";                              // чем платить: купюра (шаурма) или карта (кафе)
     let paid = st.type !== "pay" || placed.includes(payId);          // уже платил (шаг перерисован) — второй купюры не будет
     const done = (ans) => {
       if (!alive(t)) return;
-      if (ans.ok === false) { mistakes++; hint(g(ans.why || "Не совсем — подумай ещё 🙂"), true); return; }
-      if (!paid) { hint("Сначала заплати — нажми на " + (payId === "bill50" ? "купюру 💵" : "карту 💳"), true); return; }
+      if (ans.ok === false) { mistakes++; npcAct("oops", 1300); hint(g(ans.why || "Не совсем — подумай ещё 🙂"), true); return; }
+      if (!paid) { hint(payId === "bill50" ? "Сначала заплати — нажми на купюру 💵" : payId === "card" ? "Сначала заплати — нажми на карту 💳" : "Сначала нажми на картинку над фразой 👆", true); return; }
       points += 10;
-      if (ans.put) put(ans.put, ans.put === "lafa" || ans.put === "pita");
+      setTimeout(() => npcAct("happy", 1400), 250);
+      if (ans.put) put(ans.put, ans.put === "lafa" || ans.put === "pita", st.upright);
       panel.querySelectorAll("button").forEach(b => b.disabled = true);
       hint("✓ " + he(ans));
       setTimeout(() => { if (alive(t)) { k++; render(); } }, 1300);
@@ -214,34 +231,83 @@
         const b = document.getElementById("q2Board"); const el = document.createElement("img");
         el.src = pic(payId); el.className = "q2-piece q2-money"; b.appendChild(el); placed.push(payId);
         if (typeof playSound === "function") playSound("right");
+        if (st.silent) {                                                  // шаг без слов (омовение рук: до халы молчат)
+          points += 10; hint(g(st.silentHint || "✓"));
+          setTimeout(() => { if (alive(t)) { k++; render(); } }, 2200);
+          return;
+        }
         hint(micOK() ? "Теперь скажи фразу 🎤" : "Теперь нажми на фразу");
       };
       chips.before(bill);
+      if (st.silent) {                                                    // ни фраз, ни микрофона
+        if (paid) setTimeout(() => { if (alive(t)) { k++; render(); } }, 600);   // шаг перерисован после нажатия — не застрять
+        return;
+      }
     }
-    st.answers.map(fillAns).forEach(ans => {
+    // 23.11 (владелец): игрок ГОВОРИТ САМ, а не выбирает. С микрофоном вариантов на экране НЕТ — только задание и 🎤;
+    // «💡 Подсказка»: 1-е нажатие — начало фразы, 2-е — вся верная фраза (нажал — слушаешь). Кнопки-варианты — только без микрофона.
+    const mic = micOK();
+    const shown = (st.answers || []).map(fillAns).filter(a => !mic || a.ok !== false);
+    shown.forEach(ans => {
       const c = document.createElement("button");
       c.className = "q2-chip"; c.type = "button";
       c.innerHTML = `<b dir="rtl">${esc(he(ans))}</b><span>${esc(tr(ans))} · ${esc(g(ans.ru))}</span>`;
-      c.onclick = () => { speak(he(ans)); if (!micOK()) done(ans); };     // без микрофона — подсказка = ответ
+      c.onclick = () => { speak(he(ans)); if (!mic) done(ans); };          // без микрофона — подсказка = ответ
       chips.appendChild(c);
     });
-    if (micOK()) {
+    if (mic) {
+      chips.hidden = true;
+      const ok = shown[0], words = ok ? he(ok).split(/\s+/) : [], trw = ok ? tr(ok).split(/\s+/) : [];
+      let level = 0;
+      const hb = document.createElement("button");
+      hb.className = "q2-hintbtn"; hb.type = "button"; hb.textContent = "💡 Подсказка";
+      hb.onclick = () => {
+        if (!ok) return;
+        level++;
+        if (level === 1 && words.length > 1) {
+          const n = Math.max(1, Math.ceil(words.length / 3));
+          hint(`Начни так: ⁨${words.slice(0, n).join(" ")} …⁩ (${trw.slice(0, n).join(" ")} …)`);
+          speak(words.slice(0, n).join(" "));
+          hb.textContent = "💡 Ещё подсказка";
+        } else { chips.hidden = false; hb.remove(); hint("Послушай (нажми на фразу) — и скажи сам" + g("{m:}{f:а}") + " 🎤"); }
+      };
       panel.appendChild(micBtn("Нажми и скажи", alts => {
         const hits = st.answers.map(fillAns).filter(a => matches(alts, a));
         if (hits.length === 1) done(hits[0]);
         else if (hits.length > 1) hint("Скажи только один вариант 🙂", true);
-        else { mistakes++; hint(`Я услышал «${alts[0] || "…"}». Нажми на фразу — послушай — и скажи ещё раз`, true); }
+        else { voiceMiss++; hint(`Я услышал «${alts[0] || "…"}». Скажи ещё раз — или возьми подсказку 💡`, true); }
       }));
+      panel.appendChild(hb);
       noSpeakLink(panel);
     }
+  }
+
+  // API для своих механик (Q2_STEPS): всё, что нужно шагу, без доступа к внутренностям движка
+  function stepApi(st, panel, t) {
+    return {
+      st, panel, Q, root,
+      alive: () => alive(t),                                     // шаг ещё на экране? (проверять после каждого setTimeout / ответа)
+      next: (delay) => setTimeout(() => { if (alive(t)) { root.classList.remove("q2-filling", "q2-asking"); k++; render(); } }, delay == null ? 1200 : delay),
+      redraw: () => render(),
+      mistake: () => { mistakes++; npcAct("oops", 1300); },      // настоящая ошибка (снимает «идеально»)
+      voiceMiss: () => { voiceMiss++; },                         // не расслышал — не ошибка
+      good: (pts) => { points += pts == null ? 10 : pts; npcAct("happy", 1400); },
+      put: (id, big, upright) => put(id, big, upright), placed: () => placed.slice(),
+      board: () => document.getElementById("q2Board"), scene: () => document.getElementById("q2Scene"),
+      hint, say: (line) => sellerSays(line), speak: (x) => speak(typeof x === "string" ? x : he(x)), hush,
+      micOK, micBtn: (label, onAlts) => micBtn(label, onAlts), noSpeakLink: () => noSpeakLink(panel),
+      matches, namedItems, heSim: (a, b) => heSim(a, b), heNorm: (a) => heNorm(a),
+      he, tr, g, esc, pic, npcAct,
+      word: (w) => { (Q._words || (Q._words = [])).push(w); }      // слово попадёт в итог квеста (чипы со звуком)
+    };
   }
 
   // свободный выбор начинки: лотки внизу, называешь сколько хочешь, потом «זֶה הַכּוֹל»
   function renderFill(st, panel, t) {
     const chosen = new Set(st.items.filter(it => placed.includes(it.id)).map(it => it.id));   // шаг перерисован — то, что уже лежит, не пропадает
-    panel.innerHTML = `<div class="q2-task">${esc(g(st.task || "Скажи, что положить. Можно несколько сразу!"))} Потом скажи <bdi dir="rtl">${esc(he(st.done))}</bdi> (это всё)</div>
+    panel.innerHTML = `<div class="q2-task">${esc(g(st.task || "Скажи, что положить. Можно несколько сразу!"))} Потом скажи <bdi dir="rtl">${esc(he(st.done))}</bdi> (${esc(g(st.done.ru)).toLowerCase()})</div>
       <div class="q2-hint" id="q2Hint">${esc(st.trayHint || "Не знаешь слово — нажми на лоток 👇")}</div>
-      <div class="q2-trays" id="q2Trays">${st.items.map(it => `<button class="q2-tray" type="button" data-id="${it.id}"><img src="${pic(it.id)}" alt=""><span class="q2-tray-he" dir="rtl">${esc(he(it))}</span></button>`).join("")}</div>
+      <div class="q2-trays${micOK() ? " quiet" : ""}" id="q2Trays">${st.items.map(it => `<button class="q2-tray" type="button" data-id="${it.id}"><img src="${pic(it.id)}" alt=""><span class="q2-tray-he" dir="rtl">${esc(he(it))}</span></button>`).join("")}</div>
       <div class="q2-row" id="q2Row"></div>`;
     const trays = panel.querySelector("#q2Trays"), row = panel.querySelector("#q2Row");
     root.classList.add("q2-filling");                                    // сцена ниже — чтобы лотки и 🎤 влезли на экран
@@ -278,7 +344,7 @@
         const got = namedItems(alts, st.items).filter(add);
         if (matches(alts, st.done)) { if (finishFill()) return; if (!got.length) return; }
         if (got.length) hint("✓ " + got.map(he).join(", ") + " — ещё что-то? Или: " + he(st.done));
-        else { mistakes++; hint(`Я услышал «${alts[0] || "…"}». Нажми на лоток — послушай — и скажи`, true); }
+        else { voiceMiss++; hint(`Я услышал «${alts[0] || "…"}». Нажми на лоток — послушай — и скажи`, true); }
       }));
       noSpeakLink(panel);
     }
@@ -289,11 +355,14 @@
   let asked = new Set();
   function renderAsk(st, panel, t) {
     if (st.seller) sellerSays(st.seller);
+    // 23.11 (владелец: «говорит сам»): с микрофоном вопрос на иврите скрыт — видна тема по-русски; нажал — подсказка (иврит + звук)
+    const mic = micOK(), revealed = st._rev || (st._rev = new Set());
     const list = () => st.items.map(it => {
-      const on = asked.has(it.id);
+      const on = asked.has(it.id), quiet = mic && !on && !revealed.has(it.id);
       return `<button class="q2-ask${on ? " done " + (it.yes ? "yes" : "no") : ""}" type="button" data-id="${it.id}">
         <span class="q2-ask-mark">${on ? (it.yes ? "✓" : "✗") : "?"}</span>
-        <span class="q2-ask-t"><b dir="rtl">${esc(he(it.q))}</b><small>${esc(tr(it.q))} · ${esc(g(it.q.ru))}</small>${on ? `<em><bdi dir="rtl">${esc(he(it.a))}</bdi> — ${esc(g(it.a.ru))}</em>` : ""}</span></button>`;
+        <span class="q2-ask-t">${quiet ? `<b>${esc(g(it.q.ru))}</b><small>💡 нажми — подсказка</small>`
+          : `<b dir="rtl">${esc(he(it.q))}</b><small>${esc(tr(it.q))} · ${esc(g(it.q.ru))}</small>`}${on ? `<em><bdi dir="rtl">${esc(he(it.a))}</bdi> — ${esc(g(it.a.ru))}</em>` : ""}</span></button>`;
     }).join("");
     const need = Math.min(st.min || st.items.length, st.items.length);
     const left = () => Math.max(0, need - st.items.filter(it => asked.has(it.id)).length);
@@ -324,7 +393,8 @@
       const it = st.items.find(x => x.id === b.dataset.id);
       if (asked.has(it.id)) { speak(he(it.a)); return; }
       speak(he(it.q));
-      if (!micOK()) ask(it); else hint(`Скажи: ${he(it.q)} 🎤`);
+      if (!micOK()) ask(it);
+      else { revealed.add(it.id); box.innerHTML = list(); bind(); hint(`Скажи: ⁨${he(it.q)}⁩ 🎤`); }
     });
     bind(); nextBtn();
     const b0 = document.getElementById("q2Board");
@@ -336,7 +406,7 @@
         const hit = st.items.filter(it => !asked.has(it.id) && matches(alts, it.q)).sort((x, y) => score(y) - score(x));
         if (hit.length > 1 && score(hit[0]) === score(hit[1])) hint("Спроси что-то одно 🙂", true);
         else if (hit.length) ask(hit[0], true);
-        else { mistakes++; hint(`Я услышал «${alts[0] || "…"}». Нажми на вопрос — послушай — и спроси`, true); }
+        else { voiceMiss++; hint(`Я услышал «${alts[0] || "…"}». Нажми на вопрос — послушай — и спроси`, true); }
       }));
       noSpeakLink(panel);
     }
@@ -374,36 +444,61 @@
 
   function finish(t) {
     sellerSays(Q.outro);
-    const perfect = mistakes === 0, pts = Math.round(points * (perfect ? 2 : 1));
+    const perfect = mistakes === 0;
+    // очки как у старого квеста: квест : идеальный урок = 1,5 : 1 (QUEST_RATIO, perfectRaw — quest.js), ×2 без ошибок
+    const base = typeof perfectRaw === "function" && typeof QUEST_RATIO !== "undefined" ? QUEST_RATIO * perfectRaw(10) : points;
+    const pts = Math.round(base * (perfect ? 2 : 1));
     store.set(todayKey(), store.get(todayKey(), 0) + pts);
     window.streakHold = !!window.HAnim;                                // экран серии — после праздника, а не поверх него
     if (typeof streakDone === "function") streakDone();
-    if (window.track) track("quest_end", Q.id);
+    const qid = qFile ? "q-" + qFile : Q.id;                          // в статистике — тот же id, что у старого квеста
+    if (window.track) track("quest_end", qid);
     if (typeof quest !== "undefined" && quest) quest._ended = true;
     store.set("quest2_" + Q.id, true);
+    // 23.11: новый квест — это и есть квест уровня: засчитываем так же, как старый (открывает следующий уровень, золото уровня, большой сундук)
+    if (qFile) { store.set("quest_q-" + qFile, true); if (perfect) store.set("questGold_q-" + qFile, true); }
+    // итог уровня и повторение (как в quest.js): много ошибок или промахов голосом → 4 урока повторения на дорожке
+    const where = typeof questLevel === "function" && qFile ? questLevel("q-" + qFile) : null;
+    const lvl = where ? where.lvl : null;
+    const weak = mistakes >= 4 || voiceMiss >= 4;
+    if (weak && lvl) store.set("review_" + lvl.id, true);
+    const gold = lvl && typeof levelGold === "function" && levelGold(lvl);
     const panel = document.getElementById("q2Panel");
-    const words = Q.steps.flatMap(s => s.type === "fill" ? s.items.filter(it => placed.includes(it.id)) : s.type === "ask" ? s.items.filter(it => asked.has(it.id) && it.word).map(it => it.word) : []);
+    const words = Q.steps.flatMap(s => s.type === "fill" ? s.items.filter(it => placed.includes(it.id)) : s.type === "ask" ? s.items.filter(it => asked.has(it.id) && it.word).map(it => it.word) : []).concat(Q._words || []);
     panel.innerHTML = `<div class="q2-end">
       <h2>${perfect ? "Без единой ошибки! ⭐" : esc(Q.finishTitle || "Шаурма твоя! 🌯")}</h2>
+      ${where ? `<div class="q2-lvl">${gold ? `🏅 Уровень ${where.n} золотой!` : `✓ Уровень ${where.n} пройден`}</div>` : ""}
       <div class="q2-pts">+${pts} очков</div>
       ${words.length ? `<div class="q2-words">${words.map(w => `<button class="q2-word" type="button" data-he="${esc(he(w))}"><b dir="rtl">${esc(he(w))}</b><span>${esc(g(w.ru))}</span></button>`).join("")}</div>` : ""}
-      <button class="btn blue" id="q2Fin">Дальше</button></div>`;
+      ${weak && lvl ? `<div class="q2-weak">Было трудно — это нормально! Я собрал${g("")} для тебя уроки повторения 🔁</div><button class="btn orange" id="q2Rev">🔁 Начать повторение</button>` : ""}
+      <button class="btn blue" id="q2Fin">Дальше</button>
+      <button class="btn ghost" id="q2Again">Пройти ещё раз</button></div>`;
     panel.querySelectorAll(".q2-word").forEach(b => b.onclick = () => speak(b.dataset.he));
     document.getElementById("q2Fin").onclick = leave;
+    document.getElementById("q2Again").onclick = () => { hush(); token++; loadQuest2(qFile || Q.id); };
+    const rv = document.getElementById("q2Rev");
+    if (rv) rv.onclick = () => { hush(); token++; startReview(lvl.id); };
+    if (typeof vibrate === "function") vibrate("success");
     if (window.HAnim) HAnim.play("lessonEnd", { cards: false, title: Q.finishTitle || "Шаурма твоя!" })
       .then(() => { window.streakHold = false; return window.streakShow ? streakShow() : null; })
       .catch(() => { window.streakHold = false; });
     if (typeof playSound === "function") setTimeout(() => playSound("finish"), 300);
   }
 
-  window.Q2_READY = ["shawarma", "dira", "cafe"];                // какие уровни уже имеют новый квест (content/he/quests2/<id>.json)
+  window.q2Hush = hush;                                            // «Назад» Telegram (app.js): заглушить голос и микрофон квеста
+  window.Q2_READY = ["shawarma", "dira", "makolet", "bus", "shabbat", "cafe", "shuk", "rofe", "avoda"];                // какие уровни уже имеют новый квест (content/he/quests2/<id>.json)
   window.q2Test = { matches, namedItems };                       // для проверки распознавания в консоли
+  let qFile = "";                                                  // имя квеста уровня (course.json "quest"), напр. "shabbat"
+  // 23.11: перед квестом — кат-сцена (cutscene.js), один раз; потом сам квест
   window.startQuest2 = function (id) {
+    if (window.playCutscene) playCutscene(id, () => loadQuest2(id)); else loadQuest2(id);
+  };
+  function loadQuest2(id) {
     fetch(`content/${COURSE_LANG}/quests2/${id}.json`).then(r => r.json()).then(d => {
-      Q = d; k = 0; placed = []; points = 0; mistakes = 0; curWho = ""; asked = new Set(); receiptExtra = null; receiptLines = null;
-      quest = { id: d.id, _ended: false };                       // общая переменная из quest.js — для «Назад» и статистики (app.js)
+      qFile = id; Q = d; k = 0; placed = []; points = 0; mistakes = 0; voiceMiss = 0; curWho = ""; asked = new Set(); receiptExtra = null; receiptLines = null;
+      quest = { id: "q-" + id, _ended: false };                       // общая переменная из quest.js — для «Назад» и статистики (app.js)
       shell();
-      if (window.track) track("quest_start", d.id);
+      if (window.track) track("quest_start", "q-" + id);
       // карточка цели, как в старых квестах
       const panel = document.getElementById("q2Panel");
       panel.innerHTML = `<div class="q-goal"><div class="q-goal-k">🎯 Твоя цель</div><div class="q-goal-t">${esc(g(d.goal))}</div>
@@ -411,5 +506,5 @@
         <button class="btn blue q-goal-go" id="q2Go">Начать</button></div>`;
       document.getElementById("q2Go").onclick = () => { if (typeof playSound === "function") playSound("pop"); render(); };
     }).catch(() => showToast("Не получилось загрузить квест 😕"));
-  };
+  }
 })();

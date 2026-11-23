@@ -1,0 +1,99 @@
+{
+ "status": "23.11 — кат-сцены перед новыми квестами (плеер cutscene.js). Фоны — из квестов, люди — картинки chars.js. Иврит — черновик, знатокам. Кадры Codex (flat\\scenes) — брак (нарисованы кодом), ждём переделку.",
+ "howto": "pos: [x центра %, низ ступней %, рост %] — в процентах от фона 2:3 и ПО ЕГО ПЕРСПЕКТИВЕ (рост считать по предмету рядом: стул ≈ 85–90 см, дверь ≈ 2,1–2,4 м, диван ≈ 85 см, столик ≈ 45 см; человек ≈ 1,75 м; кто ближе к камере — ступни ниже и рост больше). cam: [x %, y %, приближение] — куда наезжает камера.",
+ "scenes": {
+  "shawarma": {
+   "frames": [
+    { "bg": "assets/quests/shawarma/bg_street.webp", "cam": [55, 72, 1.35], "chars": ["david", "tzila"], "pos": [[44, 89, 31], [66, 89, 30]], "acts": ["wave", "happy"],
+      "say": "Первый день в Израиле! Давид и Циля встретили тебя в аэропорту и сразу повели есть." },
+    { "bg": "assets/quests/shawarma/bg_street.webp", "cam": [55, 72, 1.35], "chars": ["david", "tzila"], "pos": [[44, 89, 31], [66, 89, 30]], "acts": ["point", "happy"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "{m:אַתָּה רָעֵב}{f:אַתְּ רְעֵבָה}?", "tr": "{m:ата раэв}{f:ат реэва}?", "ru": "{m:Ты голоден}{f:Ты голодна}?" } },
+    { "bg": "assets/quests/shawarma/bg_counter.webp", "chars": [], "who": "{m:tzila}{f:david}",
+      "line": { "he": "יַאלְלָה, שווארמה!", "tr": "ялла, шаварма!", "ru": "Давай — шаурма!" },
+      "say": "Ты у прилавка. Закажи шаурму {m:сам}{f:сама} — на иврите 🌯" }
+   ]
+  },
+  "dira": {
+   "frames": [
+    { "bg": "assets/quests/dira/bg_davids.webp", "cam": [50, 62, 1], "chars": ["david", "tzila"], "pos": [[31, 99, 60], [69, 99, 58]], "acts": ["think", "listen"],
+      "say": "Неделю ты живёшь у {m:Давида}{f:Цили} на диване. Пора искать свою квартиру." },
+    { "bg": "assets/quests/dira/bg_davids.webp", "cam": [50, 62, 1], "chars": ["david", "tzila"], "pos": [[31, 99, 60], [69, 99, 58]], "acts": ["point", "surprised"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "צָרִיךְ דִּירָה!", "tr": "царих дира!", "ru": "Нужна квартира!" } },
+    { "bg": "assets/quests/dira/bg_building.webp", "cam": [44, 74, 1.8], "chars": ["tzila", "david"], "pos": [[30, 97, 18.5], [57, 97, 19]], "acts": ["point", "wave"], "who": "{m:tzila}{f:david}",
+      "line": { "he": "הִנֵּה הַבַּיִת!", "tr": "инэ а-баит!", "ru": "Вот этот дом!" },
+      "say": "Хозяин уже ждёт. Расспроси его обо всём 🔑" }
+   ]
+  },
+  "makolet": {
+   "frames": [
+    { "bg": "assets/quests/makolet/bg_entrance.webp", "cam": [42, 70, 1.3], "chars": ["david", "tzila"], "pos": [[30, 88, 32], [52, 88, 31]], "acts": ["wave", "happy"],
+      "say": "Ключи от квартиры у тебя — а холодильник пустой! Мама прислала список покупок. На иврите 😉" },
+    { "bg": "assets/quests/makolet/bg_entrance.webp", "cam": [42, 70, 1.3], "chars": ["david", "tzila"], "pos": [[30, 88, 32], [52, 88, 31]], "acts": ["point", "happy"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "{m:אַתָּה מוּכָן}{f:אַתְּ מוּכָנָה}? יַאלְלָה!", "tr": "{m:ата мухан}{f:ат мухана}? ялла!", "ru": "{m:Готов}{f:Готова}? Погнали!" } },
+    { "bg": "assets/quests/makolet/bg_corridor_1.webp", "chars": [],
+      "say": "Говори, куда идти и что взять — всё поедет в тележку 🛒 Мама разрешила взять 2 вещи себе 😋" }
+   ]
+  },
+  "bus": {
+   "frames": [
+    { "bg": "assets/quests/bus/bg_stop.webp", "cam": [42, 70, 1.3], "chars": ["david", "tzila"], "pos": [[30, 86, 29], [50, 86, 28]], "acts": ["wave", "happy"],
+      "say": "Пятница. Мама {m:Давида}{f:Цили} позвала тебя на шабат! Друзья бегут ей помогать, а ты едешь в центр — за цветами 💐" },
+    { "bg": "assets/quests/bus/bg_stop.webp", "cam": [42, 70, 1.3], "chars": ["david", "tzila"], "pos": [[30, 86, 29], [50, 86, 28]], "acts": ["point", "happy"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "הַמֶּרְכָּז — אַחֲרֵי הַיָּם!", "tr": "а-мерказ — ахарей а-ям!", "ru": "Центр — после моря!" } },
+    { "bg": "assets/quests/bus/bg_stop.webp", "chars": [],
+      "say": "Узнай, какой автобус идёт в центр, слушай табло — и выйди на нужной остановке 🚌" }
+   ]
+  },
+  "shuk": {
+   "frames": [
+    { "bg": "assets/quests/shuk/bg_corridor_1.webp", "cam": [50, 66, 1], "chars": ["david", "tzila"], "pos": [[33, 90, 54], [67, 89, 52]], "acts": ["wave", "happy"],
+      "say": "Пятница, утро. Давид и Циля привели тебя на шук: перед шабатом тут шумно, и всё можно купить дешевле — если торговаться!" },
+    { "bg": "assets/quests/shuk/bg_corridor_1.webp", "cam": [50, 66, 1], "chars": ["david", "tzila"], "pos": [[33, 90, 54], [67, 89, 52]], "acts": ["point", "happy"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "יָקָר? {m:תַּגִּיד}{f:תַּגִּידִי}: יָקָר מִדַּי!", "tr": "якар? {m:тагид}{f:тагиди}: якар мидай!", "ru": "Дорого? Скажи: «слишком дорого!»" } },
+    { "bg": "assets/quests/shuk/bg_corridor_1.webp", "cam": [50, 66, 1], "chars": ["tzila", "david"], "pos": [[33, 90, 54], [67, 89, 52]], "acts": ["wave", "point"], "who": "{m:tzila}{f:david}",
+      "line": { "he": "יַאלְלָה, יָשָׁר!", "tr": "ялла, яшар!", "ru": "Давай, прямо!" },
+      "say": "Ходи по рынку голосом: «яшар» — прямо, «смола» — налево, «ямина» — направо 🧺" }
+   ]
+  },
+  "rofe": {
+   "frames": [
+    { "bg": "assets/quests/rofe/bg_entrance.webp", "cam": [50, 70, 1.15], "chars": ["david", "tzila"], "pos": [[36, 93, 28], [62, 93, 27]], "acts": ["surprised", "oops"],
+      "say": "Субботний вечер, шабат закончился. Вы с Давидом, Цилей и ребятами играли в баскетбол 🏀 — и ты неудачно {m:упал}{f:упала}!" },
+    { "bg": "assets/quests/rofe/bg_entrance.webp", "cam": [50, 70, 1.15], "chars": ["david", "tzila"], "pos": [[36, 93, 28], [62, 93, 27]], "acts": ["think", "listen"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "{m:אַתָּה בְּסֵדֶר}{f:אַתְּ בְּסֵדֶר}?", "tr": "{m:ата бэсэдэр}{f:ат бэсэдэр}?", "ru": "Ты в порядке?" } },
+    { "bg": "assets/quests/rofe/bg_entrance.webp", "cam": [50, 70, 1.15], "chars": ["david", "tzila"], "pos": [[36, 93, 28], [62, 93, 27]], "acts": ["point", "wave"], "who": "{m:tzila}{f:david}",
+      "line": { "he": "{m:בּוֹא}{f:בּוֹאִי}, הִנֵּה הַמִּרְפָּאָה!", "tr": "{m:бо}{f:бои}, инэ а-мирпаа!", "ru": "Пойдём, вот травмпункт!" },
+      "say": "Внутри объясни {m:сам}{f:сама}, что болит 🩺" }
+   ]
+  },
+  "avoda": {
+   "frames": [
+    { "bg": "assets/quests/avoda/bg_cafe.webp", "cam": [50, 62, 1], "chars": ["david", "tzila"], "pos": [[26, 97, 56], [74, 97, 55]], "acts": ["think", "listen"],
+      "say": "Ты {m:поправился}{f:поправилась} после травмы. А деньги кончаются — пора искать работу." },
+    { "bg": "assets/quests/avoda/bg_cafe.webp", "cam": [50, 62, 1], "chars": ["david", "tzila"], "pos": [[26, 97, 56], [74, 97, 55]], "acts": ["point", "surprised"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "צָרִיךְ עֲבוֹדָה!", "tr": "царих авода!", "ru": "Нужна работа!" } },
+    { "bg": "assets/quests/avoda/bg_options.webp", "cam": [50, 64, 1.45], "chars": [], "who": "{m:david}{f:tzila}",
+      "line": { "he": "יֵשׁ חָמֵשׁ עֲבוֹדוֹת!", "tr": "еш хамеш аводот!", "ru": "Есть пять вакансий!" },
+      "say": "Выбери, где хочешь работать, — и пройди собеседование на иврите 💼" }
+   ]
+  },
+  "shabbat": {
+   "frames": [
+    { "bg": "assets/quests/shabbat/bg_door.webp", "cam": [50, 60, 1], "chars": ["david", "tzila"], "pos": [[29, 82, 42], [73, 82, 41]], "acts": ["wave", "happy"],
+      "say": "Пятница, вечер. Семья {m:Давида}{f:Цили} позвала тебя на шабат. В руках — цветы для хозяйки 💐" },
+    { "bg": "assets/quests/shabbat/bg_door.webp", "cam": [50, 60, 1], "chars": ["david", "tzila"], "pos": [[29, 82, 42], [73, 82, 41]], "acts": ["happy", "happy"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "שַׁבָּת שָׁלוֹם!", "tr": "шабат шалом!", "ru": "Шабат шалом!" },
+      "say": "Семья скажет благословения — а ты отвечай «амен» и рассказывай о себе 🕯️" }
+   ]
+  },
+  "cafe": {
+   "frames": [
+    { "bg": "assets/quests/cafe/bg_terrace.webp", "cam": [50, 70, 1], "chars": ["david", "tzila"], "pos": [[28, 96, 50], [72, 96, 49]], "acts": ["wave", "happy"], "who": "{m:david}{f:tzila}",
+      "line": { "he": "{m:רוֹצֶה}{f:רוֹצָה} קָפֶה?", "tr": "{m:роцэ}{f:роца} кафе?", "ru": "Хочешь кофе?" },
+      "say": "Утро. {m:Давид}{f:Циля} зовёт тебя в кафе на набережной." },
+    { "bg": "assets/quests/cafe/bg_terrace.webp", "cam": [50, 70, 1], "chars": [],
+      "say": "Друзьям срочно пришлось уйти: «Позавтракай без нас!» Закажи {m:сам}{f:сама} — и проверь счёт 🧾" }
+   ]
+  }
+ }
+}

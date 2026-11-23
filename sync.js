@@ -65,7 +65,7 @@
   }
 
   // --- 💬 ОТЗЫВ ТЕСТЕРА (22.11, бета): окно с полем → /hapi/feedback → админка «📝 Отзывы» + сообщение админу в Telegram ---
-  function appVer() { const s = document.querySelector('script[src*="app.js?v="]'); return s ? (s.getAttribute("src").split("v=")[1] || "") : ""; }
+  function appVer() { if (window.APP_V) return window.APP_V; const s = document.querySelector('script[src*="app.js?v="]'); return s ? (s.getAttribute("src").split("v=")[1] || "") : ""; }
   function openFeedback(place) {
     if (!initData) { if (typeof showToast === "function") showToast("Отзыв можно отправить из приложения в Telegram"); return; }
     if (window.track) track("feedback_open");

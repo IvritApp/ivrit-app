@@ -17,7 +17,8 @@
     return cache[id];
   };
 
-  const strip = (s) => String(s || "").replace(/[֑-ׇ]/g, "").replace(/\{[mf]:([^}]*)\}/g, "$1").replace(/[?!.,]/g, "").trim();
+  // (ключ «phrasesSeen» должен совпадать с plain() в cards.js: без огласовок и знаков ?!.,״"׳')
+  const strip = (s) => String(s || "").replace(/[֑-ׇ]/g, "").replace(/\{[mf]:([^}]*)\}/g, "$1").replace(/[?!.,״"׳']/g, "").trim();
 
   // Сколько частей в уроке: 3 базовые + за количество слов + за сложные слова + за много фраз
   window.partsCount = function (data) {
@@ -51,7 +52,8 @@
     // каждая часть начинает с других слов; с 3-й части иногда попадаются слова прошлых уроков
     let bag = [];
     const nextWord = (avoid) => {
-      if (!bag.length) bag = rep(fresh).concat(oldRep.length ? shuf(oldRep).slice(0, 3) : k >= 3 && old.length ? shuf(old).slice(0, 2) : []);
+      // 23.11: слова-повторения из самого урока (после newCount) — с первой собранной части (было — только с 6-й)
+      if (!bag.length) bag = rep(fresh).concat(oldRep.length ? shuf(oldRep).slice(0, 3) : old.length ? shuf(old).slice(0, 2) : []);
       let i = bag.findIndex(x => x !== avoid);
       if (i < 0) i = 0;
       return bag.splice(i, 1)[0];
@@ -103,6 +105,8 @@
   // Часть 1 — первая половина новых слов (карточка + задание), часть 2 — вторая половина + «собери фразу»,
   // часть 3 — задания из файла урока, части 4…N — собираются (buildExercises), всё сложнее.
   window.startLessonPart = function (id, k) {
+    if (starting && Date.now() - starting < 4000) return;
+    starting = Date.now();
     getLesson(id).then(raw => {
       const data = JSON.parse(JSON.stringify(raw));
       const total = partsCount(data);
@@ -132,9 +136,76 @@
         });
       }
       data.part = k; data.partsTotal = total;
-      startLesson(data);
-    }).catch(() => startLesson(id));                              // нет файла / нет сети — как раньше
+      // 23.11 (аудит новичка): перед первой «Собери фразу» с новой фразой — карточка «💬 Новая фраза» (один раз на фразу).
+      // Вставляем ПОСЛЕ слов прошлых уроков — чтобы чужое слово не встало между карточкой фразы и её заданием.
+      const run = () => {
+        const phSeen = store.get("phrasesSeen", []), phHere = new Set();
+        for (let i = 0; i < data.exercises.length; i++) {
+          const e = data.exercises[i];
+          if (e.type !== "build_phrase" || phHere.has(e.phrase)) continue;
+          const p = (data.phrases || [])[e.phrase];
+          if (!p || phSeen.includes(strip(g(p.he)))) continue;
+          phHere.add(e.phrase);
+          data.exercises.splice(i, 0, { type: "phrase_card", phrase: e.phrase }); i++;
+        }
+        starting = 0;
+        if (k === 0) showTip(id, () => startLesson(data)); else startLesson(data);
+      };
+      // 23.11: с 4-й части — 2 слова из ПРОШЛЫХ пройденных уроков (чтобы старое не забывалось); сеть медленная — ждём не дольше 1,5 с
+      if (k >= 3) {
+        const cut = new Promise(res => setTimeout(() => res([]), 1500));
+        Promise.race([oldLessonWords(id, 2, data.words), cut]).then(list => {
+          list.forEach((v, j) => {
+            data.words.push({ he: v.he, tr: v.tr, ru: v.ru, audio: v.audio, _old: true });
+            data.exercises.splice(Math.min(data.exercises.length, 2 + j * 4), 0, { type: j % 2 ? "choose_hebrew" : "listen", word: data.words.length - 1 });
+          });
+        }).catch(() => {}).then(run);
+      } else run();
+    }).catch(() => { starting = 0; startLesson(id); });           // нет файла / нет сети — как раньше
   };
+  let starting = 0;                                               // часть уже запускается (двойное нажатие не запустит урок дважды)
+
+  // n случайных новых слов из других пройденных уроков главы (не «Запомнил», без повторов по переводу с текущими словами)
+  function oldLessonWords(cur, n, curWords) {
+    const ids = shuf(doneLessons().filter(x => /^a1-\d+-\d+$/.test(x) && x !== cur)).slice(0, n + 2);
+    if (!ids.length) return Promise.resolve([]);
+    return Promise.all(ids.map(x => getLesson(x).catch(() => null))).then(ls => {
+      const out = [], seenRu = new Set((curWords || []).map(w => w.ru));      // не повторять слова этого урока
+      for (const l of ls) {
+        if (!l || out.length >= n) continue;
+        const pool = shuf(l.words.slice(0, l.newCount || l.words.length)).filter(w => !isKnown(w) && !/\{[mf]:/.test(w.ru || "") && !seenRu.has(w.ru));
+        if (pool.length) { out.push(pool[0]); seenRu.add(pool[0].ru); }
+      }
+      return out;
+    });
+  }
+
+  // 23.11: «Совет» перед первой частью урока (как в Duolingo) — коротко о грамматике для полного новичка.
+  // Тексты — content/he/tips.json; каждый показывается один раз (store "tipsSeen"); нет файла / сети — урок начинается сразу.
+  let TIPS = null, tipCall = 0;
+  function showTip(id, go) {
+    const seen = store.get("tipsSeen", []);
+    const old = document.getElementById("tipSheet"); if (old) old.remove();
+    if (seen.includes(id)) { go(); return; }
+    const my = ++tipCall;                                          // пока грузится файл, нажали другой урок — старый вызов ничего не делает
+    const load = TIPS ? Promise.resolve(TIPS) : fetch("content/he/tips.json").then(r => r.json()).then(j => (TIPS = j.tips || {}));
+    load.then(tips => {
+      if (my !== tipCall) return;
+      const t = tips[id];
+      if (!t) { go(); return; }
+      const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      const w = document.createElement("div");
+      w.className = "tip-wrap"; w.id = "tipSheet";
+      w.innerHTML = `<div class="tip-card"><div class="tip-badge">💡 Совет</div><h3>${esc(t.h)}</h3><p>${esc(t.p)}</p>
+        <div class="tip-ex">${(t.ex || []).map((e, i) => `<button class="tip-row" type="button" data-i="${i}"><span class="tip-he" dir="rtl">${esc(g(e.he))}</span><span class="tip-tr tr">${esc(g(e.tr))}</span><span class="tip-ru">${esc(g(e.ru))}</span><span class="tip-spk">${window.SPK || "🔊"}</span></button>`).join("")}</div>
+        <button class="btn blue tip-go" type="button">Понятно, начать</button></div>`;
+      document.body.appendChild(w);
+      requestAnimationFrame(() => w.classList.add("show"));
+      w.querySelectorAll(".tip-row").forEach(b => b.onclick = () => speak(g(t.ex[+b.dataset.i].he)));
+      w._done = () => { if (!w.isConnected) return; store.set("tipsSeen", seen.concat(id)); w.remove(); go(); };
+      w.querySelector(".tip-go").onclick = () => w._done();
+    }).catch(() => go());
+  }
 
   // 23.11: все новые слова урока отмечены «Запомнил» (окно после части) — засчитать урок целиком. true — если засчитали сейчас.
   window.partsSkipIfKnown = function (lessonData) {

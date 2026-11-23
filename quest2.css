@@ -101,3 +101,60 @@
 .q2-ask-t em bdi { font-weight: 800; }
 /* мелкое облачко, когда сцена маленькая (шаг «спроси») */
 .q2.q2-asking .q2-say { padding: 6px 10px 5px; } .q2.q2-asking .q2-he { font-size: 18px; } .q2.q2-asking .q2-tr { font-size: 12px; } .q2.q2-asking .q2-ru { display: none; }
+
+/* 23.11: кат-сцена перед квестом (cutscene.js) — фон с наездом камеры, люди, облачко реплики, подпись рассказчика */
+.cs-wrap { position: fixed; inset: 0; z-index: 9400; background: #1b2433; overflow: hidden; opacity: 0; transition: opacity .25s; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cs-wrap.show { opacity: 1; }
+/* сцена 2:3 накрывает экран (как background-size: cover); люди — в % от сцены, по перспективе фона */
+.cs-stage { position: absolute; left: 50%; top: 50%; width: max(100vw, 66.667vh); height: max(150vw, 100vh); transform: translate(-50%, -50%); }
+/* камера: точка (cx, cy) фона — в центр экрана, приближение cs (cutscene.js не даёт вылезти краям) */
+.cs-cam { position: absolute; inset: 0; transform-origin: var(--cx, 50%) var(--cy, 50%); transform: translate(calc(50% - var(--cx, 50%)), calc(50% - var(--cy, 50%))) scale(var(--cs, 1)); }
+.cs-cam.zoom { animation: csCam 7s cubic-bezier(.2, .6, .3, 1) both; }
+@keyframes csCam { from { transform: translate(calc(50% - var(--cx, 50%)), calc(50% - var(--cy, 50%))) scale(calc(var(--cs, 1) * 1.08)); } to { transform: translate(calc(50% - var(--cx, 50%)), calc(50% - var(--cy, 50%))) scale(var(--cs, 1)); } }
+.cs-bg { position: absolute; inset: 0; background-size: 100% 100%; }
+.cs-chars { position: absolute; inset: 0; pointer-events: none; }
+.cs-ch { position: absolute; transform: translateX(-50%); }
+
+
+
+
+.cs-ch .ci { height: 100%; width: auto; }
+.cs-ch.speak { z-index: 1; }
+.cs-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cs-dots { display: flex; gap: 5px; }
+.cs-dots i { width: 22px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .45); }
+.cs-dots i.on { background: #fff; }
+.cs-skip { background: rgba(0, 0, 0, .35); color: #fff; border: 0; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.cs-bubble { position: absolute; top: calc(52px + env(safe-area-inset-top)); left: 14px; right: 14px; max-width: 460px; margin: 0 auto; background: #fff; color: #1c2838; border-radius: 20px; padding: 12px 16px 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, .2); text-align: center; }
+.cs-bubble.in { animation: csPop .3s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes csPop { from { opacity: 0; transform: scale(.85) translateY(8px); } to { opacity: 1; transform: none; } }
+.cs-who { font-size: 13px; font-weight: 800; color: #1cb0f6; }
+.cs-he { font-size: 30px; font-weight: 700; line-height: 1.25; margin: 2px 0; }
+.cs-tr { font-size: 15px; color: #888; }
+.cs-ru { font-size: 16px; font-weight: 600; margin-top: 2px; }
+.cs-spk { position: absolute; right: 10px; top: 10px; width: 34px; height: 34px; border: 0; background: none; color: #1cb0f6; padding: 0; cursor: pointer; }
+.cs-spk svg { width: 28px; height: 28px; }
+.cs-say { position: absolute; left: 14px; right: 14px; top: calc(52px + env(safe-area-inset-top)); max-width: 460px; margin: 0 auto; background: rgba(20, 30, 45, .82); color: #fff; border-radius: 16px; padding: 12px 16px; font-size: 16px; line-height: 1.4; text-align: center; }
+.cs-say.in { animation: csPop .3s ease both; }
+.cs-tap { position: absolute; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); text-align: center; color: rgba(255, 255, 255, .8); font-size: 13px; animation: csBlink 1.6s ease-in-out infinite; pointer-events: none; }
+@keyframes csBlink { 50% { opacity: .35; } }
+/* 23.11: итог нового квеста — уровень пройден / золотой, «было трудно → повторение» */
+.q2-lvl { font-weight: 800; color: #2e9d58; margin: 2px 0 6px; }
+.q2-weak { margin: 10px 0 8px; font-size: 15px; }
+.q2-end .btn.ghost { margin-top: 8px; }
+
+/* облачко и подпись — одной колонкой сверху (низ экрана свободен для людей) */
+.cs-head { position: absolute; left: 14px; right: 14px; top: calc(50px + env(safe-area-inset-top)); max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.cs-head .cs-bubble, .cs-head .cs-say { position: relative; top: auto; left: auto; right: auto; bottom: auto; margin: 0; max-width: none; }
+.cs-head .cs-spk { pointer-events: auto; }
+
+/* кат-сцена: люди входят в кадр со своей стороны (походкой — покачиваясь) */
+.cs-ch.in-l { animation: csInL .9s cubic-bezier(.25, .8, .35, 1) both; }
+.cs-ch.in-r { animation: csInR .9s cubic-bezier(.25, .8, .35, 1) both; }
+@keyframes csInL { 0% { transform: translateX(-140%); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateX(-50%); } }
+@keyframes csInR { 0% { transform: translateX(40%); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateX(-50%); } }
+.cs-ch.in-l .ci, .cs-ch.in-r .ci { animation: ciStep .3s ease-in-out 3, ciIdle 4.2s ease-in-out .9s infinite; }
+@keyframes ciStep { 0%, 100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(1.6deg) translateY(-3px); } 75% { transform: rotate(-1.6deg) translateY(-3px); } }
+/* 23.11 (владелец: «человек всё говорит сам»): с микрофоном слова под картинками скрыты — вспомни и скажи; нажал — слово видно и звучит */
+.q2-trays.quiet .q2-tray:not(.open):not(.used) .q2-tray-he { visibility: hidden; }
+.q2-hintbtn { display: block; margin: 8px auto 0; background: #fff4c2; color: #8a6200; border: 0; border-radius: 999px; padding: 8px 16px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
