@@ -116,9 +116,33 @@
         data.newCount = n;
       }
       else if (k >= 3) data.exercises = buildExercises(data, k - 2);
+      // 23.11 (отзыв тестера): в части 3 (задания из файла) тоже не гоняем слова «Запомнил» — если заданий останется хоть 4
+      if (k === 2) {
+        const keep = data.exercises.filter(e => e.word == null || !isKnown(data.words[e.word]));
+        if (keep.filter(e => e.word != null).length >= 4) data.exercises = keep;
+      }
+      // слова «🔁 Повторить» из прошлых уроков переезжают сюда: до 3 штук, по заданию на каждое (вперемешку)
+      if (window.WordMarks && WordMarks.repeatFor) {
+        WordMarks.repeatFor(data.words, 3).forEach((v, j) => {
+          data.words.push({ he: v.he, tr: v.tr, ru: v.ru, audio: v.audio });
+          const at = Math.min(data.exercises.length, 1 + j * 3);
+          data.exercises.splice(at, 0, { type: j % 2 ? "listen" : "choose_translation", word: data.words.length - 1 });
+        });
+      }
       data.part = k; data.partsTotal = total;
       startLesson(data);
     }).catch(() => startLesson(id));                              // нет файла / нет сети — как раньше
+  };
+
+  // 23.11: все новые слова урока отмечены «Запомнил» (окно после части) — засчитать урок целиком. true — если засчитали сейчас.
+  window.partsSkipIfKnown = function (lessonData) {
+    if (!lessonData || !lessonData.partsTotal || !(lessonData.part >= 1) || !window.WordMarks) return false;
+    const id = lessonData.id, total = lessonData.partsTotal;
+    if (partsDoneOf(id, total) >= total) return false;
+    const fresh = lessonData.words.slice(0, lessonData.newCount || lessonData.words.length);
+    if (!fresh.length || !fresh.every(w => WordMarks.known(w))) return false;
+    setPartsDone(id, total); markDone(id);
+    return true;
   };
 
   // Вызывается из showFinish (app.js) вместо markDone/markPerfect для уроков с частями.
@@ -127,6 +151,11 @@
     const id = lessonData.id, k = lessonData.part, total = lessonData.partsTotal;
     const before = partsDoneOf(id, total);
     if (k + 1 > before) setPartsDone(id, k + 1);
+    // 23.11 (отзыв тестера): после знакомства (части 1–2) все новые слова урока отмечены «Запомнил» — остальные части не нужны
+    if (k >= 1 && window.WordMarks) {
+      const fresh = lessonData.words.slice(0, lessonData.newCount || lessonData.words.length);
+      if (fresh.length && fresh.every(w => WordMarks.known(w))) setPartsDone(id, total);
+    }
     const allGold = perfect ? markPartGold(id, k, total) : false;
     const nowDone = partsDoneOf(id, total) >= total;
     if (nowDone) markDone(id);

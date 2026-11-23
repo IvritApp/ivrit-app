@@ -1106,6 +1106,7 @@ function showFinish() {
   screen.classList.add("slide-in");
   const finNext = document.getElementById("finNext"), finAgain = document.getElementById("finAgain");
   const lid = lesson.id, lpart = lesson.part, lpractice = !!lesson.practice, lexam = String(lesson.id).startsWith("exam-");
+  const finLesson = lesson;                                           // для окна «Какие слова запомнил?» после праздника
   if (finNext) finNext.onclick = () => startLessonPart(lid, pr.next);
   // ещё раз: часть урока — та же часть; экзамен — собрать заново; обычный урок — по файлу
   if (finAgain) finAgain.onclick = () => isPart ? startLessonPart(lid, lpart)
@@ -1120,6 +1121,8 @@ function showFinish() {
     if (fb) { const m = HAnim.mascot(fb, "idle", { size: 120 }); setTimeout(() => { if (fb.isConnected) m.set("happy", { size: 120 }); }, 2300); }
     HAnim.play("lessonEnd", { cards: false, title: String(lesson.id).startsWith("exam-") ? lesson.title + " сдан!" : partTitle || (pr.gold ? "Идеальный урок!" : "Урок пройден!") })
       .then(() => perfect ? HAnim.play("perfect", { xp: lessonPoints / 2, onPeak: () => playSound("combo") }) : null)
+      // 23.11 (отзыв тестера: блок внизу незаметен) — «Какие слова ты запомнил?» отдельным окном сразу после праздника
+      .then(() => window.WordMarks && WordMarks.askSheet ? WordMarks.askSheet(finLesson) : null)
       .then(() => { window.streakHold = false; return window.streakShow ? streakShow() : null; })
       .catch(() => { window.streakHold = false; });
   }

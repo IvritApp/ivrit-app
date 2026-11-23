@@ -95,6 +95,37 @@
     };
   }
 
+  // 23.11 (отзыв тестера: блок внизу итога незаметен) — то же самое отдельным окном поверх итога; «Готово» закрывает.
+  // Возвращает Promise — app.js показывает экран серии только после него.
+  function askSheet(l) {
+    return new Promise(res => {
+      if (!l || String(l.id).startsWith("exam-") || !lessonWords(l).length) return res();
+      const w = document.createElement("div");
+      w.className = "wm-sheet";
+      w.innerHTML = `<div class="wm-sheet-card"><div class="wm" id="wmSheetBox"></div><button class="btn blue" id="wmSheetOk">Готово</button></div>`;
+      document.body.appendChild(w);
+      finishBox(l, w.querySelector("#wmSheetBox"));
+      requestAnimationFrame(() => w.classList.add("show"));
+      w.querySelector("#wmSheetOk").onclick = () => {
+        w.classList.remove("show"); setTimeout(() => w.remove(), 250);
+        const inline = document.getElementById("wmBox");             // блок в итоге — показать выбранное
+        if (inline && !inline.hidden) finishBox(l, inline);
+        // все слова урока уже «Запомнил» — оставшиеся части не нужны, урок засчитан
+        if (window.partsSkipIfKnown && partsSkipIfKnown(l)) {
+          if (typeof showToast === "function") showToast("Все слова урока запомнены — урок пройден! 🎉");
+          const nx = document.getElementById("finNext");
+          if (nx) { nx.textContent = "Дальше"; nx.onclick = () => showPath(); }
+        }
+        res();
+      };
+    });
+  }
+  // слова «🔁 Повторить» из ДРУГИХ уроков — их parts.js подмешивает в следующие уроки (не больше n)
+  function repeatFor(words, n) {
+    const have = new Set((words || []).map(w => norm(w.he)));
+    return repeatList().filter(v => !have.has(norm(v.he))).slice(-(n || 3));
+  }
+
   // ---------- 3) занятие «🔁 Повтори слова» ----------
   function startRepeat() {
     const ws = repeatList().slice(-12);
@@ -123,7 +154,7 @@
     return n ? `<button class="p-soon p-repeat" id="p-repeat"><b>🔁 Повтори слова</b><span>${n}</span></button>` : "";
   }
 
-  window.WordMarks = { get, set, known, repeat, repeatList, finishBox, startRepeat, pathHTML, norm };
+  window.WordMarks = { get, set, known, repeat, repeatList, finishBox, startRepeat, pathHTML, norm, askSheet, repeatFor };
   wrapCard();
   window.addEventListener("DOMContentLoaded", wrapCard);
 })();

@@ -7,11 +7,23 @@
 // Типы шагов: choice (продавец спрашивает → один из ответов, ответ может положить картинку на доску: "put"),
 //             fill (игрок сам называет начинку, сколько хочет, потом «זֶה הַכּוֹל»), wrap (шаурма заворачивается),
 //             pay (продавец называет цену → «вот, спасибо» + нажать на купюру).
-// Пока виден только тестировщику (кнопка «🧪 Новая шаурма» на дорожке) — до одобрения владельца.
+// Пока виден только тестировщику (кнопка «🧪 Новый квест» на дорожке, список Q2_READY) — до одобрения владельца.
+// 23.11: шаги могут менять фон ("bg"), говорящего ("who"), место доски ("board"), чистить доску ("clear");
+//        новые типы: ask (спроси хозяина — чек-лист ✓/✗, квартира), "receipt" у choice (счёт с лишней строкой, кафе), "ok": false у неверного ответа.
 // =====================================================
 (function () {
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  let Q = null, k = 0, token = 0, root = null, placed = [], points = 0, mistakes = 0;
+  let Q = null, k = 0, token = 0, root = null, placed = [], points = 0, mistakes = 0, curWho = "";
+  // сцена шага: фон ("bg": имя файла без .webp), кто говорит ("who"), где доска ("board": [left, top, right, bottom] в %)
+  function setScene(st) {
+    const sc = document.getElementById("q2Scene"), b = document.getElementById("q2Board");
+    if (!sc || !b) return;
+    if (st.bg) { const u = st.bg.includes("/") ? st.bg : pic(st.bg); if (sc.dataset.bg !== u) { sc.dataset.bg = u; sc.style.backgroundImage = `url('${u}')`; sc.classList.remove("swap"); void sc.offsetWidth; sc.classList.add("swap"); } }
+    if (st.who) curWho = st.who;
+    const z = st.board || Q.board;
+    if (z) { b.style.left = z[0] + "%"; b.style.top = z[1] + "%"; b.style.right = z[2] + "%"; b.style.bottom = z[3] + "%"; }
+    if (st.clear) { b.innerHTML = ""; }
+  }
   // жив ли ещё этот шаг: не начат новый шаг, экран квеста не закрыт («✕», «Назад» Telegram, «Дальше»)
   const alive = (t) => t === token && root && root.isConnected && !document.getElementById("quest").hidden;
   // остановить микрофон и голос (при выходе и перед тем, как слушать игрока — иначе микрофон слышит продавца)
@@ -78,7 +90,7 @@
     const box = document.getElementById("q2Say");
     if (!box || !line) return;
     box.hidden = false;
-    box.innerHTML = `<div class="q2-who">${esc(Q.seller)}</div><div class="q2-he" dir="rtl">${esc(he(line))}</div>
+    box.innerHTML = `<div class="q2-who">${esc(curWho || Q.seller)}</div><div class="q2-he" dir="rtl">${esc(he(line))}</div>
       <div class="q2-tr">${esc(tr(line))}</div><button class="q2-ru" type="button">перевод</button>`;
     box.classList.remove("in"); void box.offsetWidth; box.classList.add("in");
     const ru = box.querySelector(".q2-ru");
@@ -148,6 +160,9 @@
     if (!panel) return;
     panel.innerHTML = "";
     if (!st) { finish(t); return; }
+    setScene(st);
+    if (st.type === "ask") return renderAsk(st, panel, t);
+    if (st.receipt) showReceipt(st);
     if (st.type === "wrap") {
       sellerSays(st.seller);
       setTimeout(() => {
@@ -163,12 +178,14 @@
     if (st.seller) sellerSays(st.seller);
     if (st.type === "fill") return renderFill(st, panel, t);
     // choice / pay
-    panel.innerHTML = `<div class="q2-task">${esc(st.hint || (st.type === "pay" ? "Заплати и скажи «вот, спасибо»" : "Ответь продавцу"))}</div><div class="q2-hint" id="q2Hint"></div><div class="q2-chips" id="q2Chips"></div>`;
+    panel.innerHTML = `<div class="q2-task">${esc(g(st.hint || (st.type === "pay" ? "Заплати и поблагодари" : "Ответь")))}</div><div class="q2-hint" id="q2Hint"></div><div class="q2-chips" id="q2Chips"></div>`;
     const chips = panel.querySelector("#q2Chips");
-    let paid = st.type !== "pay" || placed.includes("bill50");          // уже платил (шаг перерисован) — второй купюры не будет
+    const payId = st.payWith || "bill50";                              // чем платить: купюра (шаурма) или карта (кафе)
+    let paid = st.type !== "pay" || placed.includes(payId);          // уже платил (шаг перерисован) — второй купюры не будет
     const done = (ans) => {
       if (!alive(t)) return;
-      if (!paid) { hint("Ещё дай деньги — нажми на купюру 💵", true); return; }
+      if (ans.ok === false) { mistakes++; hint(g(ans.why || "Не совсем — подумай ещё 🙂"), true); return; }
+      if (!paid) { hint("Сначала заплати — нажми на " + (payId === "bill50" ? "купюру 💵" : "карту 💳"), true); return; }
       points += 10;
       if (ans.put) put(ans.put, ans.put === "lafa" || ans.put === "pita");
       panel.querySelectorAll("button").forEach(b => b.disabled = true);
@@ -178,18 +195,18 @@
     if (st.type === "pay") {
       const bill = document.createElement("button");
       bill.className = "q2-bill"; bill.type = "button";
-      bill.innerHTML = `<img src="${pic("bill50")}" alt="50 шекелей">`;
+      bill.innerHTML = `<img src="${pic(payId)}" alt="оплата">`;
       if (paid) bill.classList.add("gone");
       bill.onclick = () => {
         if (paid) return; paid = true; bill.classList.add("gone");
         const b = document.getElementById("q2Board"); const el = document.createElement("img");
-        el.src = pic("bill50"); el.className = "q2-piece q2-money"; b.appendChild(el); placed.push("bill50");
+        el.src = pic(payId); el.className = "q2-piece q2-money"; b.appendChild(el); placed.push(payId);
         if (typeof playSound === "function") playSound("right");
-        hint(micOK() ? "Теперь скажи: «вот, спасибо» 🎤" : "Теперь скажи «вот, спасибо» — нажми фразу");
+        hint(micOK() ? "Теперь скажи фразу 🎤" : "Теперь нажми на фразу");
       };
       chips.before(bill);
     }
-    st.answers.forEach(ans => {
+    st.answers.map(fillAns).forEach(ans => {
       const c = document.createElement("button");
       c.className = "q2-chip"; c.type = "button";
       c.innerHTML = `<b dir="rtl">${esc(he(ans))}</b><span>${esc(tr(ans))} · ${esc(g(ans.ru))}</span>`;
@@ -198,7 +215,7 @@
     });
     if (micOK()) {
       panel.appendChild(micBtn("Нажми и скажи", alts => {
-        const hits = st.answers.filter(a => matches(alts, a));
+        const hits = st.answers.map(fillAns).filter(a => matches(alts, a));
         if (hits.length === 1) done(hits[0]);
         else if (hits.length > 1) hint("Скажи только один вариант 🙂", true);
         else { mistakes++; hint(`Я услышал «${alts[0] || "…"}». Нажми на фразу — послушай — и скажи ещё раз`, true); }
@@ -210,8 +227,8 @@
   // свободный выбор начинки: лотки внизу, называешь сколько хочешь, потом «זֶה הַכּוֹל»
   function renderFill(st, panel, t) {
     const chosen = new Set(st.items.filter(it => placed.includes(it.id)).map(it => it.id));   // шаг перерисован — то, что уже лежит, не пропадает
-    panel.innerHTML = `<div class="q2-task">Скажи, что положить. Можно несколько сразу! Потом скажи <bdi dir="rtl">${esc(he(st.done))}</bdi> (это всё)</div>
-      <div class="q2-hint" id="q2Hint">Не знаешь слово — нажми на лоток 👇</div>
+    panel.innerHTML = `<div class="q2-task">${esc(g(st.task || "Скажи, что положить. Можно несколько сразу!"))} Потом скажи <bdi dir="rtl">${esc(he(st.done))}</bdi> (это всё)</div>
+      <div class="q2-hint" id="q2Hint">${esc(st.trayHint || "Не знаешь слово — нажми на лоток 👇")}</div>
       <div class="q2-trays" id="q2Trays">${st.items.map(it => `<button class="q2-tray" type="button" data-id="${it.id}"><img src="${pic(it.id)}" alt=""><span class="q2-tray-he" dir="rtl">${esc(he(it))}</span></button>`).join("")}</div>
       <div class="q2-row" id="q2Row"></div>`;
     const trays = panel.querySelector("#q2Trays"), row = panel.querySelector("#q2Row");
@@ -244,7 +261,7 @@
     doneChip.onclick = () => { speak(he(st.done)); if (!micOK()) finishFill(); };
     row.appendChild(doneChip);
     if (micOK()) {
-      row.appendChild(micBtn("Скажи начинку", alts => {
+      row.appendChild(micBtn(st.micLabel || "Скажи начинку", alts => {
         // сначала кладём всё названное («בצל וחסה, זה הכל» — и лук, и латук), потом смотрим, сказал ли «это всё»
         const got = namedItems(alts, st.items).filter(add);
         if (matches(alts, st.done)) { if (finishFill()) return; if (!got.length) return; }
@@ -253,6 +270,77 @@
       }));
       noSpeakLink(panel);
     }
+  }
+
+  // ---------- «СПРОСИ И УЗНАЙ» (квартира): игрок задаёт вопросы, хозяин отвечает, в чек-листе ✓ или ✗ ----------
+  // st.items: [{id, q:{he,tr,ru}, a:{he,tr,ru}, yes: true|false, put: "картинка", word: {he,tr,ru}}], st.min — сколько спросить
+  let asked = new Set();
+  function renderAsk(st, panel, t) {
+    if (st.seller) sellerSays(st.seller);
+    const list = () => st.items.map(it => {
+      const on = asked.has(it.id);
+      return `<button class="q2-ask${on ? " done " + (it.yes ? "yes" : "no") : ""}" type="button" data-id="${it.id}">
+        <span class="q2-ask-mark">${on ? (it.yes ? "✓" : "✗") : "?"}</span>
+        <span class="q2-ask-t"><b dir="rtl">${esc(he(it.q))}</b><small>${esc(tr(it.q))} · ${esc(g(it.q.ru))}</small>${on ? `<em>${esc(g(it.a.ru))}</em>` : ""}</span></button>`;
+    }).join("");
+    const need = Math.min(st.min || st.items.length, st.items.length);
+    const left = () => Math.max(0, need - st.items.filter(it => asked.has(it.id)).length);
+    panel.innerHTML = `<div class="q2-task">${esc(g(st.task || "Спроси хозяина"))}</div><div class="q2-hint" id="q2Hint">${left() ? `Задай ещё ${left()} ${left() === 1 ? "вопрос" : left() < 5 ? "вопроса" : "вопросов"}` : ""}</div>
+      <div class="q2-asks" id="q2Asks">${list()}</div><div class="q2-row" id="q2Row"></div>`;
+    const box = panel.querySelector("#q2Asks"), row = panel.querySelector("#q2Row");
+    root.classList.add("q2-filling");
+    const nextBtn = () => {
+      if (left() || row.querySelector(".q2-next")) return;
+      const b = document.createElement("button"); b.className = "btn blue q2-next"; b.type = "button"; b.textContent = "Дальше";
+      b.onclick = () => { if (!alive(t)) return; root.classList.remove("q2-filling"); k++; render(); };
+      row.prepend(b);
+    };
+    const ask = (it) => {
+      if (!it || asked.has(it.id)) return;
+      asked.add(it.id); points += 5;
+      hush();
+      setTimeout(() => { if (!alive(t)) return;
+        sellerSays(it.a);
+        if (it.put) put(it.put, false);
+        box.innerHTML = list(); bind();
+        const l = left(); hint(l ? `Ещё ${l}` : "Можно спросить ещё или нажать «Дальше»");
+        nextBtn();
+      }, 350);
+    };
+    const bind = () => box.querySelectorAll(".q2-ask").forEach(b => b.onclick = () => {
+      const it = st.items.find(x => x.id === b.dataset.id);
+      if (asked.has(it.id)) { speak(he(it.a)); return; }
+      speak(he(it.q));
+      if (!micOK()) ask(it); else hint(`Скажи: ${he(it.q)} 🎤`);
+    });
+    bind(); nextBtn();
+    if (micOK()) {
+      row.appendChild(micBtn(st.micLabel || "Спроси", alts => {
+        const hit = st.items.filter(it => !asked.has(it.id) && matches(alts, it.q));
+        if (hit.length) ask(hit[0]);
+        else { mistakes++; hint(`Я услышал «${alts[0] || "…"}». Нажми на вопрос — послушай — и спроси`, true); }
+      }));
+      noSpeakLink(panel);
+    }
+  }
+
+  // ---------- ЧЕК (кафе): на доске бумажный счёт; в нём лишняя строка — то, что игрок НЕ заказывал ----------
+  // st.receipt: { from: [id шага fill…], extra: [{id, he, tr, ru, price}], prices: {id: цена} }
+  let receiptExtra = null;
+  function showReceipt(st) {
+    const R = st.receipt, b = document.getElementById("q2Board");
+    const ordered = Q.steps.filter(s => s.type === "fill").flatMap(s => s.items).filter(it => placed.includes(it.id));
+    if (!receiptExtra) { const pool = (R.extra || []).filter(x => !placed.includes(x.id)); receiptExtra = pool[Math.floor(Math.random() * pool.length)] || null; }
+    const lines = ordered.map(it => ({ it, p: (R.prices || {})[it.id] || 20 }));
+    if (receiptExtra) lines.splice(Math.floor(Math.random() * (lines.length + 1)), 0, { it: receiptExtra, p: receiptExtra.price || 30 });
+    const sum = lines.reduce((s, l) => s + l.p, 0);
+    b.innerHTML = `<div class="q2-receipt"><div class="q2-rc-h" dir="rtl">חֶשְׁבּוֹן</div>${lines.map(l =>
+      `<div class="q2-rc-l"><b dir="rtl">${esc(he(l.it))}</b><span>${l.p} ₪</span></div>`).join("")}<div class="q2-rc-s"><b dir="rtl">סַךְ הַכּוֹל</b><span>${sum} ₪</span></div></div>`;
+  }
+  // ответ с подстановкой: "{X}" — лишнее блюдо из чека
+  function fillAns(a) {
+    if (!receiptExtra || !/\{X\}/.test(a.he || "")) return a;
+    return Object.assign({}, a, { he: a.he.replace("{X}", receiptExtra.he), tr: (a.tr || "").replace("{X}", receiptExtra.tr || ""), ru: (a.ru || "").replace("{X}", receiptExtra.ru || "") });
   }
 
   function finish(t) {
@@ -265,24 +353,25 @@
     if (typeof quest !== "undefined" && quest) quest._ended = true;
     store.set("quest2_" + Q.id, true);
     const panel = document.getElementById("q2Panel");
-    const words = Q.steps.flatMap(s => s.type === "fill" ? s.items.filter(it => placed.includes(it.id)) : []);
+    const words = Q.steps.flatMap(s => s.type === "fill" ? s.items.filter(it => placed.includes(it.id)) : s.type === "ask" ? s.items.filter(it => asked.has(it.id) && it.word).map(it => it.word) : []);
     panel.innerHTML = `<div class="q2-end">
-      <h2>${perfect ? "Без единой ошибки! ⭐" : "Шаурма твоя! 🌯"}</h2>
+      <h2>${perfect ? "Без единой ошибки! ⭐" : esc(Q.finishTitle || "Шаурма твоя! 🌯")}</h2>
       <div class="q2-pts">+${pts} очков</div>
       ${words.length ? `<div class="q2-words">${words.map(w => `<button class="q2-word" type="button" data-he="${esc(he(w))}"><b dir="rtl">${esc(he(w))}</b><span>${esc(g(w.ru))}</span></button>`).join("")}</div>` : ""}
       <button class="btn blue" id="q2Fin">Дальше</button></div>`;
     panel.querySelectorAll(".q2-word").forEach(b => b.onclick = () => speak(b.dataset.he));
     document.getElementById("q2Fin").onclick = leave;
-    if (window.HAnim) HAnim.play("lessonEnd", { cards: false, title: "Шаурма твоя!" })
+    if (window.HAnim) HAnim.play("lessonEnd", { cards: false, title: Q.finishTitle || "Шаурма твоя!" })
       .then(() => { window.streakHold = false; return window.streakShow ? streakShow() : null; })
       .catch(() => { window.streakHold = false; });
     if (typeof playSound === "function") setTimeout(() => playSound("finish"), 300);
   }
 
+  window.Q2_READY = ["shawarma", "dira", "cafe"];                // какие уровни уже имеют новый квест (content/he/quests2/<id>.json)
   window.q2Test = { matches, namedItems };                       // для проверки распознавания в консоли
   window.startQuest2 = function (id) {
     fetch(`content/${COURSE_LANG}/quests2/${id}.json`).then(r => r.json()).then(d => {
-      Q = d; k = 0; placed = []; points = 0; mistakes = 0;
+      Q = d; k = 0; placed = []; points = 0; mistakes = 0; curWho = ""; asked = new Set(); receiptExtra = null;
       quest = { id: d.id, _ended: false };                       // общая переменная из quest.js — для «Назад» и статистики (app.js)
       shell();
       if (window.track) track("quest_start", d.id);
