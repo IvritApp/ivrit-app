@@ -65,7 +65,7 @@
     const missed = l._missed || {};
     // слово с ошибкой — сразу «повторить» (игрок может передумать);
     // в «🔁 Повтори слова» слово без ошибки уходит из списка повторения (отметить снова можно кнопками ниже)
-    list.forEach(x => { if (missed[x.i]) { if (!repeat(x.w)) set(x.w, "r"); } else if (l.id === "repeat" && repeat(x.w)) set(x.w, ""); });
+    list.forEach(x => { if (missed[x.i]) { if (!repeat(x.w)) set(x.w, "r"); } else if ((l.id === "repeat" || x.w._rep) && repeat(x.w)) set(x.w, ""); });   // слово «Повторить», отвеченное без ошибки, уходит из повтора
     const row = (x) => {
       const m = get(x.w);
       return `<div class="wm-row" data-i="${x.i}">
@@ -100,9 +100,11 @@
   function askSheet(l) {
     return new Promise(res => {
       if (!l || String(l.id).startsWith("exam-") || !lessonWords(l).length) return res();
+      if (typeof lessonView !== "undefined" && lessonView.hidden) return res();   // уже ушли из урока («Назад» во время праздника)
       const w = document.createElement("div");
       w.className = "wm-sheet";
       w.innerHTML = `<div class="wm-sheet-card"><div class="wm" id="wmSheetBox"></div><button class="btn blue" id="wmSheetOk">Готово</button></div>`;
+      w._done = res;                                                   // «Назад» Telegram закрывает окно и отпускает экран серии (app.js)
       document.body.appendChild(w);
       finishBox(l, w.querySelector("#wmSheetBox"));
       requestAnimationFrame(() => w.classList.add("show"));

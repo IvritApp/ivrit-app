@@ -22,7 +22,7 @@
     if (st.who) curWho = st.who;
     const z = st.board || Q.board;
     if (z) { b.style.left = z[0] + "%"; b.style.top = z[1] + "%"; b.style.right = z[2] + "%"; b.style.bottom = z[3] + "%"; }
-    if (st.clear) { b.innerHTML = ""; }
+    if (st.clear && !st._cleared) { b.innerHTML = ""; st._cleared = true; }   // только при первом показе шага (перерисовка не стирает разложенное)
   }
   // жив ли ещё этот шаг: не начат новый шаг, экран квеста не закрыт («✕», «Назад» Telegram, «Дальше»)
   const alive = (t) => t === token && root && root.isConnected && !document.getElementById("quest").hidden;
@@ -75,11 +75,19 @@
       <div class="q2-top"><button class="q2-x" id="q2X" aria-label="Выйти">✕</button><div class="q2-bar"><i id="q2Bar"></i></div></div>
       <div class="q2-scene" id="q2Scene" style="background-image:url('${Q.bg}')">
         <div class="q2-say" id="q2Say" hidden></div>
+        <div class="q2-npc" id="q2Npc"></div>
         <div class="q2-board" id="q2Board"></div>
       </div>
       <div class="q2-panel" id="q2Panel"></div>
     </div>`;
     root = document.getElementById("q2");
+    document.getElementById("q2Scene").dataset.bg = Q.bg;              // первый фон уже стоит — не мигать
+    // человек в сцене (картинка Codex из chars.js): "npc": {id, right, bottom, h} в % от сцены
+    const n = Q.npc, box = document.getElementById("q2Npc");
+    if (n && window.HirbisChars && HirbisChars.has(n.id)) {
+      box.innerHTML = charImgHTML(n.id);
+      box.style.right = (n.right ?? 6) + "%"; box.style.bottom = (n.bottom ?? 24) + "%"; box.style.height = (n.h ?? 52) + "%";
+    } else box.remove();
     window.scrollTo(0, 0);
     document.getElementById("q2X").onclick = () => { if (window.track && !(quest && quest._ended)) track("quest_exit", Q.id); leave(); };
   }
@@ -97,6 +105,8 @@
     ru.onclick = () => { ru.textContent = g(line.ru); ru.classList.add("open"); };
     box.querySelector(".q2-he").onclick = () => speak(he(line));
     speak(he(line));
+    const npc = document.querySelector("#q2Npc .ci");                 // человек «говорит» (рот двигается)
+    if (npc) { npc.classList.add("talking"); clearTimeout(npc._tt); npc._tt = setTimeout(() => npc.classList.remove("talking"), 900 + he(line).length * 60); }
   }
 
   // положить картинку на доску: хлеб — большой в центре, остальное — горкой поверх, со «шлепком»
@@ -162,7 +172,8 @@
     if (!st) { finish(t); return; }
     setScene(st);
     if (st.type === "ask") return renderAsk(st, panel, t);
-    if (st.receipt) showReceipt(st);
+    if (st.receipt) { showReceipt(st); st.answers = receiptAnswers(st); }
+    else if (st.fixReceipt && receiptLines) showReceipt(Q.steps.find(s => s.receipt), true);
     if (st.type === "wrap") {
       sellerSays(st.seller);
       setTimeout(() => {
@@ -176,6 +187,7 @@
       return;
     }
     if (st.seller) sellerSays(st.seller);
+    else if (st.seller === null) { const sb = document.getElementById("q2Say"); if (sb) sb.hidden = true; }   // реплики нет — старое облачко убрать
     if (st.type === "fill") return renderFill(st, panel, t);
     // choice / pay
     panel.innerHTML = `<div class="q2-task">${esc(g(st.hint || (st.type === "pay" ? "Заплати и поблагодари" : "Ответь")))}</div><div class="q2-hint" id="q2Hint"></div><div class="q2-chips" id="q2Chips"></div>`;
@@ -281,31 +293,32 @@
       const on = asked.has(it.id);
       return `<button class="q2-ask${on ? " done " + (it.yes ? "yes" : "no") : ""}" type="button" data-id="${it.id}">
         <span class="q2-ask-mark">${on ? (it.yes ? "✓" : "✗") : "?"}</span>
-        <span class="q2-ask-t"><b dir="rtl">${esc(he(it.q))}</b><small>${esc(tr(it.q))} · ${esc(g(it.q.ru))}</small>${on ? `<em>${esc(g(it.a.ru))}</em>` : ""}</span></button>`;
+        <span class="q2-ask-t"><b dir="rtl">${esc(he(it.q))}</b><small>${esc(tr(it.q))} · ${esc(g(it.q.ru))}</small>${on ? `<em><bdi dir="rtl">${esc(he(it.a))}</bdi> — ${esc(g(it.a.ru))}</em>` : ""}</span></button>`;
     }).join("");
     const need = Math.min(st.min || st.items.length, st.items.length);
     const left = () => Math.max(0, need - st.items.filter(it => asked.has(it.id)).length);
     panel.innerHTML = `<div class="q2-task">${esc(g(st.task || "Спроси хозяина"))}</div><div class="q2-hint" id="q2Hint">${left() ? `Задай ещё ${left()} ${left() === 1 ? "вопрос" : left() < 5 ? "вопроса" : "вопросов"}` : ""}</div>
       <div class="q2-asks" id="q2Asks">${list()}</div><div class="q2-row" id="q2Row"></div>`;
     const box = panel.querySelector("#q2Asks"), row = panel.querySelector("#q2Row");
-    root.classList.add("q2-filling");
+    root.classList.add("q2-filling", "q2-asking");
     const nextBtn = () => {
       if (left() || row.querySelector(".q2-next")) return;
       const b = document.createElement("button"); b.className = "btn blue q2-next"; b.type = "button"; b.textContent = "Дальше";
-      b.onclick = () => { if (!alive(t)) return; root.classList.remove("q2-filling"); k++; render(); };
+      b.onclick = () => { if (!alive(t)) return; root.classList.remove("q2-filling", "q2-asking"); k++; render(); };
       row.prepend(b);
+      b.scrollIntoView && b.scrollIntoView({ block: "nearest", behavior: "smooth" });
     };
-    const ask = (it) => {
+    const ask = (it, byVoice) => {
       if (!it || asked.has(it.id)) return;
       asked.add(it.id); points += 5;
-      hush();
+      // голосом — ответ сразу; кнопкой — сначала прозвучит сам вопрос, потом ответ хозяина
       setTimeout(() => { if (!alive(t)) return;
         sellerSays(it.a);
         if (it.put) put(it.put, false);
         box.innerHTML = list(); bind();
         const l = left(); hint(l ? `Ещё ${l}` : "Можно спросить ещё или нажать «Дальше»");
         nextBtn();
-      }, 350);
+      }, byVoice ? 350 : 700 + he(it.q).length * 70);
     };
     const bind = () => box.querySelectorAll(".q2-ask").forEach(b => b.onclick = () => {
       const it = st.items.find(x => x.id === b.dataset.id);
@@ -314,10 +327,15 @@
       if (!micOK()) ask(it); else hint(`Скажи: ${he(it.q)} 🎤`);
     });
     bind(); nextBtn();
+    const b0 = document.getElementById("q2Board");
+    st.items.forEach(it => { if (asked.has(it.id) && it.put && b0 && !b0.querySelector(`img[src$="/${it.put}.webp"]`)) put(it.put, false); });
     if (micOK()) {
       row.appendChild(micBtn(st.micLabel || "Спроси", alts => {
-        const hit = st.items.filter(it => !asked.has(it.id) && matches(alts, it.q));
-        if (hit.length) ask(hit[0]);
+        // самый похожий из ещё не заданных вопросов (короткие «יש X?» похожи друг на друга)
+        const score = (it) => Math.max(...alts.map(a => heSim(a, he(it.q))), ...alts.map(a => heNorm(a).includes(heNorm(he(it.q))) ? 1 : 0));
+        const hit = st.items.filter(it => !asked.has(it.id) && matches(alts, it.q)).sort((x, y) => score(y) - score(x));
+        if (hit.length > 1 && score(hit[0]) === score(hit[1])) hint("Спроси что-то одно 🙂", true);
+        else if (hit.length) ask(hit[0], true);
         else { mistakes++; hint(`Я услышал «${alts[0] || "…"}». Нажми на вопрос — послушай — и спроси`, true); }
       }));
       noSpeakLink(panel);
@@ -326,16 +344,27 @@
 
   // ---------- ЧЕК (кафе): на доске бумажный счёт; в нём лишняя строка — то, что игрок НЕ заказывал ----------
   // st.receipt: { from: [id шага fill…], extra: [{id, he, tr, ru, price}], prices: {id: цена} }
-  let receiptExtra = null;
-  function showReceipt(st) {
+  let receiptExtra = null, receiptLines = null;
+  function showReceipt(st, fixed) {
     const R = st.receipt, b = document.getElementById("q2Board");
-    const ordered = Q.steps.filter(s => s.type === "fill").flatMap(s => s.items).filter(it => placed.includes(it.id));
-    if (!receiptExtra) { const pool = (R.extra || []).filter(x => !placed.includes(x.id)); receiptExtra = pool[Math.floor(Math.random() * pool.length)] || null; }
-    const lines = ordered.map(it => ({ it, p: (R.prices || {})[it.id] || 20 }));
-    if (receiptExtra) lines.splice(Math.floor(Math.random() * (lines.length + 1)), 0, { it: receiptExtra, p: receiptExtra.price || 30 });
+    if (!receiptLines) {                                                // строки и место лишней — один раз (перерисовка шага их не меняет)
+      const ordered = Q.steps.filter(s => s.type === "fill").flatMap(s => s.items).filter(it => placed.includes(it.id));
+      const pool = (R.extra || []).filter(x => !placed.includes(x.id)); receiptExtra = pool[Math.floor(Math.random() * pool.length)] || null;
+      receiptLines = ordered.map(it => ({ it, p: (R.prices || {})[it.id] || 20 }));
+      if (receiptExtra) receiptLines.splice(Math.floor(Math.random() * (receiptLines.length + 1)), 0, { it: receiptExtra, p: receiptExtra.price || 30, extra: true });
+    }
+    const lines = fixed ? receiptLines.filter(l => !l.extra) : receiptLines;   // fixed — официантка исправила счёт
     const sum = lines.reduce((s, l) => s + l.p, 0);
     b.innerHTML = `<div class="q2-receipt"><div class="q2-rc-h" dir="rtl">חֶשְׁבּוֹן</div>${lines.map(l =>
       `<div class="q2-rc-l"><b dir="rtl">${esc(he(l.it))}</b><span>${l.p} ₪</span></div>`).join("")}<div class="q2-rc-s"><b dir="rtl">סַךְ הַכּוֹל</b><span>${sum} ₪</span></div></div>`;
+  }
+  // ответы к чеку: «לא הזמנתי + строка» на КАЖДУЮ строку (верно — только лишняя) + ответы из файла без {X}
+  function receiptAnswers(st) {
+    const tpl = (st._origAnswers || st.answers).find(a => /\{X\}/.test(a.he || "")) || { he: "לֹא הִזְמַנְתִּי {X}.", tr: "ло хизманти {X}.", ru: "Я не заказывал(а): {X}" };
+    const rest = (st._origAnswers || (st._origAnswers = st.answers)).filter(a => !/\{X\}/.test(a.he || ""));
+    const per = receiptLines.map(l => Object.assign({}, tpl, { he: tpl.he.replace("{X}", l.it.he), tr: (tpl.tr || "").replace("{X}", l.it.tr || ""), ru: (tpl.ru || "").replace("{X}", l.it.ru || ""),
+      also: undefined, ok: l.extra ? undefined : false, why: l.extra ? undefined : "Это ты заказывал{m:}{f:а}! Посмотри на другую строку 🙂" }));
+    return per.concat(rest);
   }
   // ответ с подстановкой: "{X}" — лишнее блюдо из чека
   function fillAns(a) {
@@ -371,7 +400,7 @@
   window.q2Test = { matches, namedItems };                       // для проверки распознавания в консоли
   window.startQuest2 = function (id) {
     fetch(`content/${COURSE_LANG}/quests2/${id}.json`).then(r => r.json()).then(d => {
-      Q = d; k = 0; placed = []; points = 0; mistakes = 0; curWho = ""; asked = new Set(); receiptExtra = null;
+      Q = d; k = 0; placed = []; points = 0; mistakes = 0; curWho = ""; asked = new Set(); receiptExtra = null; receiptLines = null;
       quest = { id: d.id, _ended: false };                       // общая переменная из quest.js — для «Назад» и статистики (app.js)
       shell();
       if (window.track) track("quest_start", d.id);

@@ -438,6 +438,7 @@ if (tg && tg.BackButton) tg.BackButton.onClick(() => {
   if (!document.getElementById("alphabet").hidden && typeof window.alphabetBack === "function" && window.alphabetBack()) return;
   // открытые окна «Точно выйти?» / «Сердечки кончились» закрываем — иначе висят поверх дорожки (и выход посчитался бы дважды)
   ["exAsk", "hOut"].forEach(id => { const w = document.getElementById(id); if (w) w.remove(); });
+  document.querySelectorAll(".wm-sheet").forEach(w => { w.remove(); if (w._done) w._done(); });   // окно «Какие слова запомнил?»
   // статистика: «Назад» посреди урока/квеста — значит бросил (telemetry.js)
   if (window.track) {
     if (!lessonView.hidden && lesson && step < queue.length) track("lesson_exit", lessonTag(lesson));

@@ -124,8 +124,10 @@
       // слова «🔁 Повторить» из прошлых уроков переезжают сюда: до 3 штук, по заданию на каждое (вперемешку)
       if (window.WordMarks && WordMarks.repeatFor) {
         WordMarks.repeatFor(data.words, 3).forEach((v, j) => {
-          data.words.push({ he: v.he, tr: v.tr, ru: v.ru, audio: v.audio });
-          const at = Math.min(data.exercises.length, 1 + j * 3);
+          data.words.push({ he: v.he, tr: v.tr, ru: v.ru, audio: v.audio, _rep: true });
+          // в знакомстве (части 1–2) пара «карточка → задание» не рвётся: ставим перед «найди пары» в конце
+          const mp = data.exercises.findIndex(e => e.type === "match_pairs");
+          const at = k <= 1 ? (mp >= 0 ? mp : data.exercises.length) : Math.min(data.exercises.length, 1 + j * 3);
           data.exercises.splice(at, 0, { type: j % 2 ? "listen" : "choose_translation", word: data.words.length - 1 });
         });
       }
