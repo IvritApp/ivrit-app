@@ -8,6 +8,12 @@
  "seller": "{m:Рина, мама Давида}{f:Ирит, мама Цили}",
  "board": [10, 50, 10, 10],
  "npc": { "id": "{m:rina}{f:irit}", "right": 2, "bottom": 18, "h": 56 },
+ "npcAt": {
+  "bg_candles": { "hide": true },
+  "bg_sink": { "hide": true },
+  "bg_table": { "right": 41, "bottom": 40, "h": 26, "cut": 57 },
+  "bg_evening": { "right": 6, "bottom": 8, "h": 55 }
+ },
  "finishTitle": "Шабат шалом! 🕯️",
  "steps": [
   {

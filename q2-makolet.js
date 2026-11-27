@@ -152,7 +152,10 @@
     n.style.display = on ? "" : "none";
     if (on && pos) { n.style.right = pos.right + "%"; n.style.bottom = pos.bottom + "%"; n.style.height = pos.h + "%"; }
   }
-  const clearAisle = (sc) => ["view", "cart", "list"].forEach(c => own(sc, c).forEach(el => el.remove()));
+  const clearAisle = (sc) => {
+    ["view", "cart", "list"].forEach(c => own(sc, c).forEach(el => el.remove()));
+    const hd = document.getElementById("q2Head"); if (hd) own(hd, "list").forEach(el => el.remove());   // список — в плашке под облачком
+  };
   const clearBelt = (sc) => ["front", "belt"].forEach(c => own(sc, c).forEach(el => el.remove()));
   const anim = (el) => typeof el.animate === "function";
 
@@ -173,7 +176,7 @@
     const bgOf = (key) => api.pic(key === "c" ? st.bg : sides[key].bg);
     function makeView(key) {
       const v = document.createElement("div");
-      v.className = P + "view"; v.dataset.key = key;
+      v.className = P + "view" + (key !== "c" ? " q2-focus" : ""); v.dataset.key = key;   // полки — вся ширина в кадре (крайние товары не обрезаются)
       v.style.backgroundImage = `url('${bgOf(key)}')`;
       if (key !== "c") sides[key].items.forEach(it => {
         const g = G[it.id]; if (!g) return;
@@ -220,10 +223,12 @@
     const cartLow = (on) => cart.classList.toggle("low", on);           // смотришь на полки — тележка уходит вниз, видна горка
 
     // мамин список на бумажке
-    let list = own(sc, "list")[0];
+    // 27.11 (квест на весь экран): список — плашка под облачком (#q2Head), а не в углу сцены (там его закрывала шапка)
+    const hd = document.getElementById("q2Head");
+    let list = (hd && own(hd, "list")[0]) || own(sc, "list")[0];
     if (!list) {
       list = document.createElement("div"); list.className = P + "list in";
-      say && say.parentNode === sc ? sc.insertBefore(list, say) : sc.appendChild(list);
+      if (hd) hd.appendChild(list); else if (say && say.parentNode === sc) sc.insertBefore(list, say); else sc.appendChild(list);
       setTimeout(() => list.classList.remove("in"), 600);
     }
     const listMini = (on) => list.classList.toggle("mini", on);         // у полок список уменьшается — не закрывает товары

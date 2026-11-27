@@ -50,6 +50,11 @@
 .q2makolet-list.all { animation: q2makoletAll .7s ease; box-shadow: 0 0 0 3px #58cc02, 0 3px 0 rgba(0, 0, 0, .14); }
 @keyframes q2makoletListIn { from { transform: translateY(-120%) rotate(-8deg); } to { transform: rotate(-1.5deg); } }
 @keyframes q2makoletAll { 40% { transform: rotate(-1.5deg) scale(1.08); } }
+/* 27.11: в квесте на весь экран список — плашка под облачком (#q2Head); у полок становится компактнее (только строки) */
+.q2-head .q2makolet-list { position: relative; left: auto; top: auto; width: 66%; margin-top: 8px; pointer-events: auto; transform: rotate(-1.5deg); }
+.q2-head .q2makolet-list.mini { transform: rotate(-1.5deg); width: 56%; }
+.q2-head .q2makolet-list.mini .q2makolet-lh { display: none; }
+.q2-head .q2makolet-list.mini .q2makolet-row { font-size: 12px; }
 .q2makolet-lh { font-size: 11px; font-weight: 800; color: #9a7b3c; margin-bottom: 2px; }
 .q2makolet-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 6px; direction: rtl; }
 .q2makolet-row { display: flex; align-items: center; gap: 4px; min-width: 0; border: 0; background: none; padding: 1px 0; color: #222;

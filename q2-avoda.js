@@ -24,6 +24,7 @@
     const u = api.pic(name);
     if (sc.dataset.bg === u) return;
     sc.dataset.bg = u; sc.style.backgroundImage = `url('${u}')`;
+    if (api.root) api.root.dataset.bg = u;                             // для CSS вида .q2[data-bg*=…] (облачко теперь вне сцены)
     if (anim) { sc.classList.remove("swap"); void sc.offsetWidth; sc.classList.add("swap"); }
   }
   // кто проводит собеседование — свой человек у каждой работы (chars.js), стоит справа
@@ -59,7 +60,7 @@
     if (!S || !S.cvOn) return;
     const sc = api.scene(); if (!sc) return;
     let cv = sc.querySelector(".q2avoda-cv");
-    if (!cv) { cv = document.createElement("div"); cv.className = "q2avoda-cv"; sc.appendChild(cv); }
+    if (!cv) { cv = document.createElement("div"); cv.className = "q2avoda-cv q2-focus"; sc.appendChild(cv); }   // q2-focus — камера держит резюме на виду
     const r = S.job.cv || [3, 42, 49, 5];
     cv.style.left = r[0] + "%"; cv.style.top = r[1] + "%"; cv.style.right = r[2] + "%"; cv.style.bottom = r[3] + "%";
     const e = api.esc, f = S.flash;

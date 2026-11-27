@@ -204,7 +204,7 @@
       W.className = "q2shuk-world walk" + (state(api).turn ? " in-back" : "");
       W.onpointerdown = null;
       W.innerHTML = `<div class="q2shuk-mir${st.mirror ? " on" : ""}"><div class="q2shuk-bg" style="background-image:url('${api.pic(st.bg)}');transform-origin:${st.vx || 50}% ${st.vy || 55}%"></div></div>
-        <div class="q2shuk-sign ${st.target}" hidden><img src="${api.pic(st.sign)}" alt=""><b>${ARROW[st.target]}</b></div>`;
+        <div class="q2shuk-sign q2-focus ${st.target}" hidden><img src="${api.pic(st.sign)}" alt=""><b>${ARROW[st.target]}</b></div>`;
       L.cart.className = "q2shuk-cart";
     }
     W.classList.remove("walking", "peek-left", "peek-right", "peek-straight");
@@ -598,7 +598,7 @@
       W.className = "q2shuk-world walk in-back";
       W.onpointerdown = null;
       W.innerHTML = `<div class="q2shuk-mir"><div class="q2shuk-bg" style="background-image:url('${api.pic(st.bg)}')"></div></div>
-        <div class="q2shuk-wcard"><img src="${api.pic("wallet")}" alt=""><div class="q2shuk-cash">${cashHTML(money)}</div></div>`;
+        <div class="q2shuk-wcard q2-focus"><img src="${api.pic("wallet")}" alt=""><div class="q2shuk-cash">${cashHTML(money)}</div></div>`;
       L.cart.className = "q2shuk-cart";
     }
     // варианты: настоящий остаток и соседние десятки (только суммы, которые есть в JSON)

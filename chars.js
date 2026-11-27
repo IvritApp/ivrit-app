@@ -19,7 +19,7 @@
   // ХИБРИ СЮДА НЕ ДОБАВЛЯТЬ: он остаётся рисованным SVG из anim.js (решение владельца). Герои — когда нарисуют (CHARS[h] = A).
   const CHARS = { david: AB, tzila: AB };
   // 23.11: люди квестов (Codex, плоский стиль, лист A) — для новых квестов quest2.js ("npc" в content/he/quests2/*.json)
-  ["grocer", "driver", "neighbor", "waitress", "vendor", "doctor", "boss", "clerk", "landlord",
+  ["seller", "grocer", "driver", "neighbor", "waitress", "vendor", "doctor", "boss", "clerk", "landlord",
    "avi", "rina", "tova", "shlomo", "talia", "yosef", "irit", "batya", "moti", "igor"].concat(HEROES).forEach(id => { CHARS[id] = A; });   // + семьи Давида и Цили + 20 героев игрока
   const SIZE = { hibri: [600, 640] };                          // у остальных 360×768
   const ENABLED = true;

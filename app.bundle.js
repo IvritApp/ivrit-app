@@ -1,5 +1,5 @@
 /* Hirbis: склейка claude-docs/tools/bundle.ps1 — НЕ править здесь, правьте исходные файлы */
-window.APP_V = "202611232333"; window.ALPHABET_V = window.APP_V;
+window.APP_V = "202611272011"; window.ALPHABET_V = window.APP_V;
 
 /* ===== avatar.js ===== */
 try {
@@ -1857,7 +1857,7 @@ try {
   // ХИБРИ СЮДА НЕ ДОБАВЛЯТЬ: он остаётся рисованным SVG из anim.js (решение владельца). Герои — когда нарисуют (CHARS[h] = A).
   const CHARS = { david: AB, tzila: AB };
   // 23.11: люди квестов (Codex, плоский стиль, лист A) — для новых квестов quest2.js ("npc" в content/he/quests2/*.json)
-  ["grocer", "driver", "neighbor", "waitress", "vendor", "doctor", "boss", "clerk", "landlord",
+  ["seller", "grocer", "driver", "neighbor", "waitress", "vendor", "doctor", "boss", "clerk", "landlord",
    "avi", "rina", "tova", "shlomo", "talia", "yosef", "irit", "batya", "moti", "igor"].concat(HEROES).forEach(id => { CHARS[id] = A; });   // + семьи Давида и Цили + 20 героев игрока
   const SIZE = { hibri: [600, 640] };                          // у остальных 360×768
   const ENABLED = true;
@@ -6869,6 +6869,7 @@ function openQuestSection() {
   stopHomeBird();
   closeStage();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "quest");
+  document.getElementById("quest").classList.remove("q2-host");   // новый квест (quest2.js) поставит снова — старым квестам нужны обычные отступы
   if (tg && tg.BackButton) tg.BackButton.show();
 }
 function closeStage() {
@@ -7643,11 +7644,27 @@ try {
   function setScene(st) {
     const sc = document.getElementById("q2Scene"), b = document.getElementById("q2Board");
     if (!sc || !b) return;
-    if (st.bg) { const u = st.bg.includes("/") ? st.bg : pic(st.bg); if (sc.dataset.bg !== u) { sc.dataset.bg = u; sc.style.backgroundImage = `url('${u}')`; sc.classList.remove("swap"); void sc.offsetWidth; sc.classList.add("swap"); } }
+    if (st.bg) { const u = st.bg.includes("/") ? st.bg : pic(st.bg); if (sc.dataset.bg !== u) { sc.dataset.bg = u; if (root) root.dataset.bg = u; sc.style.backgroundImage = `url('${u}')`; sc.classList.remove("swap"); void sc.offsetWidth; sc.classList.add("swap"); } }
     if (st.who) curWho = st.who;
+    // где стоит человек: у шага может быть своё место ("npc": {right, bottom, h} — например, у дома он ниже и меньше, чем в комнате)
+    const nb = document.getElementById("q2Npc");
+    if (nb && Q.npc) placeNpc(nb, npcFor(st, sc.dataset.bg));
     const z = st.board || Q.board;
     if (z) { b.style.left = z[0] + "%"; b.style.top = z[1] + "%"; b.style.right = z[2] + "%"; b.style.bottom = z[3] + "%"; }
     if (st.clear && !st._cleared) { b.innerHTML = ""; st._cleared = true; if (st.base) put(st.base, true); }   // только при первом показе шага (перерисовка не стирает разложенное); "base" — подложка (тарелка)
+  }
+  // человек в сцене: right / bottom / h — в % от сцены; "cut" — линия прилавка (в % сверху): ниже неё человека не видно (стоит ЗА прилавком)
+  // место человека на шаге: общее "npc" квеста ← "npcAt" по фону (у стола, у двери…; "hide": true — на этом фоне его нет) ← "npc" шага
+  function npcFor(st, bgUrl) {
+    const key = String(bgUrl || "").split("/").pop().replace(/\.webp$/, "");
+    return Object.assign({}, Q.npc, (Q.npcAt || {})[key] || {}, (st && st.npc) || {});
+  }
+  function placeNpc(box, n) {
+    if (Q.npcAt || n.hide !== undefined) box.style.display = n.hide ? "none" : "";   // прятать/показывать — только у квестов, где это задано (магазин прячет сам)
+    const b = n.bottom ?? 24, h = n.h ?? 52;
+    box.style.right = (n.right ?? 6) + "%"; box.style.bottom = b + "%"; box.style.height = h + "%";
+    const clip = n.cut ? `inset(0 0 ${Math.max(0, (100 - b - n.cut) / h * 100).toFixed(1)}% 0)` : "";
+    box.style.clipPath = clip; box.style.webkitClipPath = clip; box.dataset.cut = n.cut || "";
   }
   // жив ли ещё этот шаг: не начат новый шаг, экран квеста не закрыт («✕», «Назад» Telegram, «Дальше»)
   const alive = (t) => t === token && root && root.isConnected && !document.getElementById("quest").hidden;
@@ -7658,7 +7675,7 @@ try {
     try { if (typeof ttsPlayer !== "undefined" && ttsPlayer) ttsPlayer.pause(); } catch (e) {}
     try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
   }
-  const leave = () => { hush(); token++; showPath(); };
+  const leave = () => { hush(); token++; if (ro) ro.disconnect(); if (mo) mo.disconnect(); showPath(); };
   const he = (x) => g(x.he), tr = (x) => g(x.tr || "");
   const pic = (id) => `${Q.img}${id}.webp`;
   const micOK = () => typeof canSpeakNow === "function" && canSpeakNow();
@@ -7694,26 +7711,119 @@ try {
   }
 
   // ---------- экран ----------
+  // 27.11 (владелец): КВЕСТ НА ВЕСЬ ЭКРАН. Сцена 2:3 накрывает весь экран (как cover), а шапка, облачко и панель ответа — плашки ПОВЕРХ.
+  // «Камера» (fit) подбирает размер и сдвиг сцены так, чтобы главное — человек и доска (или "focus" шага/квеста:
+  // [left, top, right, bottom] — отступы в % от сцены, как у "board") — было видно между облачком сверху и панелью снизу.
+  // Что держать в кадре (доли сцены 0…1): must — доска (если на шаге на неё кладут или на ней что-то есть) и всё с классом
+  // q2-focus (кошелёк шука, резюме, человек на остановке, карта маршрута); npc — человек целиком; head — только его голова.
+  const union = (a, b) => !a ? b : !b ? a : { l: Math.min(a.l, b.l), t: Math.min(a.t, b.t), r: Math.max(a.r, b.r), b: Math.max(a.b, b.b) };
+  function focusParts(sc) {
+    const st = Q && Q.steps[k], f = (st && st.focus) || (Q && Q.focus);
+    if (f) return { must: { l: f[0] / 100, t: f[1] / 100, r: 1 - f[2] / 100, b: 1 - f[3] / 100 }, npc: null, head: null };
+    const S = sc.getBoundingClientRect();
+    if (!S.width || !S.height) return { must: null, npc: null, head: null };
+    const rel = (el) => {                                              // место элемента в долях сцены (или null, если его не видно)
+      if (!el || !sc.contains(el) || !el.offsetWidth || !el.offsetHeight) return null;
+      const cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") return null;   // прозрачность не смотрим: человек «входит» из opacity 0 — камера должна ждать его на месте
+      const r = el.getBoundingClientRect();
+      return { l: Math.max(0, (r.left - S.left) / S.width), t: Math.max(0, (r.top - S.top) / S.height), r: Math.min(1, (r.right - S.left) / S.width), b: Math.min(1, (r.bottom - S.top) / S.height) };
+    };
+    const bd = document.getElementById("q2Board");
+    const boardMatters = bd && (bd.children.length || (st && (st.type === "fill" || st.type === "ask" || st.type === "pay" || st.receipt || (st.answers || []).some(a => a.put))));
+    let must = boardMatters ? rel(bd) : null;
+    sc.querySelectorAll(".q2-focus").forEach(el => { must = union(must, rel(el)); });
+    const nEl = document.getElementById("q2Npc"), full = rel(nEl);
+    if (!full) return { must, npc: null, head: null };
+    const head = { l: full.l, r: full.r, t: full.t, b: full.t + (full.b - full.t) * 0.3 };   // голова — верхние ~30% картинки человека
+    const npc = Object.assign({}, full);
+    if (nEl.dataset.cut) npc.b = Math.max(head.b, Math.min(npc.b, +nEl.dataset.cut / 100));  // человек за прилавком — ноги не в счёт
+    return { must, npc, head };
+  }
+  const PANEL_FADE = 12;                                              // верх панели — прозрачный градиент, сцену под ним видно
+  let lastCam = "";
+  function fit() {
+    const sc = document.getElementById("q2Scene");
+    if (!root || !root.isConnected || !sc) return;
+    const cw = root.clientWidth, ch = root.clientHeight;
+    if (!cw || !ch) return;
+    // 1) свободное место между верхними плашками (шапка, облачко, табло/список) и панелью ответа
+    const top = document.getElementById("q2Top"), head = document.getElementById("q2Head"), panel = document.getElementById("q2Panel");
+    let yTop = top ? top.offsetTop + top.offsetHeight : 0;
+    if (head && head.offsetHeight > 0) yTop = head.offsetTop + head.offsetHeight;
+    yTop += 6;
+    const yBot = panel && panel.offsetHeight ? ch - panel.offsetHeight + PANEL_FADE : ch;
+    const free = Math.max(60, yBot - yTop);
+    // 2) размер сцены: «cover» (накрывает весь экран); меньше — только если главное не влезает,
+    //    но по ширине всегда весь экран и низ картинки доходит до панели (без тёмной полосы)
+    const W0 = Math.max(cw, ch * 2 / 3);
+    const sizeFor = (f) => {
+      const want = Math.min(free / (1.5 * Math.max(0.05, f.b - f.t)), cw / Math.max(0.05, f.r - f.l));
+      return Math.min(W0, Math.max(cw, yBot / 1.5, want));
+    };
+    // 3) что держим в кадре: доска + человек целиком → доска + голова человека → только доска
+    const P = focusParts(sc);
+    const tries = [union(P.must, P.npc), union(P.must, P.head), P.must || P.head].filter(Boolean);
+    let f = null, W = W0, fits = false;
+    for (const c of tries) { f = c; W = sizeFor(c); fits = (c.b - c.t) * W * 1.5 <= free + 1; if (fits) break; }
+    const H = W * 1.5;
+    let x, y;
+    if (f) {
+      x = cw / 2 - (f.l + f.r) / 2 * W;
+      y = fits ? (yTop + yBot) / 2 - (f.t + f.b) / 2 * H              // влезает — по центру свободного места
+        : yTop - f.t * H;                                             // не влезает — видно верх главного, низ уходит под панель
+    } else { x = (cw - W) / 2; y = Math.min(0, (yTop + yBot) / 2 - H / 2); }   // главного нет — середина картинки посередине свободного места (без тёмной полосы сверху)
+    // 4) по бокам пустоты нет, низ картинки не выше панели; сверху картинка может чуть опуститься (до облачка):
+    //    тёмная полоса тогда за шапкой и облачком, зато лицо / чек / знак не прячутся под облачко
+    x = Math.min(0, Math.max(cw - W, x));
+    y = Math.min(Math.max(0, yTop - 50), Math.max(Math.min(0, yBot - H), y));
+    const cam = [W, H, x, y].map(v => Math.round(v * 10) / 10).join();
+    if (cam === lastCam && sc.style.width) return;                     // ничего не поменялось — не трогаем (иначе лишние перерисовки)
+    lastCam = cam;
+    sc.style.width = W + "px"; sc.style.height = H + "px"; sc.style.left = x + "px"; sc.style.top = y + "px";
+    if (!sc.classList.contains("q2-cam")) requestAnimationFrame(() => sc.classList.add("q2-cam"));   // первый раз — сразу, дальше камера едет плавно
+  }
+  let fitRaf = 0, fitLate = 0;
+  const refit = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fit); };
+  // человек появился / спрятался / переехал (у них плавный переход) — пересчитать сразу и ещё раз чуть позже
+  const refitSoon = () => { refit(); clearTimeout(fitLate); fitLate = setTimeout(refit, 450); };
+  let fitHooked = false, ro = null, mo = null;
+
   function shell() {
     openQuestSection();
+    document.getElementById("quest").classList.add("q2-host");         // секция без отступов и без «въезда» (иначе плашки прыгают)
     questView.innerHTML = `<div class="q2" id="q2">
-      <div class="q2-top"><button class="q2-x" id="q2X" aria-label="Выйти">✕</button><div class="q2-bar"><i id="q2Bar"></i></div></div>
       <div class="q2-scene" id="q2Scene" style="background-image:url('${Q.bg}')">
-        <div class="q2-say" id="q2Say" hidden></div>
         <div class="q2-npc" id="q2Npc"></div>
         <div class="q2-board" id="q2Board"></div>
       </div>
+      <div class="q2-top" id="q2Top"><button class="q2-x" id="q2X" aria-label="Выйти">✕</button><div class="q2-bar"><i id="q2Bar"></i></div></div>
+      <div class="q2-head" id="q2Head"><div class="q2-say" id="q2Say" hidden></div></div>
       <div class="q2-panel" id="q2Panel"></div>
     </div>`;
     root = document.getElementById("q2");
     document.getElementById("q2Scene").dataset.bg = Q.bg;              // первый фон уже стоит — не мигать
+    root.dataset.bg = Q.bg;
+    lastCam = "";
+    // панель и облачко меняют высоту → камера подстраивается
+    if (ro) ro.disconnect();
+    if (mo) mo.disconnect();
+    if (window.ResizeObserver) { ro = new ResizeObserver(refit); ["q2Panel", "q2Head"].forEach(id => ro.observe(document.getElementById(id))); ro.observe(root); }
+    // механики квестов добавляют/убирают людей и предметы в сцене, двигают человека → камера сама подстраивается
+    const sc0 = document.getElementById("q2Scene");
+    mo = new MutationObserver(list => {
+      if (list.some(m => m.type === "childList" ? !(m.target.closest && m.target.closest(".ci")) : m.target.matches && m.target.matches("#q2Npc, #q2Board, .q2-focus"))) refitSoon();
+    });
+    mo.observe(sc0, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    if (!fitHooked) { fitHooked = true; window.addEventListener("resize", refit); }
     // человек в сцене (картинка Codex из chars.js): "npc": {id, right, bottom, h} в % от сцены
     const n = Q.npc, box = document.getElementById("q2Npc"), nid = n ? g(n.id) : "";   // id может зависеть от пола: "{m:rina}{f:irit}"
     if (n && window.HirbisChars && HirbisChars.has(nid)) {
       box.innerHTML = charImgHTML(nid);
-      box.style.right = (n.right ?? 6) + "%"; box.style.bottom = (n.bottom ?? 24) + "%"; box.style.height = (n.h ?? 52) + "%";
+      placeNpc(box, npcFor(Q.steps[0], Q.bg));                        // на карточке цели человек уже там, где будет на 1-м шаге
     } else box.remove();
     window.scrollTo(0, 0);
+    fit();
     document.getElementById("q2X").onclick = () => { if (window.track && !(quest && quest._ended)) track("quest_exit", quest ? quest.id : Q.id); leave(); };
   }
   function progress() { const b = document.getElementById("q2Bar"); if (b) b.style.width = Math.round(k / Q.steps.length * 100) + "%"; }
@@ -7804,6 +7914,9 @@ try {
     const panel = document.getElementById("q2Panel");
     if (!panel) return;
     panel.innerHTML = "";
+    panel.scrollTop = 0;
+    // камера — когда шаг нарисован (и ещё раз, когда человек появился/спрятался: у них плавный переход)
+    setTimeout(() => { if (alive(t)) fit(); }, 0); setTimeout(() => { if (alive(t)) fit(); }, 450);
     if (!st) { finish(t); return; }
     setScene(st);
     // 23.11: СВОИ МЕХАНИКИ квестов — отдельные файлы q2-<квест>.js регистрируют тип шага: Q2_STEPS[type] = function (api) {…}
@@ -7918,6 +8031,7 @@ try {
       good: (pts) => { points += pts == null ? 10 : pts; npcAct("happy", 1400); },
       put: (id, big, upright) => put(id, big, upright), placed: () => placed.slice(),
       board: () => document.getElementById("q2Board"), scene: () => document.getElementById("q2Scene"),
+      fit: () => refitSoon(),                                    // человек/доска появились или спрятались — камера подстроится (обычно сама)
       hint, say: (line) => sellerSays(line), speak: (x) => speak(typeof x === "string" ? x : he(x)), hush,
       micOK, micBtn: (label, onAlts) => micBtn(label, onAlts), noSpeakLink: () => noSpeakLink(panel),
       matches, namedItems, heSim: (a, b) => heSim(a, b), heNorm: (a) => heNorm(a),
@@ -8092,7 +8206,7 @@ try {
     panel.innerHTML = `<div class="q2-end">
       <h2>${perfect ? "Без единой ошибки! ⭐" : esc(Q.finishTitle || "Шаурма твоя! 🌯")}</h2>
       ${where ? `<div class="q2-lvl">${gold ? `🏅 Уровень ${where.n} золотой!` : `✓ Уровень ${where.n} пройден`}</div>` : ""}
-      <div class="q2-pts">+${pts} очков</div>
+      <div class="q2-pts">+${pts} ${pts % 10 === 1 && pts % 100 !== 11 ? "очко" : [2, 3, 4].includes(pts % 10) && ![12, 13, 14].includes(pts % 100) ? "очка" : "очков"}</div>
       ${words.length ? `<div class="q2-words">${words.map(w => `<button class="q2-word" type="button" data-he="${esc(he(w))}"><b dir="rtl">${esc(he(w))}</b><span>${esc(g(w.ru))}</span></button>`).join("")}</div>` : ""}
       ${weak && lvl ? `<div class="q2-weak">Было трудно — это нормально! Я собрал${g("")} для тебя уроки повторения 🔁</div><button class="btn orange" id="q2Rev">🔁 Начать повторение</button>` : ""}
       <button class="btn blue" id="q2Fin">Дальше</button>
@@ -8111,7 +8225,7 @@ try {
 
   window.q2Hush = hush;                                            // «Назад» Telegram (app.js): заглушить голос и микрофон квеста
   window.Q2_READY = ["shawarma", "dira", "makolet", "bus", "shabbat", "cafe", "shuk", "rofe", "avoda"];                // какие уровни уже имеют новый квест (content/he/quests2/<id>.json)
-  window.q2Test = { matches, namedItems };                       // для проверки распознавания в консоли
+  window.q2Test = { matches, namedItems, go: (n) => { k = n; render(); }, steps: () => Q ? Q.steps.length : 0 };   // проверка распознавания и прыжок к шагу (снимки экранов)
   let qFile = "";                                                  // имя квеста уровня (course.json "quest"), напр. "shabbat"
   // 23.11: перед квестом — кат-сцена (cutscene.js), один раз; потом сам квест
   window.startQuest2 = function (id) {
@@ -8406,7 +8520,10 @@ try {
     n.style.display = on ? "" : "none";
     if (on && pos) { n.style.right = pos.right + "%"; n.style.bottom = pos.bottom + "%"; n.style.height = pos.h + "%"; }
   }
-  const clearAisle = (sc) => ["view", "cart", "list"].forEach(c => own(sc, c).forEach(el => el.remove()));
+  const clearAisle = (sc) => {
+    ["view", "cart", "list"].forEach(c => own(sc, c).forEach(el => el.remove()));
+    const hd = document.getElementById("q2Head"); if (hd) own(hd, "list").forEach(el => el.remove());   // список — в плашке под облачком
+  };
   const clearBelt = (sc) => ["front", "belt"].forEach(c => own(sc, c).forEach(el => el.remove()));
   const anim = (el) => typeof el.animate === "function";
 
@@ -8427,7 +8544,7 @@ try {
     const bgOf = (key) => api.pic(key === "c" ? st.bg : sides[key].bg);
     function makeView(key) {
       const v = document.createElement("div");
-      v.className = P + "view"; v.dataset.key = key;
+      v.className = P + "view" + (key !== "c" ? " q2-focus" : ""); v.dataset.key = key;   // полки — вся ширина в кадре (крайние товары не обрезаются)
       v.style.backgroundImage = `url('${bgOf(key)}')`;
       if (key !== "c") sides[key].items.forEach(it => {
         const g = G[it.id]; if (!g) return;
@@ -8474,10 +8591,12 @@ try {
     const cartLow = (on) => cart.classList.toggle("low", on);           // смотришь на полки — тележка уходит вниз, видна горка
 
     // мамин список на бумажке
-    let list = own(sc, "list")[0];
+    // 27.11 (квест на весь экран): список — плашка под облачком (#q2Head), а не в углу сцены (там его закрывала шапка)
+    const hd = document.getElementById("q2Head");
+    let list = (hd && own(hd, "list")[0]) || own(sc, "list")[0];
     if (!list) {
       list = document.createElement("div"); list.className = P + "list in";
-      say && say.parentNode === sc ? sc.insertBefore(list, say) : sc.appendChild(list);
+      if (hd) hd.appendChild(list); else if (say && say.parentNode === sc) sc.insertBefore(list, say); else sc.appendChild(list);
       setTimeout(() => list.classList.remove("in"), 600);
     }
     const listMini = (on) => list.classList.toggle("mini", on);         // у полок список уменьшается — не закрывает товары
@@ -8824,7 +8943,7 @@ try {
     if (!el || el.dataset.id !== id) {
       if (el) el.remove();
       el = document.createElement("div");
-      el.className = "q2bus-p"; el.dataset.id = id;
+      el.className = "q2bus-p q2-focus"; el.dataset.id = id;            // q2-focus — камера держит человека на виду
       el.innerHTML = charImgHTML(id);
       sc.appendChild(el);
     }
@@ -8859,6 +8978,7 @@ try {
     const sc = api.scene();
     if (!sc) return;
     sc.querySelectorAll(".q2bus-led, .q2bus-map, .q2bus-speed, .q2bus-ding").forEach(x => x.remove());
+    if (api.root) api.root.querySelectorAll(".q2bus-led").forEach(x => x.remove());   // табло — плашка под облачком (#q2Head)
     sc.classList.remove("q2bus-moving");
   }
 
@@ -8948,6 +9068,7 @@ try {
     st.bg = name;                                                     // a redraw (render → setScene) keeps this background
     if (!sc || sc.dataset.bg === u) return;
     sc.dataset.bg = u; sc.style.backgroundImage = `url('${u}')`;
+    if (api.root) api.root.dataset.bg = u;                             // для CSS вида .q2[data-bg*=…] (облачко теперь вне сцены)
     sc.classList.remove("swap"); void sc.offsetWidth; sc.classList.add("swap");
   }
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -8969,9 +9090,11 @@ try {
 
     // ---- overlays: speed streaks, LED board, route map (rebuilt from the state on every call)
     if (!sc.querySelector(".q2bus-speed")) { const s = document.createElement("div"); s.className = "q2bus-speed"; sc.appendChild(s); }
-    let led = sc.querySelector(".q2bus-led"), map = sc.querySelector(".q2bus-map");
-    if (!led) { led = document.createElement("button"); led.type = "button"; led.className = "q2bus-led"; led.setAttribute("aria-label", "Послушать табло"); sc.appendChild(led); }
-    if (!map) { map = document.createElement("div"); map.className = "q2bus-map"; sc.appendChild(map); }
+    // 27.11 (квест на весь экран): табло — плашка под облачком (не уезжает за край), карта маршрута — в сцене, камера держит её на виду
+    const hd = document.getElementById("q2Head") || sc;
+    let led = hd.querySelector(".q2bus-led"), map = sc.querySelector(".q2bus-map");
+    if (!led) { led = document.createElement("button"); led.type = "button"; led.className = "q2bus-led"; led.setAttribute("aria-label", "Послушать табло"); hd.appendChild(led); }
+    if (!map) { map = document.createElement("div"); map.className = "q2bus-map q2-focus"; sc.appendChild(map); }
     const N = R.length + 1;                                             // + one more circle after the centre: the bus goes on
     const pos = (k) => 90 - k * (80 / (N - 1));                         // right → left: the map reads like Hebrew
     const mid = pos(S.i - 1) + (pos(S.i) - pos(S.i - 1)) * 0.55;
@@ -9314,7 +9437,7 @@ try {
       W.className = "q2shuk-world walk" + (state(api).turn ? " in-back" : "");
       W.onpointerdown = null;
       W.innerHTML = `<div class="q2shuk-mir${st.mirror ? " on" : ""}"><div class="q2shuk-bg" style="background-image:url('${api.pic(st.bg)}');transform-origin:${st.vx || 50}% ${st.vy || 55}%"></div></div>
-        <div class="q2shuk-sign ${st.target}" hidden><img src="${api.pic(st.sign)}" alt=""><b>${ARROW[st.target]}</b></div>`;
+        <div class="q2shuk-sign q2-focus ${st.target}" hidden><img src="${api.pic(st.sign)}" alt=""><b>${ARROW[st.target]}</b></div>`;
       L.cart.className = "q2shuk-cart";
     }
     W.classList.remove("walking", "peek-left", "peek-right", "peek-straight");
@@ -9708,7 +9831,7 @@ try {
       W.className = "q2shuk-world walk in-back";
       W.onpointerdown = null;
       W.innerHTML = `<div class="q2shuk-mir"><div class="q2shuk-bg" style="background-image:url('${api.pic(st.bg)}')"></div></div>
-        <div class="q2shuk-wcard"><img src="${api.pic("wallet")}" alt=""><div class="q2shuk-cash">${cashHTML(money)}</div></div>`;
+        <div class="q2shuk-wcard q2-focus"><img src="${api.pic("wallet")}" alt=""><div class="q2shuk-cash">${cashHTML(money)}</div></div>`;
       L.cart.className = "q2shuk-cart";
     }
     // варианты: настоящий остаток и соседние десятки (только суммы, которые есть в JSON)
@@ -10337,6 +10460,7 @@ try {
     const u = api.pic(name);
     if (sc.dataset.bg === u) return;
     sc.dataset.bg = u; sc.style.backgroundImage = `url('${u}')`;
+    if (api.root) api.root.dataset.bg = u;                             // для CSS вида .q2[data-bg*=…] (облачко теперь вне сцены)
     if (anim) { sc.classList.remove("swap"); void sc.offsetWidth; sc.classList.add("swap"); }
   }
   // кто проводит собеседование — свой человек у каждой работы (chars.js), стоит справа
@@ -10372,7 +10496,7 @@ try {
     if (!S || !S.cvOn) return;
     const sc = api.scene(); if (!sc) return;
     let cv = sc.querySelector(".q2avoda-cv");
-    if (!cv) { cv = document.createElement("div"); cv.className = "q2avoda-cv"; sc.appendChild(cv); }
+    if (!cv) { cv = document.createElement("div"); cv.className = "q2avoda-cv q2-focus"; sc.appendChild(cv); }   // q2-focus — камера держит резюме на виду
     const r = S.job.cv || [3, 42, 49, 5];
     cv.style.left = r[0] + "%"; cv.style.top = r[1] + "%"; cv.style.right = r[2] + "%"; cv.style.bottom = r[3] + "%";
     const e = api.esc, f = S.flash;

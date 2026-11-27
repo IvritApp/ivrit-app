@@ -59,7 +59,7 @@
     if (!el || el.dataset.id !== id) {
       if (el) el.remove();
       el = document.createElement("div");
-      el.className = "q2bus-p"; el.dataset.id = id;
+      el.className = "q2bus-p q2-focus"; el.dataset.id = id;            // q2-focus — камера держит человека на виду
       el.innerHTML = charImgHTML(id);
       sc.appendChild(el);
     }
@@ -94,6 +94,7 @@
     const sc = api.scene();
     if (!sc) return;
     sc.querySelectorAll(".q2bus-led, .q2bus-map, .q2bus-speed, .q2bus-ding").forEach(x => x.remove());
+    if (api.root) api.root.querySelectorAll(".q2bus-led").forEach(x => x.remove());   // табло — плашка под облачком (#q2Head)
     sc.classList.remove("q2bus-moving");
   }
 
@@ -183,6 +184,7 @@
     st.bg = name;                                                     // a redraw (render → setScene) keeps this background
     if (!sc || sc.dataset.bg === u) return;
     sc.dataset.bg = u; sc.style.backgroundImage = `url('${u}')`;
+    if (api.root) api.root.dataset.bg = u;                             // для CSS вида .q2[data-bg*=…] (облачко теперь вне сцены)
     sc.classList.remove("swap"); void sc.offsetWidth; sc.classList.add("swap");
   }
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -204,9 +206,11 @@
 
     // ---- overlays: speed streaks, LED board, route map (rebuilt from the state on every call)
     if (!sc.querySelector(".q2bus-speed")) { const s = document.createElement("div"); s.className = "q2bus-speed"; sc.appendChild(s); }
-    let led = sc.querySelector(".q2bus-led"), map = sc.querySelector(".q2bus-map");
-    if (!led) { led = document.createElement("button"); led.type = "button"; led.className = "q2bus-led"; led.setAttribute("aria-label", "Послушать табло"); sc.appendChild(led); }
-    if (!map) { map = document.createElement("div"); map.className = "q2bus-map"; sc.appendChild(map); }
+    // 27.11 (квест на весь экран): табло — плашка под облачком (не уезжает за край), карта маршрута — в сцене, камера держит её на виду
+    const hd = document.getElementById("q2Head") || sc;
+    let led = hd.querySelector(".q2bus-led"), map = sc.querySelector(".q2bus-map");
+    if (!led) { led = document.createElement("button"); led.type = "button"; led.className = "q2bus-led"; led.setAttribute("aria-label", "Послушать табло"); hd.appendChild(led); }
+    if (!map) { map = document.createElement("div"); map.className = "q2bus-map q2-focus"; sc.appendChild(map); }
     const N = R.length + 1;                                             // + one more circle after the centre: the bus goes on
     const pos = (k) => 90 - k * (80 / (N - 1));                         // right → left: the map reads like Hebrew
     const mid = pos(S.i - 1) + (pos(S.i) - pos(S.i - 1)) * 0.55;

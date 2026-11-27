@@ -2,10 +2,10 @@
 /* предметы движка (мяч, календарь) в этом квесте крупнее */
 .q2-scene[data-bg*="quests/rofe/"] .q2-piece { width: 36%; }
 /* в кабинете врача облачко компактнее — манекен под ним виден целиком */
-.q2-scene[data-bg*="rofe/bg_exam"] .q2-say { padding: 7px 12px 6px; }
-.q2-scene[data-bg*="rofe/bg_exam"] .q2-he { font-size: 20px; }
-.q2-scene[data-bg*="rofe/bg_exam"] .q2-tr { font-size: 12px; }
-.q2-scene[data-bg*="rofe/bg_exam"] .q2-ru { font-size: 12px; padding: 2px 8px; margin-top: 2px; }
+.q2[data-bg*="rofe/bg_exam"] .q2-say { padding: 7px 12px 6px; }
+.q2[data-bg*="rofe/bg_exam"] .q2-he { font-size: 20px; }
+.q2[data-bg*="rofe/bg_exam"] .q2-tr { font-size: 12px; }
+.q2[data-bg*="rofe/bg_exam"] .q2-ru { font-size: 12px; padding: 2px 8px; margin-top: 2px; }
 
 /* панель */
 .q2rofe-chips { display: flex; flex-direction: column; gap: 8px; }

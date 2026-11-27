@@ -93,10 +93,10 @@
 /* полёт картинки от кнопки в резюме */
 .q2avoda-fly { position: fixed; z-index: 9000; pointer-events: none; object-fit: contain; transition: transform .6s cubic-bezier(.45, .05, .3, 1), opacity .6s ease-in; }
 /* сцена меньше (шаги со списком) — облачко компактнее, чтобы не закрывало резюме и человека */
-.q2.q2-filling .q2-scene[data-bg*="quests/avoda/"] .q2-say { padding: 6px 10px 5px; }
-.q2.q2-filling .q2-scene[data-bg*="quests/avoda/"] .q2-he { font-size: 19px; }
-.q2.q2-filling .q2-scene[data-bg*="quests/avoda/"] .q2-tr { font-size: 12px; }
-.q2.q2-filling .q2-scene[data-bg*="quests/avoda/"] .q2-ru { padding: 1px 8px; font-size: 12px; }
+.q2.q2-filling[data-bg*="quests/avoda/"] .q2-say { padding: 6px 10px 5px; }
+.q2.q2-filling[data-bg*="quests/avoda/"] .q2-he { font-size: 19px; }
+.q2.q2-filling[data-bg*="quests/avoda/"] .q2-tr { font-size: 12px; }
+.q2.q2-filling[data-bg*="quests/avoda/"] .q2-ru { padding: 1px 8px; font-size: 12px; }
 /* 23.11 (владелец: «человек всё говорит сам»): с микрофоном иврит под картинками скрыт — вспомни и скажи; нажал на картинку — слово видно и звучит */
 .q2avoda-tiles.quiet .q2avoda-tile:not(.open):not(.used) b { visibility: hidden; }
 .q2-panel .q2-hintbtn { margin-top: 2px; }

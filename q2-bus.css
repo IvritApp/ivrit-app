@@ -53,8 +53,10 @@
 @keyframes q2busDing { 0% { opacity: 0; transform: scale(.5); } 20% { opacity: 1; transform: scale(1.1); } 35% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(.95); } }
 
 /* панель: 🔔 или «еду дальше» */
-.q2bus-need { text-align: center; font-size: 14px; color: #6b7785; }
-.q2bus-need bdi { font-weight: 800; color: #222; }
+.q2bus-need { text-align: center; font-size: 14px; color: #c9d3de; }
+.q2bus-need bdi { font-weight: 800; color: #fff; }
+/* 27.11: квест на весь экран — табло живёт в плашке под облачком (#q2Head), а не в сцене */
+.q2-head .q2bus-led { position: relative; left: auto; right: auto; top: auto; display: block; width: 100%; margin-top: 8px; pointer-events: auto; }
 .q2bus-go { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .q2bus-bell, .q2bus-on { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 8px; border: 2px solid #dfe6ee; border-bottom-width: 4px;
   border-radius: 18px; background: #fff; color: #222; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }

@@ -42,6 +42,7 @@ function openQuestSection() {
   stopHomeBird();
   closeStage();
   document.querySelectorAll("body > section").forEach(sec => sec.hidden = sec.id !== "quest");
+  document.getElementById("quest").classList.remove("q2-host");   // новый квест (quest2.js) поставит снова — старым квестам нужны обычные отступы
   if (tg && tg.BackButton) tg.BackButton.show();
 }
 function closeStage() {
