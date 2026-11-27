@@ -101,10 +101,12 @@ if (tg) {
     document.documentElement.classList.toggle("tg-full", full);
   };
   const mobileTg = ["ios", "android"].includes(tg.platform);
+  // отступы под кнопки Telegram — на ЛЮБОЙ платформе (полный экран может включить и BotFather: «Mode: Fullscreen», владелец 27.11)
+  if (typeof tg.onEvent === "function") ["fullscreenChanged", "safeAreaChanged", "contentSafeAreaChanged", "viewportChanged"].forEach(ev => tg.onEvent(ev, tgInsets));
+  tgInsets();
+  // сами просим полный экран — только на телефоне
   if (mobileTg && typeof tg.isVersionAtLeast === "function" && tg.isVersionAtLeast("8.0") && typeof tg.requestFullscreen === "function") {
-    if (typeof tg.onEvent === "function") ["fullscreenChanged", "safeAreaChanged", "contentSafeAreaChanged", "viewportChanged"].forEach(ev => tg.onEvent(ev, tgInsets));
     try { if (!tg.isFullscreen) tg.requestFullscreen(); } catch (e) {}
-    tgInsets();
   }
   if (typeof tg.onEvent === "function") tg.onEvent("themeChanged", () => applySettings());
 }
