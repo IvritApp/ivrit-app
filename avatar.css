@@ -87,6 +87,9 @@
 /* говорит: рот открывается-закрывается */
 .talking .ci .ci-talk, .act-talk .ci .ci-talk, .ci.talking .ci-talk { animation: ciTalk .34s steps(1) infinite; }
 @keyframes ciTalk { 0% { opacity: 1; } 50% { opacity: 0; } }
+/* 27.11: губы по звуку (lipsync.js) — пока играет озвучка, рот открыт только на громких местах (класс lip-open), без ровного мигания */
+.ci.lip-on .ci-talk { animation: none !important; opacity: 0; transition: none !important; }   /* без плавного перехода — иначе рот «мыльный» */
+.ci.lip-on.lip-open .ci-talk { opacity: 1; }
 /* радуется / «ой» — свой кадр, остальные прячем */
 .act-cheer .ci .ci-f, .ci.ci-happy .ci-f, .act-oops .ci .ci-f, .ci.ci-oops .ci-f { opacity: 0 !important; animation: none !important; }
 .act-cheer .ci .ci-happy, .ci.ci-happy .ci-happy { opacity: 1 !important; }
