@@ -248,7 +248,7 @@ function listenHe(onText, onFail) {
   let got = false;
   r.onresult = (e) => { got = true; const alts = [...e.results[0]].map(x => x.transcript); onText(alts); };
   r.onerror = (e) => { got = true; onFail(e.error || "error"); };
-  r.onend = () => { if (!got) onFail("no-speech"); qRec = null; };
+  r.onend = () => { if (!got) onFail("no-speech"); if (qRec === r) qRec = null; };   // старый onend (после abort) не стирает новый распознаватель
   try { r.start(); } catch (e) { onFail("start"); }
 }
 function addQuestOptions(st, opts) {

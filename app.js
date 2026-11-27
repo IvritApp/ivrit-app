@@ -89,6 +89,23 @@ if (tg) {
   tg.ready(); tg.expand();
   // свайп вниз не сворачивает приложение (мешал «Буквам по кругу» и перетаскиванию в играх)
   if (typeof tg.disableVerticalSwipes === "function") { try { tg.disableVerticalSwipes(); } catch (e) {} }
+  // 27.11 (решение владельца): ПОЛНЫЙ ЭКРАН — только на телефоне (iOS / Android) и в Telegram 8.0+; на компьютере и в старых версиях — как раньше.
+  // Сверху поверх приложения тогда висят кнопки Telegram («Закрыть», «⋯») и строка телефона (часы, батарея):
+  // их высоту Telegram сообщает (safeAreaInset + contentSafeAreaInset) — кладём в CSS-переменные --tg-top / --tg-bottom,
+  // а все верхние/нижние отступы приложения считаются через --safe-top / --safe-bottom (начало style.css).
+  const tgInsets = () => {
+    const full = !!tg.isFullscreen, s = tg.safeAreaInset || {}, c = tg.contentSafeAreaInset || {};
+    const r = document.documentElement.style;
+    r.setProperty("--tg-top", full ? ((s.top || 0) + (c.top || 0)) + "px" : "0px");
+    r.setProperty("--tg-bottom", full ? ((s.bottom || 0) + (c.bottom || 0)) + "px" : "0px");
+    document.documentElement.classList.toggle("tg-full", full);
+  };
+  const mobileTg = ["ios", "android"].includes(tg.platform);
+  if (mobileTg && typeof tg.isVersionAtLeast === "function" && tg.isVersionAtLeast("8.0") && typeof tg.requestFullscreen === "function") {
+    if (typeof tg.onEvent === "function") ["fullscreenChanged", "safeAreaChanged", "contentSafeAreaChanged", "viewportChanged"].forEach(ev => tg.onEvent(ev, tgInsets));
+    try { if (!tg.isFullscreen) tg.requestFullscreen(); } catch (e) {}
+    tgInsets();
+  }
   if (typeof tg.onEvent === "function") tg.onEvent("themeChanged", () => applySettings());
 }
 

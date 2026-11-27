@@ -1,7 +1,7 @@
 /* chest.css — экран открытия сундука (chest.js, window.ChestFX). Экран всегда тёмный. */
 .cx-ov{position:fixed;left:0;top:0;right:0;bottom:0;z-index:9500;overflow:hidden;
   display:flex;flex-direction:column;align-items:center;justify-content:space-between;
-  padding:calc(24px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));
+  padding:calc(24px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
   box-sizing:border-box;background:#0d0a1c;color:#fff;text-align:center;
   font-family:"Nunito","Segoe UI",Roboto,Arial,sans-serif;user-select:none;-webkit-user-select:none;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer;

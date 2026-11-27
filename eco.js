@@ -210,16 +210,20 @@
   }
 
   // ---------- ЗНАЧКИ 🥐 💎 🎁 ----------
-  function chipsHTML() {
+  // 27.11 (тестерша: «БЕТА наплывает на бурекасы»): на главной большие суммы коротко — 12500 → «12,5к», 125000 → «125к»
+  const short = (v) => { const n = +v || 0; return n < 10000 ? String(n) : (n < 100000 ? (Math.floor(n / 100) / 10).toString().replace(".", ",") : String(Math.floor(n / 1000))) + "к"; };
+  const shown = (el, v) => el.closest("#ecoHome") ? short(v) : v;
+  function chipsHTML(compact) {
     const n = ((me() || {}).chests || []).length + ((me() || {}).daily_ready ? 1 : 0);
-    return `<button class="eco-chip" data-eco="bur" aria-label="Бурекасы">🥐 <b data-bur>${bur()}</b></button>` +
-      `<button class="eco-chip gem" data-eco="gems" aria-label="Хибриллианты">💎 <b data-gems>${gems()}</b></button>` +
+    const f = (v) => compact ? short(v) : v;
+    return `<button class="eco-chip" data-eco="bur" aria-label="Бурекасы">🥐 <b data-bur>${f(bur())}</b></button>` +
+      `<button class="eco-chip gem" data-eco="gems" aria-label="Хибриллианты">💎 <b data-gems>${f(gems())}</b></button>` +
       `<button class="eco-chip gift" data-eco="chests" aria-label="Сундуки" ${n ? "" : "hidden"}>🎁 <b data-chests>${n}</b></button>`;
   }
   function paint() {
     const n = ((me() || {}).chests || []).length + ((me() || {}).daily_ready ? 1 : 0);
-    document.querySelectorAll("[data-bur]").forEach(e => { e.textContent = bur(); });
-    document.querySelectorAll("[data-gems]").forEach(e => { e.textContent = gems(); });
+    document.querySelectorAll("[data-bur]").forEach(e => { e.textContent = shown(e, bur()); });
+    document.querySelectorAll("[data-gems]").forEach(e => { e.textContent = shown(e, gems()); });
     document.querySelectorAll("[data-chests]").forEach(e => { e.textContent = n; const b = e.closest(".eco-chip"); if (b) b.hidden = !n; });
     const sd = document.getElementById("goShopDesc");
     if (sd) sd.textContent = n ? `🎁 Сундуков: ${n} — открой!` : "Сундуки, скины, ники";
@@ -237,7 +241,7 @@
     const home = document.getElementById("home"); if (!home) return;
     let bar = document.getElementById("ecoHome");
     if (!bar) { bar = document.createElement("div"); bar.id = "ecoHome"; bar.className = "eco-bar"; home.prepend(bar); }
-    bar.innerHTML = chipsHTML();
+    bar.innerHTML = chipsHTML(true);
   }
 
   // ---------- ЭКРАН «МАГАЗИН» ----------

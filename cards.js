@@ -217,6 +217,8 @@
     const w = lesson.words[ex.word];
     if (!w) { goNext(); return; }
     const pic = typeof wordIcon === "function" ? wordIcon(w, 96) : "";
+    // 27.11 (отзыв тестерши): повтори слово ГОЛОСОМ — 🎤, распознавание he-IL (quest.js). Не обязательно: «дальше» можно и без этого
+    const mic = typeof canSpeakNow === "function" && typeof listenHe === "function" && canSpeakNow();
     screen.innerHTML = `
       <div class="cd-wrap cd-inlesson">
         <div class="cd-newtag">✨ Новое слово</div>
@@ -229,10 +231,13 @@
           </div>
           <button class="cd-say cd-pair-say" id="cd-say" aria-label="Послушать ещё раз">${SPK}</button>
         </div>
-        <div class="cd-pair-tip">Послушай и повтори вслух 🗣️</div>
+        ${mic ? `<button class="cd-mic" id="cd-mic" type="button"><span>🎤</span> Скажи вслух</button><div class="cd-mic-h" id="cd-mic-h">Послушай — и повтори сам${g("{m:}{f:а}")}</div>`
+              : `<div class="cd-pair-tip">Послушай и повтори вслух 🗣️</div>`}
         <div class="cd-btns" id="cd-btns"><button class="btn blue" id="cd-go">Запомнил${g("{m:}{f:а}")}, дальше</button></div>
       </div>`;
-    const sayIt = () => { speak(w.he, { audio: w.audio }); const b = document.getElementById("cd-say"); if (b) { b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); } };
+    const sayIt = () => { const m = document.getElementById("cd-mic"); if (m && m.classList.contains("on")) return;   // идёт запись — не говорим в микрофон
+      speak(w.he, { audio: w.audio }); const b = document.getElementById("cd-say"); if (b) { b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); } };
+    if (mic) bindMic(w);
     document.getElementById("cd-say").onclick = sayIt;
     document.getElementById("cd-pair").onclick = (e) => { if (!e.target.closest("#cd-say")) sayIt(); };   // внутри кнопки — SVG, e.target может быть <path>
     setTimeout(sayIt, 350);
@@ -240,9 +245,43 @@
     document.getElementById("cd-go").onclick = function () {
       if (this.disabled) return;
       document.querySelectorAll("#cd-btns button").forEach(x => x.disabled = true);   // вместе с «Уже знаю» (wordmarks.js)
-      playSound("pop"); vibrate("light"); goNext();
+      cardMicStop(); playSound("pop"); vibrate("light"); goNext();
     };
   };
+  // ушли с карточки — микрофон выключить (иначе он пишет ещё несколько секунд на следующем задании)
+  window.cardMicStop = function () { try { if (typeof qRec !== "undefined" && qRec) qRec.abort(); } catch (e) {} };
+
+  // 🎤 на карточке слова: сказал похоже (≥ 0.6 или слово целиком внутри фразы) — «Отлично!», иначе — «Я услышал… ещё раз»
+  function bindMic(w) {
+    const btn = document.getElementById("cd-mic"), h = document.getElementById("cd-mic-h");
+    if (!btn) return;
+    const say = (t, cls) => { if (h) { h.textContent = t; h.className = "cd-mic-h" + (cls ? " " + cls : ""); } };
+    btn.onclick = () => {
+      if (btn.classList.contains("on") || btn.classList.contains("ok")) return;
+      try { if (typeof ttsReq !== "undefined") ttsReq++; if (typeof ttsPlayer !== "undefined" && ttsPlayer) ttsPlayer.pause(); if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}   // иначе микрофон слышит наш же голос (ttsReq++ — отменить и слово, которое ещё грузится)
+      btn.classList.add("on"); say("Говори…");
+      const alive = () => btn.isConnected;
+      listenHe(alts => {
+        btn.classList.remove("on");
+        if (!alive()) return;
+        const target = heNorm(w.he);
+        const hit = (alts || []).some(a => heSim(a, w.he) >= 0.6 || (target.length >= 2 && (" " + heNorm(a) + " ").includes(" " + target + " ")));
+        if (hit) {
+          btn.classList.add("ok"); btn.innerHTML = "<span>✓</span> Отлично!";
+          say("Ты сказал" + g("{m:}{f:а}") + " правильно 👏", "good");
+          playSound("right"); vibrate("success");
+          if (window.HAnim && HAnim.sparkle) HAnim.sparkle(btn, { count: 7 });
+        } else say(`Я услышал «⁨${(alts && alts[0]) || "…"}⁩». Послушай ещё раз и попробуй снова`, "bad");
+      }, err => {
+        btn.classList.remove("on");
+        if (!alive()) return;
+        if (err === "no-speech" || err === "aborted") { say("Не расслышал — нажми 🎤 и скажи ещё раз", "bad"); return; }
+        // микрофон не дали / не работает — сутки без голоса (как в квестах), кнопку прячем
+        store.set("nospeak_until", Date.now() + 86400000);
+        btn.remove(); say(err === "not-allowed" || err === "service-not-allowed" ? "Микрофон не разрешён — просто повтори вслух 🗣️" : "Голос тут не работает — просто повтори вслух 🗣️");
+      });
+    };
+  }
 
   // ---------- Карточка «Новая фраза» (23.11, аудит новичка): шаг { type: "phrase_card", phrase: i } ----------
   // Перед первой «Собери фразу» с этой фразой: фраза целиком (звук, транскрипция, перевод) + разбор по словам.

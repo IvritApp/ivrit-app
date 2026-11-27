@@ -16,7 +16,16 @@
   --text: var(--tg-theme-text-color, #222222);
   --hint: var(--tg-theme-hint-color, #8a8a8a);
   --soft: var(--tg-theme-secondary-bg-color, #eef5fd);
+  /* 27.11: ПОЛНЫЙ ЭКРАН в Telegram — сверху кнопки Telegram и строка телефона, снизу полоска «домой».
+     --tg-top / --tg-bottom ставит app.js (0, если не полный экран); везде, где раньше был env(safe-area-inset-*), теперь эти: */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--tg-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-bottom, 0px));
 }
+/* очень старые WebView без max(): --safe-* иначе стали бы «битыми» и отступы пропали бы */
+@supports not (top: max(0px, 1px)) { :root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); } }
+/* в полном экране всё содержимое — ниже кнопок Telegram; полноэкранные окна (чат, профиль друга) — тоже */
+html.tg-full body { padding-top: calc(20px + var(--tg-top, 0px)); }
+html.tg-full #frChat, html.tg-full #frProfile, html.tg-full .st-wrap { padding-top: var(--tg-top, 0px); }
 
 * { box-sizing: border-box; }
 
@@ -602,7 +611,7 @@ body {
 .st-tap { position: absolute; z-index: 26; right: 10px; bottom: 8px; font-size: 12px; color: #6b7c8f;
   background: rgba(255,255,255,.85); padding: 3px 9px; border-radius: 999px; opacity: 0; transition: opacity .3s; pointer-events: none; }
 .st-tap.show { opacity: 1; }
-.st-panel { flex: none; padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); max-width: 460px; width: 100%;
+.st-panel { flex: none; padding: 10px 16px calc(14px + var(--safe-bottom)); max-width: 460px; width: 100%;
   box-sizing: border-box; margin: 0 auto; }
 .st-panel .q-options { margin-top: 4px; }
 .st-panel .option { margin: 8px 0; }
@@ -922,7 +931,7 @@ body.theme-dark .sy-f select { background: #1c2430; color: var(--text); border-c
 
 /* ---------- Нижнее меню и «Друзья» (friends.js) ---------- */
 #tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; justify-content: center; gap: 8px;
-  background: var(--bg); border-top: 1px solid rgba(128,128,128,.18); padding: 6px 12px calc(6px + env(safe-area-inset-bottom)); }
+  background: var(--bg); border-top: 1px solid rgba(128,128,128,.18); padding: 6px 12px calc(6px + var(--safe-bottom)); }
 #tabbar[hidden] { display: none; }
 #tabbar button { flex: 1; max-width: 200px; border: none; background: none; color: var(--hint); font: inherit; font-size: 12px; font-weight: 700;
   display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0; border-radius: 12px; cursor: pointer; position: relative; }
@@ -931,7 +940,7 @@ body.theme-dark .sy-f select { background: #1c2430; color: var(--text); border-c
 #tabbar button.on span { filter: none; opacity: 1; }
 .tb-badge { position: absolute; top: 2px; left: calc(50% + 8px); min-width: 18px; height: 18px; border-radius: 9px; background: #e5484d; color: #fff;
   font-size: 11px; font-style: normal; line-height: 18px; padding: 0 5px; }
-body.has-tabbar { padding-bottom: 76px; }
+body.has-tabbar { padding-bottom: calc(76px + var(--safe-bottom)); }
 #friends { padding: 12px 14px 20px; max-width: 520px; margin: 0 auto; }
 .fr-title { text-align: left; font-size: 28px; margin: 6px 2px 12px; }
 .fr-note { color: var(--hint); font-size: 15px; margin: 10px 4px; line-height: 1.4; }
@@ -1131,12 +1140,12 @@ body.theme-dark .q-speak-field { background: #1c2430; border-color: #2c3a4c; }
 .p-rev.done b { background: #3cae5c; }
 body.theme-dark .p-review { background: #2a2118; } body.theme-dark .p-rev { background: #1c2430; color: var(--text); }
 /* автопилот тестировщика */
-.auto-box { position: absolute; z-index: 60; left: max(10px, env(safe-area-inset-left, 0px)); top: calc(54px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; gap: 6px; }
+.auto-box { position: absolute; z-index: 60; left: max(10px, env(safe-area-inset-left, 0px)); top: calc(54px + var(--safe-top)); display: flex; flex-direction: column; gap: 6px; }
 .auto-box button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(43,47,58,.82); color: #fff; font-size: 20px; box-shadow: 0 3px 10px rgba(0,0,0,.25); cursor: pointer; }
 /* обучение «Как играть» */
 .tu { position: fixed; inset: 0; z-index: 200; background: rgba(20,30,45,.55); display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity .3s; }
 .tu.show { opacity: 1; }
-.tu-card { width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; background: var(--bg); color: var(--text); border-radius: 26px 26px 0 0; padding: 14px 20px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateY(30px); transition: transform .3s; }
+.tu-card { width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; background: var(--bg); color: var(--text); border-radius: 26px 26px 0 0; padding: 14px 20px calc(18px + var(--safe-bottom)); transform: translateY(30px); transition: transform .3s; }
 .tu.show .tu-card { transform: none; }
 .tu-top { display: flex; justify-content: space-between; align-items: center; }
 .tu-dots { display: flex; gap: 6px; }
@@ -1155,7 +1164,7 @@ body.theme-dark .p-review { background: #2a2118; } body.theme-dark .p-rev { back
 .tu-nav { display: flex; gap: 10px; margin-top: 14px; }
 .tu-nav .btn { flex: 1; margin: 0; }
 /* админка: одна кнопка «Сохранить» для всех изменений */
-.sy-savebar { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; gap: 8px; margin: 16px -4px 0; padding: 10px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--soft, #e3ecf5); font-size: 13px; }
+.sy-savebar { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; gap: 8px; margin: 16px -4px 0; padding: 10px 8px calc(10px + var(--safe-bottom)); background: var(--bg); border-top: 1px solid var(--soft, #e3ecf5); font-size: 13px; }
 .sy-savebar { flex-wrap: wrap; }
 .sy-savebar span { flex: 1 1 100%; min-width: 0; color: var(--hint, #8a8a8a); }
 .sy-savebar.dirty span { color: var(--text); }

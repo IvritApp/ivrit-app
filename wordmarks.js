@@ -43,6 +43,7 @@
         const nx = queue[step + 1];
         if (nx && nx.type !== "card" && nx.word === ex.word && nx.type !== "match_pairs") queue.splice(step + 1, 1);
         if (typeof showToast === "function") showToast("Отлично! Это слово не будем повторять ✓");
+        if (window.cardMicStop) cardMicStop();                          // 🎤 на карточке мог ещё слушать
         playSound("pop"); vibrate("light"); goNext();
       };
     };

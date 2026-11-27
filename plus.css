@@ -1,7 +1,7 @@
 /* ===== HIRBIS PLUS (21.11): окно подписки, карточка в настройках, ∞ в уроке ===== */
 #plusSheet { position: fixed; inset: 0; z-index: 120; display: flex; align-items: flex-end; justify-content: center; background: rgba(10, 20, 35, 0); transition: background .25s; }
 #plusSheet.show { background: rgba(10, 20, 35, .55); }
-.pl-card { position: relative; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; padding: 18px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+.pl-card { position: relative; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; padding: 18px 18px calc(20px + var(--safe-bottom));
   border-radius: 26px 26px 0 0; background: var(--bg); color: var(--text); text-align: center;
   transform: translateY(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
 #plusSheet.show .pl-card { transform: none; }
@@ -67,3 +67,10 @@
 .sy-fb-text { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 2px solid rgba(127, 127, 127, .3); background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.4; font-family: inherit; resize: vertical; margin: 6px 0 12px; }
 .sy-fb-open { margin-bottom: 6px; }
 .sy-fb-msg { display: block; margin: 6px 0 2px; font-size: 15px; color: var(--text); white-space: pre-wrap; }
+
+/* 27.11: ПОЛНЫЙ ЭКРАН Telegram — окна, которые выезжают снизу, не поднимаются под кнопки Telegram («Закрыть», «⋯») */
+html.tg-full .tu, html.tg-full .hp-wrap, html.tg-full #plusSheet, html.tg-full #settings, html.tg-full .tip-wrap, html.tg-full .wm-sheet,
+html.tg-full #streakSheet, html.tg-full .sy-wrap, html.tg-full #ptSheet, html.tg-full #hOut, html.tg-full #exAsk, html.tg-full #mgNeed,
+html.tg-full #tmTopSheet, html.tg-full #wdHow { padding-top: calc(var(--tg-top, 0px) + 8px); }
+html.tg-full .tu-card, html.tg-full .hp-card, html.tg-full .pl-card, html.tg-full .set-sheet, html.tg-full .tip-card, html.tg-full .wm-sheet-card {
+  max-height: calc(100vh - var(--tg-top, 0px) - 12px); overflow-y: auto; }

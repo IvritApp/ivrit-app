@@ -53,7 +53,7 @@
 /* Окно «Нужно ещё N очков» */
 #mgNeed { position: fixed; inset: 0; z-index: 95; background: rgba(10, 20, 35, 0); display: flex; align-items: flex-end; justify-content: center; transition: background .25s; }
 #mgNeed.show { background: rgba(10, 20, 35, .45); }
-.mg-sheet { width: 100%; max-width: 520px; background: var(--bg); color: var(--text); border-radius: 24px 24px 0 0; padding: 14px 16px calc(22px + env(safe-area-inset-bottom, 0px));
+.mg-sheet { width: 100%; max-width: 520px; background: var(--bg); color: var(--text); border-radius: 24px 24px 0 0; padding: 14px 16px calc(22px + var(--safe-bottom));
   text-align: center; transform: translateY(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
 #mgNeed.show .mg-sheet { transform: none; }
 .mg-need-bird { height: 90px; display: flex; justify-content: center; align-items: flex-end; }

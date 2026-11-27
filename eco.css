@@ -5,6 +5,12 @@
 /* --- значки валют --- */
 .eco-bar { display: flex; gap: 6px; align-items: center; }
 #ecoHome { position: absolute; top: 2px; right: 50px; z-index: 3; }
+/* 27.11 (тестерша: «БЕТА наплывает на бурекасы»): валюты — одной строкой справа (большие суммы коротко, eco.js short),
+   а значок «БЕТА» — строкой ниже, слева (там свободно: Хибри по центру) */
+#ecoHome { left: 10px; justify-content: flex-end; gap: 5px; }
+#ecoHome .eco-chip { padding: 0 10px; gap: 3px; white-space: nowrap; flex: none; }
+#home .beta-chip { top: 50px; }
+@media (max-width: 340px) { #ecoHome .eco-chip { padding: 0 7px; font-size: 14px; } }
 .eco-bar-in { justify-content: center; margin: 10px 0 4px; }
 .eco-chip { display: inline-flex; align-items: center; gap: 4px; height: 38px; padding: 0 12px; border-radius: 999px; border: none; background: var(--soft);
   color: var(--text); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .08); font-variant-numeric: tabular-nums; }

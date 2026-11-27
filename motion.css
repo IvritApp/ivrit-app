@@ -29,8 +29,8 @@ body > section.sec-in { animation: moSecIn .38s var(--mo-out) both; }
 @keyframes moPop { from { opacity: 0; translate: 0 18px; scale: .7; } to { opacity: 1; translate: 0 0; scale: 1; } }
 @keyframes moRise { from { opacity: 0; translate: 0 16px; } to { opacity: 1; translate: 0 0; } }
 
-/* Главная: солнце не под шестерёнкой настроек */
-#home .ha-sun { right: auto; left: 22px; }
+/* Главная: солнце убрано (отзыв тестерши 27.11) — остаются облака */
+#home .ha-sun { display: none !important; }
 
 /* Кольцо-таймер блица (anim.js) на месте старой полоски */
 .bl-top.has-ring { justify-content: center; }

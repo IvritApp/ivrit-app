@@ -205,6 +205,17 @@ body.theme-dark .cd-pair-he b { color: #8cc4f5; }
 .cd-pair-say.ping { animation: cdPing .5s ease; }
 @keyframes cdPing { 40% { transform: scale(1.18); } }
 .cd-pair-tip { margin: 14px 0 0; font-size: 14px; color: var(--hint); }
+/* 27.11: «🎤 Скажи вслух» на карточке нового слова */
+.cd-mic { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 320px; margin: 14px auto 0; padding: 12px; border: 2px solid #1cb0f6; border-bottom-width: 4px;
+  border-radius: 16px; background: #eaf6fe; color: #1680b8; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; }
+.cd-mic span { font-size: 20px; }
+.cd-mic.on { background: #ff4b4b; border-color: #c93a3a; color: #fff; animation: cdMicPulse 1s ease-in-out infinite; }
+.cd-mic.ok { background: #58cc02; border-color: #46a302; color: #fff; }
+@keyframes cdMicPulse { 50% { transform: scale(1.03); } }
+.cd-mic-h { margin-top: 6px; min-height: 18px; font-size: 14px; color: var(--hint); }
+.cd-mic-h.good { color: #3c8c00; font-weight: 700; }
+.cd-mic-h.bad { color: #e24b4b; }
+@media (prefers-reduced-motion: reduce) { .cd-mic.on { animation: none; } }
 @media (max-width: 360px) { .cd-pair-row { grid-template-columns: 1fr; } .cd-pair-eq { display: none; } }
 
 /* подпись под кружком — ниже кольца */

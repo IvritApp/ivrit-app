@@ -1,5 +1,5 @@
 /* Hirbis: склейка claude-docs/tools/bundle.ps1 — НЕ править здесь, правьте исходные файлы */
-window.APP_V = "202611272118"; window.ALPHABET_V = window.APP_V;
+window.APP_V = "202611272134"; window.ALPHABET_V = window.APP_V;
 
 /* ===== avatar.js ===== */
 try {
@@ -5391,6 +5391,23 @@ if (tg) {
   tg.ready(); tg.expand();
   // свайп вниз не сворачивает приложение (мешал «Буквам по кругу» и перетаскиванию в играх)
   if (typeof tg.disableVerticalSwipes === "function") { try { tg.disableVerticalSwipes(); } catch (e) {} }
+  // 27.11 (решение владельца): ПОЛНЫЙ ЭКРАН — только на телефоне (iOS / Android) и в Telegram 8.0+; на компьютере и в старых версиях — как раньше.
+  // Сверху поверх приложения тогда висят кнопки Telegram («Закрыть», «⋯») и строка телефона (часы, батарея):
+  // их высоту Telegram сообщает (safeAreaInset + contentSafeAreaInset) — кладём в CSS-переменные --tg-top / --tg-bottom,
+  // а все верхние/нижние отступы приложения считаются через --safe-top / --safe-bottom (начало style.css).
+  const tgInsets = () => {
+    const full = !!tg.isFullscreen, s = tg.safeAreaInset || {}, c = tg.contentSafeAreaInset || {};
+    const r = document.documentElement.style;
+    r.setProperty("--tg-top", full ? ((s.top || 0) + (c.top || 0)) + "px" : "0px");
+    r.setProperty("--tg-bottom", full ? ((s.bottom || 0) + (c.bottom || 0)) + "px" : "0px");
+    document.documentElement.classList.toggle("tg-full", full);
+  };
+  const mobileTg = ["ios", "android"].includes(tg.platform);
+  if (mobileTg && typeof tg.isVersionAtLeast === "function" && tg.isVersionAtLeast("8.0") && typeof tg.requestFullscreen === "function") {
+    if (typeof tg.onEvent === "function") ["fullscreenChanged", "safeAreaChanged", "contentSafeAreaChanged", "viewportChanged"].forEach(ev => tg.onEvent(ev, tgInsets));
+    try { if (!tg.isFullscreen) tg.requestFullscreen(); } catch (e) {}
+    tgInsets();
+  }
   if (typeof tg.onEvent === "function") tg.onEvent("themeChanged", () => applySettings());
 }
 
@@ -7191,7 +7208,7 @@ function listenHe(onText, onFail) {
   let got = false;
   r.onresult = (e) => { got = true; const alts = [...e.results[0]].map(x => x.transcript); onText(alts); };
   r.onerror = (e) => { got = true; onFail(e.error || "error"); };
-  r.onend = () => { if (!got) onFail("no-speech"); qRec = null; };
+  r.onend = () => { if (!got) onFail("no-speech"); if (qRec === r) qRec = null; };   // старый onend (после abort) не стирает новый распознаватель
   try { r.start(); } catch (e) { onFail("start"); }
 }
 function addQuestOptions(st, opts) {
@@ -11912,6 +11929,8 @@ try {
     const w = lesson.words[ex.word];
     if (!w) { goNext(); return; }
     const pic = typeof wordIcon === "function" ? wordIcon(w, 96) : "";
+    // 27.11 (отзыв тестерши): повтори слово ГОЛОСОМ — 🎤, распознавание he-IL (quest.js). Не обязательно: «дальше» можно и без этого
+    const mic = typeof canSpeakNow === "function" && typeof listenHe === "function" && canSpeakNow();
     screen.innerHTML = `
       <div class="cd-wrap cd-inlesson">
         <div class="cd-newtag">✨ Новое слово</div>
@@ -11924,10 +11943,13 @@ try {
           </div>
           <button class="cd-say cd-pair-say" id="cd-say" aria-label="Послушать ещё раз">${SPK}</button>
         </div>
-        <div class="cd-pair-tip">Послушай и повтори вслух 🗣️</div>
+        ${mic ? `<button class="cd-mic" id="cd-mic" type="button"><span>🎤</span> Скажи вслух</button><div class="cd-mic-h" id="cd-mic-h">Послушай — и повтори сам${g("{m:}{f:а}")}</div>`
+              : `<div class="cd-pair-tip">Послушай и повтори вслух 🗣️</div>`}
         <div class="cd-btns" id="cd-btns"><button class="btn blue" id="cd-go">Запомнил${g("{m:}{f:а}")}, дальше</button></div>
       </div>`;
-    const sayIt = () => { speak(w.he, { audio: w.audio }); const b = document.getElementById("cd-say"); if (b) { b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); } };
+    const sayIt = () => { const m = document.getElementById("cd-mic"); if (m && m.classList.contains("on")) return;   // идёт запись — не говорим в микрофон
+      speak(w.he, { audio: w.audio }); const b = document.getElementById("cd-say"); if (b) { b.classList.remove("ping"); void b.offsetWidth; b.classList.add("ping"); } };
+    if (mic) bindMic(w);
     document.getElementById("cd-say").onclick = sayIt;
     document.getElementById("cd-pair").onclick = (e) => { if (!e.target.closest("#cd-say")) sayIt(); };   // внутри кнопки — SVG, e.target может быть <path>
     setTimeout(sayIt, 350);
@@ -11935,9 +11957,43 @@ try {
     document.getElementById("cd-go").onclick = function () {
       if (this.disabled) return;
       document.querySelectorAll("#cd-btns button").forEach(x => x.disabled = true);   // вместе с «Уже знаю» (wordmarks.js)
-      playSound("pop"); vibrate("light"); goNext();
+      cardMicStop(); playSound("pop"); vibrate("light"); goNext();
     };
   };
+  // ушли с карточки — микрофон выключить (иначе он пишет ещё несколько секунд на следующем задании)
+  window.cardMicStop = function () { try { if (typeof qRec !== "undefined" && qRec) qRec.abort(); } catch (e) {} };
+
+  // 🎤 на карточке слова: сказал похоже (≥ 0.6 или слово целиком внутри фразы) — «Отлично!», иначе — «Я услышал… ещё раз»
+  function bindMic(w) {
+    const btn = document.getElementById("cd-mic"), h = document.getElementById("cd-mic-h");
+    if (!btn) return;
+    const say = (t, cls) => { if (h) { h.textContent = t; h.className = "cd-mic-h" + (cls ? " " + cls : ""); } };
+    btn.onclick = () => {
+      if (btn.classList.contains("on") || btn.classList.contains("ok")) return;
+      try { if (typeof ttsReq !== "undefined") ttsReq++; if (typeof ttsPlayer !== "undefined" && ttsPlayer) ttsPlayer.pause(); if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}   // иначе микрофон слышит наш же голос (ttsReq++ — отменить и слово, которое ещё грузится)
+      btn.classList.add("on"); say("Говори…");
+      const alive = () => btn.isConnected;
+      listenHe(alts => {
+        btn.classList.remove("on");
+        if (!alive()) return;
+        const target = heNorm(w.he);
+        const hit = (alts || []).some(a => heSim(a, w.he) >= 0.6 || (target.length >= 2 && (" " + heNorm(a) + " ").includes(" " + target + " ")));
+        if (hit) {
+          btn.classList.add("ok"); btn.innerHTML = "<span>✓</span> Отлично!";
+          say("Ты сказал" + g("{m:}{f:а}") + " правильно 👏", "good");
+          playSound("right"); vibrate("success");
+          if (window.HAnim && HAnim.sparkle) HAnim.sparkle(btn, { count: 7 });
+        } else say(`Я услышал «⁨${(alts && alts[0]) || "…"}⁩». Послушай ещё раз и попробуй снова`, "bad");
+      }, err => {
+        btn.classList.remove("on");
+        if (!alive()) return;
+        if (err === "no-speech" || err === "aborted") { say("Не расслышал — нажми 🎤 и скажи ещё раз", "bad"); return; }
+        // микрофон не дали / не работает — сутки без голоса (как в квестах), кнопку прячем
+        store.set("nospeak_until", Date.now() + 86400000);
+        btn.remove(); say(err === "not-allowed" || err === "service-not-allowed" ? "Микрофон не разрешён — просто повтори вслух 🗣️" : "Голос тут не работает — просто повтори вслух 🗣️");
+      });
+    };
+  }
 
   // ---------- Карточка «Новая фраза» (23.11, аудит новичка): шаг { type: "phrase_card", phrase: i } ----------
   // Перед первой «Собери фразу» с этой фразой: фраза целиком (звук, транскрипция, перевод) + разбор по словам.
@@ -12430,6 +12486,7 @@ try {
         const nx = queue[step + 1];
         if (nx && nx.type !== "card" && nx.word === ex.word && nx.type !== "match_pairs") queue.splice(step + 1, 1);
         if (typeof showToast === "function") showToast("Отлично! Это слово не будем повторять ✓");
+        if (window.cardMicStop) cardMicStop();                          // 🎤 на карточке мог ещё слушать
         playSound("pop"); vibrate("light"); goNext();
       };
     };
@@ -14005,16 +14062,20 @@ try {
   }
 
   // ---------- ЗНАЧКИ 🥐 💎 🎁 ----------
-  function chipsHTML() {
+  // 27.11 (тестерша: «БЕТА наплывает на бурекасы»): на главной большие суммы коротко — 12500 → «12,5к», 125000 → «125к»
+  const short = (v) => { const n = +v || 0; return n < 10000 ? String(n) : (n < 100000 ? (Math.floor(n / 100) / 10).toString().replace(".", ",") : String(Math.floor(n / 1000))) + "к"; };
+  const shown = (el, v) => el.closest("#ecoHome") ? short(v) : v;
+  function chipsHTML(compact) {
     const n = ((me() || {}).chests || []).length + ((me() || {}).daily_ready ? 1 : 0);
-    return `<button class="eco-chip" data-eco="bur" aria-label="Бурекасы">🥐 <b data-bur>${bur()}</b></button>` +
-      `<button class="eco-chip gem" data-eco="gems" aria-label="Хибриллианты">💎 <b data-gems>${gems()}</b></button>` +
+    const f = (v) => compact ? short(v) : v;
+    return `<button class="eco-chip" data-eco="bur" aria-label="Бурекасы">🥐 <b data-bur>${f(bur())}</b></button>` +
+      `<button class="eco-chip gem" data-eco="gems" aria-label="Хибриллианты">💎 <b data-gems>${f(gems())}</b></button>` +
       `<button class="eco-chip gift" data-eco="chests" aria-label="Сундуки" ${n ? "" : "hidden"}>🎁 <b data-chests>${n}</b></button>`;
   }
   function paint() {
     const n = ((me() || {}).chests || []).length + ((me() || {}).daily_ready ? 1 : 0);
-    document.querySelectorAll("[data-bur]").forEach(e => { e.textContent = bur(); });
-    document.querySelectorAll("[data-gems]").forEach(e => { e.textContent = gems(); });
+    document.querySelectorAll("[data-bur]").forEach(e => { e.textContent = shown(e, bur()); });
+    document.querySelectorAll("[data-gems]").forEach(e => { e.textContent = shown(e, gems()); });
     document.querySelectorAll("[data-chests]").forEach(e => { e.textContent = n; const b = e.closest(".eco-chip"); if (b) b.hidden = !n; });
     const sd = document.getElementById("goShopDesc");
     if (sd) sd.textContent = n ? `🎁 Сундуков: ${n} — открой!` : "Сундуки, скины, ники";
@@ -14032,7 +14093,7 @@ try {
     const home = document.getElementById("home"); if (!home) return;
     let bar = document.getElementById("ecoHome");
     if (!bar) { bar = document.createElement("div"); bar.id = "ecoHome"; bar.className = "eco-bar"; home.prepend(bar); }
-    bar.innerHTML = chipsHTML();
+    bar.innerHTML = chipsHTML(true);
   }
 
   // ---------- ЭКРАН «МАГАЗИН» ----------
