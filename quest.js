@@ -94,8 +94,23 @@ function meSays(html) { stage.say("me", nameTag(profile && profile.name ? profil
 // Сначала (один раз) — кино прилёта из второго чата.
 // =====================================================
 function showTaxi(onDone) {
+  // 27.11: новая первая сцена (cutscene.js, scenes.json "intro"): аэропорт → такси, живые Давид и Циля. Старое кино — запасной вариант.
+  if (window.playCutscene) {
+    // дорожка под сценой уже нарисована: «Назад» во время сцены не оставит новичка на пустом экране (критик 27.11)
+    const pv = document.getElementById("path");
+    if (pv && !pv.hidden && typeof renderPath === "function" && typeof course !== "undefined" && course) renderPath();
+    playCutscene("intro", (shown) => {
+      if (shown === false) { showTaxiOld(onDone); return; }       // сцену не загрузить (нет сети) — старое кино, отметки «видел» не ставим
+      store.set("taxiSeen", true); store.set("arrivalSeen", true); onDone();
+    }, true);
+    return;
+  }
+  showTaxiOld(onDone);
+}
+function showTaxiOld(onDone) {
   openQuestSection();
-  const run = () => fetch(`content/${COURSE_LANG}/scenes/taxi.json`).then(r => r.json()).then(sc => playTaxi(sc, onDone));
+  const run = () => fetch(`content/${COURSE_LANG}/scenes/taxi.json`).then(r => r.json()).then(sc => playTaxi(sc, onDone))
+    .catch(() => { if (typeof showToast === "function") showToast("Нет сети — сцену покажем позже"); onDone(); });   // не оставлять пустой экран
   if (window.playArrivalScene && !store.get("arrivalSeen", false)) {
     questView.innerHTML = `<div id="sceneBox"></div>`;
     window.playArrivalScene(document.getElementById("sceneBox"), { gender: profile ? profile.gender : "m", profile, part: "arrival" }, () => {

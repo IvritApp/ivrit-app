@@ -19,12 +19,13 @@
   // playCutscene(id, done, force) — force: показать, даже если уже видел
   window.playCutscene = function (id, done, force) {
     const seen = store.get("scenesSeen", []);
-    if (!force && seen.includes(id)) { done(); return; }
+    if (!force && seen.includes(id)) { done(false); return; }
+    // done(true) — сцену показали; done(false) — показать не вышло (нет сцены / нет сети)
     load().then(S => {
       const sc = S[id];
-      if (!sc || !sc.frames || !sc.frames.length) { done(); return; }
-      run(id, sc, () => { if (!seen.includes(id)) store.set("scenesSeen", seen.concat(id)); done(); });
-    }).catch(() => done());
+      if (!sc || !sc.frames || !sc.frames.length) { done(false); return; }
+      run(id, sc, () => { if (!seen.includes(id)) store.set("scenesSeen", seen.concat(id)); done(true); });
+    }).catch(() => done(false));
   };
 
   function run(id, sc, done) {
@@ -45,10 +46,10 @@
     };
     const end = () => {
       if (finished) return; finished = true; hushIt();
-      w.classList.remove("show"); setTimeout(() => { w.remove(); done(); }, 260);
+      w.classList.remove("show"); setTimeout(() => { w.remove(); if (!w._dead) done(); }, 260);   // «Назад» за эти 260 мс — квест/урок не открывать
     };
     w._end = end;
-    w._stop = () => { finished = true; hushIt(); };                 // «Назад» Telegram: закрыть без квеста
+    w._stop = () => { finished = true; w._dead = true; hushIt(); };                 // «Назад» Telegram: закрыть без квеста
     const show = () => {
       const f = sc.frames[i];
       document.getElementById("csDots").innerHTML = sc.frames.map((_, k) => `<i class="${k <= i ? "on" : ""}"></i>`).join("");
@@ -101,7 +102,9 @@
       if (f.say) { say.hidden = false; say.textContent = g(f.say); say.classList.remove("in"); void say.offsetWidth; say.classList.add("in"); }
       else say.hidden = true;
     };
-    const next = () => { if (finished) return; i++; if (i >= sc.frames.length) { end(); return; } if (typeof playSound === "function" && i > 0) playSound("pop"); show(); };
+    let lastTap = 0;
+    // двойной тап не проглатывает кадр
+    const next = () => { if (finished) return; const now = Date.now(); if (now - lastTap < 400) return; lastTap = now; i++; if (i >= sc.frames.length) { end(); return; } if (typeof playSound === "function" && i > 0) playSound("pop"); show(); };
     // нажатие где угодно — дальше; 🔊 в облачке — послушать ещё раз
     w.onclick = (e) => { if (e.target.closest("#csSkip")) return; if (e.target.closest(".cs-spk") && sc.frames[i] && sc.frames[i].line) { speak(g(sc.frames[i].line.he)); return; } next(); };
     document.getElementById("csSkip").onclick = (e) => { e.stopPropagation(); end(); };

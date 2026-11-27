@@ -151,7 +151,8 @@
 .cs-spk svg { width: 28px; height: 28px; }
 .cs-say { position: absolute; left: 14px; right: 14px; top: calc(52px + var(--safe-top)); max-width: 460px; margin: 0 auto; background: rgba(20, 30, 45, .82); color: #fff; border-radius: 16px; padding: 12px 16px; font-size: 16px; line-height: 1.4; text-align: center; }
 .cs-say.in { animation: csPop .3s ease both; }
-.cs-tap { position: absolute; left: 0; right: 0; bottom: calc(14px + var(--safe-bottom)); text-align: center; color: rgba(255, 255, 255, .8); font-size: 13px; animation: csBlink 1.6s ease-in-out infinite; pointer-events: none; }
+.cs-tap { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + var(--safe-bottom)); padding: 6px 14px; border-radius: 999px; background: rgba(20, 30, 45, .55); white-space: nowrap;
+  text-align: center; color: #fff; font-size: 13px; font-weight: 700; animation: csBlink 1.6s ease-in-out infinite; pointer-events: none; }   /* на светлом полу тоже читается */
 @keyframes csBlink { 50% { opacity: .35; } }
 /* 23.11: итог нового квеста — уровень пройден / золотой, «было трудно → повторение» */
 .q2-lvl { font-weight: 800; color: #2e9d58; margin: 2px 0 6px; }

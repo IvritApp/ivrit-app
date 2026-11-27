@@ -8,7 +8,7 @@
 // =====================================================
 (function () {
   const API = "https://89-23-99-107.sslip.io/hapi";
-  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru", "autoplay", "plus", "eco", "eco_mock"];
+  const NOSYNC = ["testmode", "combo", "nolisten_until", "nospeak_until", "sync_ver", "sync_hash", "sync_ok", "sync_me", "sync_want", "adminmode", "allru", "autoplay", "plus", "eco", "eco_mock", "rig_on"];
   const P = "hirbis_";
   const tgApp = window.Telegram && window.Telegram.WebApp;
   const initData = tgApp && tgApp.initData;

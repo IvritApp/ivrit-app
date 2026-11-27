@@ -1420,6 +1420,89 @@ div.tu-bird { margin: 0 auto; }
 .ci.ci-surprised { animation: ciSurp .6s cubic-bezier(.3, 1.6, .5, 1) both !important; }
 @keyframes ciSurp { 0% { transform: none; } 30% { transform: translateY(-10px) scale(.96, 1.06); } 100% { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .ci, .host-fig .ci, .talking .ci, .act-talk .ci, .act-cheer .ci, .act-oops .ci, .act-think .ci, .act-wave .ci, .act-thumb .ci, .act-eat .ci { animation: none !important; } }
+/* ===== rig.css ===== */
+/* =====================================================
+   ЖИВОЙ ПЕРСОНАЖ ИЗ ОДНОГО РИСУНКА (rig.js, 27.11): части вырезаны из одного рисунка — без швов.
+   data-e — глаза (open / closed / happy / half), data-m — рот (smile — родная улыбка, остальное — SVG поверх заплатки кожи),
+   data-p — поза. Руки в «А-позе» на рисунке — в покое опущены поворотом в плече.
+   Покой: дышит, голова чуть покачивается, руки «гуляют» (свойство rotate — отдельно от transform поз, они складываются).
+   ===================================================== */
+.ci.rig { position: relative; contain: layout; }
+.rig .rg, .rig .rg-g { position: absolute; inset: 0; }
+.rig .rg-p, .rig .rg-face { position: absolute; height: auto; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.rig .rg-face { overflow: visible; }
+.rig .rg-g { transition: transform .4s cubic-bezier(.3, 1.25, .5, 1); }
+
+/* лицо: заплатки и формы рта показываются по состоянию */
+.rig .rg-eyec, .rig .rg-eyeh, .rig .rg-lid, .rig .rg-mouthc, .rig .rg-m { visibility: hidden; }
+.rig:not([data-e="open"]) .rg-eyec { visibility: visible; }
+.rig[data-e="half"] .rg-eyec { visibility: hidden; } .rig[data-e="half"] .rg-eyeh { visibility: visible; }
+.rig[data-e="closed"] .rg-lid-closed, .rig[data-e="happy"] .rg-lid-happy { visibility: visible; }
+.rig:not([data-m="smile"]) .rg-mouthc { visibility: visible; }
+.rig[data-m="M"] .rg-m-M, .rig[data-m="E"] .rg-m-E, .rig[data-m="A"] .rg-m-A, .rig[data-m="O"] .rg-m-O,
+.rig[data-m="laugh"] .rg-m-laugh, .rig[data-m="sad"] .rg-m-sad, .rig[data-m="surprised"] .rg-m-surprised { visibility: visible; }
+/* полуприкрытые глаза («ой», думает): верхняя половина глаза закрыта кожей + веко */
+
+
+/* руки в покое опущены (на рисунке — «А-поза») */
+.rig .rg-armA { transform: rotate(-13deg); }
+.rig .rg-armB { transform: rotate(13deg); }
+.rig .rg-farmA { transform: rotate(-4deg); }
+.rig .rg-farmB { transform: rotate(4deg); }
+
+/* покой */
+.rig .rg-torso { animation: rgBreath 3.6s ease-in-out infinite; }
+.rig .rg-head { animation: rgHead 5.3s ease-in-out infinite; }
+.rig .rg-armA { animation: rgArmA 3.6s ease-in-out infinite; }
+.rig .rg-armB { animation: rgArmB 3.6s ease-in-out infinite; }
+@keyframes rgBreath { 0%, 100% { scale: 1 1; } 50% { scale: 1.005 1.012; } }
+@keyframes rgHead { 0%, 100% { rotate: calc(-1.4deg * var(--ht, 1)); } 50% { rotate: calc(1.6deg * var(--ht, 1)); } }
+@keyframes rgArmA { 0%, 100% { rotate: 0deg; } 50% { rotate: 1.8deg; } }
+@keyframes rgArmB { 0%, 100% { rotate: 0deg; } 50% { rotate: -1.8deg; } }
+
+/* говорит: кивает, руки чуть жестикулируют */
+.rig[data-p="talk"] .rg-head { animation: rgNod .76s ease-in-out infinite; }
+.rig[data-p="talk"] .rg-farmA { animation: rgGestA 1.6s ease-in-out infinite; }
+.rig[data-p="talk"] .rg-farmB { animation: rgGestB 2s ease-in-out infinite; }
+@keyframes rgNod { 0%, 100% { rotate: calc(-1.6deg * var(--ht, 1)); translate: 0 0; } 50% { rotate: calc(1.8deg * var(--ht, 1)); translate: 0 .35%; } }
+@keyframes rgGestA { 0%, 100% { rotate: 0deg; } 50% { rotate: 12deg; } }
+@keyframes rgGestB { 0%, 100% { rotate: 0deg; } 50% { rotate: -9deg; } }
+
+/* машет (рука слева на экране): плечо в сторону, предплечье вверх, ладонь качается */
+.rig[data-p="wave"] .rg-armA { transform: rotate(34deg); }
+.rig[data-p="wave"] .rg-farmA { transform: rotate(112deg); animation: rgWave .45s ease-in-out infinite alternate; }
+@keyframes rgWave { from { rotate: -14deg; } to { rotate: 10deg; } }
+/* показывает: рука вперёд-в сторону */
+.rig[data-p="point"] .rg-armA { transform: rotate(30deg); }
+.rig[data-p="point"] .rg-farmA { transform: rotate(55deg); }
+/* радость: обе руки вверх («ура») + прыжок (avatar.css ciJump) */
+.rig[data-p="cheer"] .rg-armA { transform: rotate(34deg); }
+.rig[data-p="cheer"] .rg-armB { transform: rotate(-34deg); }
+.rig[data-p="cheer"] .rg-farmA { transform: rotate(105deg); }
+.rig[data-p="cheer"] .rg-farmB { transform: rotate(-105deg); }
+.rig[data-p="cheer"] .rg-head { transform: rotate(calc(-3deg * var(--ht, 1))); }
+/* «ой»: руки опущены к телу, голова набок */
+.rig[data-p="oops"] .rg-armA { transform: rotate(-17deg); }
+.rig[data-p="oops"] .rg-armB { transform: rotate(17deg); }
+.rig[data-p="oops"] .rg-head { transform: rotate(calc(6deg * var(--ht, 1))) translateY(.6%); }
+/* думает / удивлён */
+.rig[data-p="think"] .rg-head { transform: rotate(calc(-5deg * var(--ht, 1))); }
+.rig[data-p="surprised"] .rg-armA { transform: rotate(10deg); }
+.rig[data-p="surprised"] .rg-armB { transform: rotate(-10deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rig .rg-torso, .rig .rg-head, .rig .rg-armA, .rig .rg-armB, .rig .rg-farmA, .rig .rg-farmB { animation: none !important; }
+}
+.ha-rm .rig .rg-torso, .ha-rm .rig .rg-head, .ha-rm .rig .rg-armA, .ha-rm .rig .rg-armB, .ha-rm .rig .rg-farmA, .ha-rm .rig .rg-farmB { animation: none !important; }
+
+/* 27.11 (владелец: «руки вверх — кривые»): большие жесты — целые рисунки (кадры chars.js), части в это время прячутся */
+.rig .rg-pose { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; pointer-events: none; transition: opacity .12s ease; }
+.rig .rg { transition: opacity .12s ease; }
+.rig[data-p="cheer"] .rg, .rig[data-p="wave"] .rg { opacity: 0; }
+.rig[data-p="cheer"] .rg-pose-happy, .rig[data-p="wave"] .rg-pose-wave { opacity: 1; }
+.rig[data-p="wave"] .rg-pose-wave { animation: rgPoseWave .5s ease-in-out 3; transform-origin: 50% 100%; }
+@keyframes rgPoseWave { 50% { transform: rotate(1.6deg) translateY(-1%); } }.rig:not(.rg-ready) .rg { opacity: 0 !important; }   /* части ещё грузятся (rig.js ставит rg-ready, когда загрузились все) */
+
 /* ===== scene.css ===== */
 /* =====================================================
    КИНО «ПРИЛЁТ» (scene.js). Все классы начинаются с hs-,
@@ -3161,7 +3244,8 @@ body.theme-dark .ww-l { box-shadow: 0 4px 0 rgba(0, 0, 0, .4); }
 .cs-spk svg { width: 28px; height: 28px; }
 .cs-say { position: absolute; left: 14px; right: 14px; top: calc(52px + var(--safe-top)); max-width: 460px; margin: 0 auto; background: rgba(20, 30, 45, .82); color: #fff; border-radius: 16px; padding: 12px 16px; font-size: 16px; line-height: 1.4; text-align: center; }
 .cs-say.in { animation: csPop .3s ease both; }
-.cs-tap { position: absolute; left: 0; right: 0; bottom: calc(14px + var(--safe-bottom)); text-align: center; color: rgba(255, 255, 255, .8); font-size: 13px; animation: csBlink 1.6s ease-in-out infinite; pointer-events: none; }
+.cs-tap { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + var(--safe-bottom)); padding: 6px 14px; border-radius: 999px; background: rgba(20, 30, 45, .55); white-space: nowrap;
+  text-align: center; color: #fff; font-size: 13px; font-weight: 700; animation: csBlink 1.6s ease-in-out infinite; pointer-events: none; }   /* на светлом полу тоже читается */
 @keyframes csBlink { 50% { opacity: .35; } }
 /* 23.11: итог нового квеста — уровень пройден / золотой, «было трудно → повторение» */
 .q2-lvl { font-weight: 800; color: #2e9d58; margin: 2px 0 6px; }

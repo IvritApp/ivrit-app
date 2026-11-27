@@ -56,17 +56,18 @@
   function stop() {
     clearTimeout(timer); timer = 0; clearInterval(linger); linger = 0;
     env = null; open = false; targets = [];
-    document.querySelectorAll(".ci.lip-on, .ci.lip-open").forEach(el => el.classList.remove("lip-on", "lip-open"));
+    document.querySelectorAll(".ci.lip-on, .ci.lip-open").forEach(el => { el.classList.remove("lip-on", "lip-open"); delete el.dataset.lv; });
     document.body.classList.remove("lipsync");
   }
   // фраза кончилась: рот закрыт; lip-on держим, пока персонаж ещё «говорит» по своему таймеру (иначе он снова замигает)
   function finish() {
     clearTimeout(timer); timer = 0;
     setOpen(false); env = null;
+    targets.forEach(el => { el.dataset.lv = "0"; });
     clearInterval(linger);
     linger = setInterval(() => {
       const now = speakers();
-      document.querySelectorAll(".ci.lip-on").forEach(el => { if (!now.includes(el)) el.classList.remove("lip-on", "lip-open"); });
+      document.querySelectorAll(".ci.lip-on").forEach(el => { if (!now.includes(el)) { el.classList.remove("lip-on", "lip-open"); delete el.dataset.lv; } });
       if (!document.querySelector(".ci.lip-on")) stop();
     }, 200);
   }
@@ -77,6 +78,9 @@
     if (performance.now() - since < 600) speakers().forEach(el => { if (!targets.includes(el)) { targets.push(el); el.classList.add("lip-on"); if (open) el.classList.add("lip-open"); } });
     const v = env[Math.floor(ttsPlayer.currentTime / STEP)] || 0;
     setOpen(open ? v > 0.18 : v > 0.32);                               // с запасом: рот не дрожит на границе
+    // живой персонаж (rig.js) выбирает форму рта по громкости: 0 — закрыт, 1 — чуть, 2 — открыт, 3 — широко
+    const lv = !open ? "0" : v > 0.8 ? "3" : v > 0.55 ? "2" : "1";
+    targets.forEach(el => { if (el.dataset.lv !== lv) el.dataset.lv = lv; });
     timer = setTimeout(tick, 33);                                      // ~30 раз в секунду (таймер, а не кадры экрана: в некоторых WebView кадры «засыпают»)
   }
   // файл озвучки начал грузиться: рот закрыт и не мигает по-старому, пока звук не заиграет (на телефоне это может быть заметная пауза)

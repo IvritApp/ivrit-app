@@ -24,9 +24,14 @@
   const SIZE = { hibri: [600, 640] };                          // у остальных 360×768
   const ENABLED = true;
   const has = (id) => ENABLED && !!CHARS[id];
+  // живые персонажи (гибрид: части из одного рисунка + целые кадры для «ура» и «машет») — ВКЛЮЧЕНЫ (владелец 27.11);
+  // выключить для сравнения — localStorage hirbis_rig_on = 0 (ключ в NOSYNC)
+  const RIG_ON = () => { try { return localStorage.getItem("hirbis_rig_on") !== "0"; } catch (e) { return true; } };
 
   window.charImgHTML = function (id, cls) {
     if (!has(id)) return "";
+    // 27.11: у кого есть части (rig.js: Давид, Циля) — живой персонаж из частей вместо кадров
+    if (window.HirbisRig && HirbisRig.has(id) && RIG_ON()) return HirbisRig.html(id, cls);
     const b = CHARS[id].includes("think") ? " ci-b" : "";   // есть лист B (думает, машет…)
     const [w, h] = SIZE[id] || [360, 768];
     return `<div class="ci${b} ${cls || ""}" data-char="${id}" style="aspect-ratio:${w}/${h}">${CHARS[id].map(f =>
